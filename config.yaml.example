@@ -1,0 +1,54 @@
+# Khedra Configuration File
+# Version: 2.0
+
+general:
+  data_dir: "~/.khedra"
+  log_level: "info"           # Options: debug, info, warn, error
+
+chains:
+  - name: "mainnet"
+    rpc_endpoint: "https://mainnet.infura.io/v3/YOUR_PROJECT_ID"
+    enabled: true
+
+  - name: "sepolia"
+    rpc_endpoint: "https://sepolia.infura.io/v3/YOUR_PROJECT_ID"
+    enabled: true
+
+  - name: "gnosis"
+    rpc_endpoint: "https://rpc.gnosischain.com"
+    enabled: false
+
+  - name: "optimism"
+    rpc_endpoint: "https://rpc.optimism.com"
+    enabled: false
+
+api:
+  enabled: true
+  port: 8080
+
+scraper:
+  enabled: true
+  sleep_duration: 60 # In seconds
+  max_blocks_per_batch: 500
+  retry_attempts: 3
+  retry_delay: 10 # In seconds
+
+monitor:
+  enabled: true
+  sleep_duration: 60 # In seconds
+  max_blocks_per_batch: 500
+  retry_attempts: 3
+  retry_delay: 10 # In seconds
+
+ipfs:
+  enabled: true
+  endpoint: "http://localhost:5001"
+  pinning_service: "pinata"
+  
+# logging:
+  # folder: "~/.khedra/logs"
+  # filename: "khedra.log"
+  # max_size_mb: 10
+  # max_backups: 5
+  # max_age_days: 30
+  # compress: true

@@ -1,0 +1,10 @@
+[book]
+authors = ["TrueBlocks, LLC"]
+language = "en"
+multilingual = false
+src = "src"
+title = "The Khedra Book"
+
+[output.html]
+numbered = false
+default-theme = "rust"

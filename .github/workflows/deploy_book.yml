@@ -1,0 +1,33 @@
+name: Deploy Documentation
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+jobs:
+  deploy:
+    name: Build and Deploy Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Build and Deploy to Server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.NEW_SERVER_HOST }}
+          username: ${{ secrets.DOCS_USER }}
+          key: ${{ secrets.DOCS_PRIVATE_KEY }}
+          script: |
+            set -e
+            echo "Cleaning up previous build..."
+            rm -rf /home/${{ secrets.DOCS_USER }}/build
+            mkdir -p /home/${{ secrets.DOCS_USER }}/build/book
+
+            echo "Cloning repository and building documentation..."
+            cd /home/${{ secrets.DOCS_USER }}/build
+            git clone git@github.com:TrueBlocks/trueblocks-khedra
+            cd trueblocks-khedra/book
+            mdbook build
+
+            echo "Deploying to the book server..."
+            rsync -avz --delete book/ /var/www/khedra.trueblocks.io/html/

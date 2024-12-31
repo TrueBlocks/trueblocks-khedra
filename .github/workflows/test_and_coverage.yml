@@ -1,0 +1,55 @@
+name: Go Test and Coverage
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+jobs:
+  test:
+    name: Run Tests and Generate Coverage
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Install Go 1.23
+        run: |
+          ARCH=$(uname -m)
+          if [ "$ARCH" = "x86_64" ]; then
+            ARCH="amd64"
+          elif [ "$ARCH" = "aarch64" ]; then
+            ARCH="arm64"
+          else
+            echo "Unsupported architecture: $ARCH"
+            exit 1
+          fi
+          curl -LO https://golang.org/dl/go1.23.1.linux-$ARCH.tar.gz
+          sudo tar -C /usr/local -xzf go1.23.1.linux-$ARCH.tar.gz
+          export PATH=$PATH:/usr/local/go/bin
+          go version
+      # Run go mod tidy
+      - name: Ensure Dependencies are Updated
+        run: go mod tidy
+      # Run tests and generate coverage
+      - name: Run Tests with Coverage
+        run: |
+          mkdir -p coverage
+          go test -coverprofile=coverage/coverage.out ./...
+          go tool cover -html=coverage/coverage.out -o coverage/coverage.html
+      # Upload coverage HTML as an artifact
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-html
+          path: coverage/coverage.html
+    # Optionally, fail the job if coverage is too low (replace 75 with your minimum coverage %)
+    # - name: Check Coverage Percentage
+    #   run: |
+    #     COVERAGE=$(go tool cover -func=coverage/coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+    #     echo "Coverage: $COVERAGE%"
+    #     if (( $(echo "$COVERAGE < 75" | bc -l) )); then
+    #       echo "Coverage below threshold. Failing job."
+    #       exit 1
+    #     fi
