@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `config` package in Khedra manages application configuration through the `config.yaml` file. This file allows you to specify key parameters for running Khedra, including logging, blockchain chains, and services. This document outlines the configuration file structure, validation rules, and default values.
+The `config` package in Khedra manages application configuration through the `config.yaml` file. This file allows you to specify key parameters for running Khedra, including logging, blockchain chains, and services. Additionally, environment variables can override specific configuration options. This document outlines the configuration file structure, validation rules, default values, and environment variable usage.
 
 ---
 
@@ -18,6 +18,13 @@ The `config` package in Khedra manages application configuration through the `co
 
 2. **Location of `config.yaml`**:
    - By default, the `config.yaml` file must be in the current directory or in the `~/.khedra` folder. If the file is not present, Khedra creates a default configuration file in `~/.khedra`.
+
+3. **Using Environment Variables**:
+   - Environment variables starting with `TB_KHEDRA_` can override specific values in `config.yaml`. For example:
+
+     ```bash
+     export TB_KHEDRA_GENERAL_DATADIR="/path/override"
+     ```
 
 ---
 
@@ -85,6 +92,36 @@ logging:
 
 ---
 
+## Using Environment Variables
+
+Khedra allows configuration values to be overridden using environment variables. The environment variable naming convention is:
+
+`TB_KHEDRA_<section>_<key>`
+
+For example:
+
+- To override the `general.data_dir` value:
+
+  ```bash
+  export TB_KHEDRA_GENERAL_DATADIR="/path/override"
+  ```
+
+- To set the `log_level`:
+
+  ```bash
+  export TB_KHEDRA_GENERAL_LOGLEVEL="debug"
+  ```
+
+### Precedence Rules
+
+1. Default values are loaded first.
+2. Values from `config.yaml` override the defaults.
+3. Environment variables (e.g., `TB_KHEDRA_<section>_<key>`) take precedence over both the defaults and the file.
+
+Environment variables must conform to the same validation rules as the configuration file.
+
+---
+
 ## Configuration Sections
 
 ### General Settings
@@ -129,7 +166,7 @@ Controls the application's logging behavior:
 
 ## Validation Rules
 
-The configuration file is validated on load with the following rules:
+The configuration file and environment variables are validated on load with the following rules:
 
 ### General
 
@@ -183,7 +220,7 @@ If the configuration file is not found or incomplete, Khedra uses the following 
 ## Common Commands
 
 1. **Validate Configuration**:
-   Khedra validates the `config.yaml` file automatically on startup.
+   Khedra validates the `config.yaml` file and environment variables automatically on startup.
 
 2. **Run Khedra**:
 
@@ -192,5 +229,14 @@ If the configuration file is not found or incomplete, Khedra uses the following 
    ```
 
    Ensure that your `config.yaml` file is properly set up.
+
+3. **Override Configuration with Environment Variables**:
+
+   Use environment variables to override specific configurations:
+
+   ```bash
+   export TB_KHEDRA_GENERAL_DATADIR="/new/path"
+   ./khedra
+   ```
 
 For additional details, see the technical specification.

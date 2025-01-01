@@ -1,8 +1,6 @@
 package config
 
 import (
-	"encoding/json"
-
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"gopkg.in/yaml.v2"
 )
@@ -19,18 +17,13 @@ func NewConfig() Config {
 		General: NewGeneral(),
 		Chains:  []Chain{NewChain()},
 		Services: []Service{
-			NewScraper(),
-			NewMonitor(),
-			NewApi(),
-			NewIpfs(),
+			NewService("scraper"),
+			NewService("monitor"),
+			NewService("api"),
+			NewService("ipfs"),
 		},
 		Logging: NewLogging(),
 	}
-}
-
-func (c *Config) String() string {
-	bytes, _ := json.Marshal(c)
-	return string(bytes)
 }
 
 func establishConfig(fn string) bool {

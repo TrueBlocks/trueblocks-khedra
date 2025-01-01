@@ -11,7 +11,7 @@
 
 Khedra operates through:
 
-- **Command-Line Interface (CLI)**: For configuration and command execution.
+- **Command-Line Interface (Cli)**: For configuration and command execution.
 - **REST API**: For programmatic interaction with indexed data.
 
 ## Terminology and Concepts

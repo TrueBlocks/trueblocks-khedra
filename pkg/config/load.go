@@ -9,6 +9,7 @@ import (
 
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/knadh/koanf/parsers/yaml"
+	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
 )
@@ -17,6 +18,7 @@ import (
 // we can mock it during testing.
 var getConfigFn = mustGetConfigFn
 
+// MustLoadConfig returns a validated Config struct or fails fatally.
 func MustLoadConfig(fn string) *Config {
 	var err error
 	var cfg Config
@@ -31,10 +33,17 @@ func loadConfig() (Config, error) {
 
 	fn := getConfigFn()
 	if err := k.Load(file.Provider(fn), yaml.Parser()); err != nil {
-		return Config{}, fmt.Errorf("koanf.Load failed: %v", err)
+		return Config{}, fmt.Errorf("koanf.Load failed for file %s: %v", fn, err)
 	}
 
 	cfg := NewConfig()
+	if err := k.Load(env.Provider("TB_KHEDRA_", ".", func(s string) string {
+		key := strings.TrimPrefix(s, "TB_KHEDRA_")
+		return strings.Replace(strings.ToLower(key), "_", ".", -1)
+	}), nil); err != nil {
+		return Config{}, fmt.Errorf("koanf.Load failed for environment variables: %v", err)
+	}
+
 	if err := k.Unmarshal("", &cfg); err != nil {
 		return cfg, fmt.Errorf("koanf.Unmarshal failed: %v", err)
 	}
@@ -49,14 +58,6 @@ func loadConfig() (Config, error) {
 	coreFile.EstablishFolder(cfg.Logging.Folder)
 
 	if err := validate.Struct(cfg); err != nil {
-		// errs := err.(validator.ValidationErrors)
-		// for _, e := range errs {
-		// 	field := e.Field()         // The field name
-		// 	tag := e.Tag()             // The validation tag that failed
-		// 	value := e.Value()         // The invalid value
-		// 	namespace := e.Namespace() // The full field namespace (e.g., Config.Chains[0].RPCs[0])
-		// 	fmt.Printf("error validating field %s: %s, value: %v, namespace: %s\n", field, tag, value, namespace)
-		// }
 		return Config{}, err
 	}
 
@@ -91,10 +92,10 @@ func mustGetConfigDir() string {
 		if err = coreFile.EstablishFolder(cfgDir); err != nil {
 			log.Fatalf("error establishing log folder %s: %v", cfgDir, err)
 		}
+	}
 
-		if writable := IsWritable(cfgDir); !writable {
-			log.Fatalf("log directory %s is not writable: %v", cfgDir, err)
-		}
+	if writable := IsWritable(cfgDir); !writable {
+		log.Fatalf("log directory %s is not writable: %v", cfgDir, err)
 	}
 
 	return cfgDir

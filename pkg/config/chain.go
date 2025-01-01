@@ -8,7 +8,7 @@ type Chain struct {
 
 func NewChain() Chain {
 	return Chain{
-		Name:    "ethereum",
+		Name:    "mainnet",
 		RPCs:    []string{"http://localhost:8545"},
 		Enabled: true,
 	}
