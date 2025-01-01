@@ -18,7 +18,6 @@ type Khedra struct {
 
 func main() {
 	cfg := config.MustLoadConfig("config.yaml")
-	slog.Info("Logging to", "filename", filepath.Join(cfg.Logging.Folder, cfg.Logging.Filename))
 
 	fileLogger := &lumberjack.Logger{
 		Filename:   filepath.Join(cfg.Logging.Folder, cfg.Logging.Filename),
@@ -33,8 +32,6 @@ func main() {
 	// slog.SetDefault(logger)
 
 	logger.Info("Starting Khedra CLI")
-	logger.Info("Logging to", "filename", filepath.Join(cfg.Logging.Folder, cfg.Logging.Filename))
-	logger.Info(cfg.String())
 
 	app := &cli.App{
 		Name:  "khedra",

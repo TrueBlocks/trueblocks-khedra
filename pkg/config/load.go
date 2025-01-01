@@ -10,9 +10,11 @@ import (
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/v2"
 )
 
-// Declare a variable for the function that retrieves the config file path
+// Declare a variable for the function that retrieves the config file path so
+// we can mock it during testing.
 var getConfigFn = mustGetConfigFn
 
 func MustLoadConfig(fn string) *Config {
@@ -25,6 +27,8 @@ func MustLoadConfig(fn string) *Config {
 }
 
 func loadConfig() (Config, error) {
+	var k = koanf.New(".")
+
 	fn := getConfigFn()
 	if err := k.Load(file.Provider(fn), yaml.Parser()); err != nil {
 		return Config{}, fmt.Errorf("koanf.Load failed: %v", err)
@@ -34,6 +38,19 @@ func loadConfig() (Config, error) {
 	if err := k.Unmarshal("", &cfg); err != nil {
 		return cfg, fmt.Errorf("koanf.Unmarshal failed: %v", err)
 	}
+
+	if err := validate.Struct(cfg); err != nil {
+		// errs := err.(validator.ValidationErrors)
+		// for _, e := range errs {
+		// 	field := e.Field()         // The field name
+		// 	tag := e.Tag()             // The validation tag that failed
+		// 	value := e.Value()         // The invalid value
+		// 	namespace := e.Namespace() // The full field namespace (e.g., Config.Chains[0].RPCs[0])
+		// 	fmt.Printf("error validating field %s: %s, value: %v, namespace: %s\n", field, tag, value, namespace)
+		// }
+		return Config{}, err
+	}
+
 	cfg.Logging.Folder = expandPath(cfg.Logging.Folder)
 	coreFile.EstablishFolder(cfg.Logging.Folder)
 
