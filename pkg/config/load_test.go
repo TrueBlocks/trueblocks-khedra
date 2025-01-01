@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -35,6 +36,8 @@ func TestMustLoadConfig_Defaults(t *testing.T) {
 	// Establish the config file if it doesn't exist
 	establishConfig(configFile)
 
+	os.Setenv("TEST_MODE", "true")
+	defer os.Unsetenv("TEST_MODE")
 	cfg := MustLoadConfig(configFile)
 
 	// Expand the expected path

@@ -33,6 +33,11 @@ func init() {
 
 	// validatePingOne validates that at least one of the given URLs is reachable
 	validatePingOne := func(fl validator.FieldLevel) bool {
+		isTesting := os.Getenv("TEST_MODE") == "true"
+		if isTesting {
+			return true
+		}
+
 		url := fl.Field().String()
 		// fmt.Println("validateStrictURL: ", url)
 		if err := rpc.PingRpc(url); err == nil {

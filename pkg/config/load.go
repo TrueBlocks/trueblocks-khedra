@@ -39,6 +39,15 @@ func loadConfig() (Config, error) {
 		return cfg, fmt.Errorf("koanf.Unmarshal failed: %v", err)
 	}
 
+	configPath := expandPath("~/.khedra")
+	coreFile.EstablishFolder(configPath)
+
+	cfg.General.DataPath = expandPath(cfg.General.DataPath)
+	coreFile.EstablishFolder(cfg.Logging.Folder)
+
+	cfg.Logging.Folder = expandPath(cfg.Logging.Folder)
+	coreFile.EstablishFolder(cfg.Logging.Folder)
+
 	if err := validate.Struct(cfg); err != nil {
 		// errs := err.(validator.ValidationErrors)
 		// for _, e := range errs {
@@ -50,9 +59,6 @@ func loadConfig() (Config, error) {
 		// }
 		return Config{}, err
 	}
-
-	cfg.Logging.Folder = expandPath(cfg.Logging.Folder)
-	coreFile.EstablishFolder(cfg.Logging.Folder)
 
 	return cfg, nil
 }

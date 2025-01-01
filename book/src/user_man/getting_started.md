@@ -27,7 +27,7 @@ The `config.yaml` file is structured as follows:
 
 ```yaml
 general:
-  data_dir: "~/.khedra"          # Path to the data directory (must exist and be writable)
+  data_dir: "~/.khedra/data"     # Path to the data directory (must exist and be writable)
   log_level: "info"              # Log level: debug, info, warn, error
 
 chains:
@@ -166,7 +166,7 @@ The configuration file is validated on load with the following rules:
 
 If the configuration file is not found or incomplete, Khedra uses the following defaults:
 
-- **Data directory**: `~/.khedra`
+- **Data directory**: `~/.khedra/data`
 - **Log level**: `info`
 - **Logging configuration**:
   - Folder: `~/.khedra/logs`
