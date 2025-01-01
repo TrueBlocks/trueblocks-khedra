@@ -35,15 +35,11 @@ services:
     enabled: true
     sleep: 60 # In seconds
     batch_size: 500
-    retry_cnt: 3
-    retry_delay: 10 # In seconds
 
   - name: "monitor"
     enabled: true
     sleep: 60 # In seconds
     batch_size: 500
-    retry_cnt: 3
-    retry_delay: 10 # In seconds
 
   - name: "ipfs"
     enabled: true

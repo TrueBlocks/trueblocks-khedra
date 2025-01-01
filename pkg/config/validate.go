@@ -127,12 +127,6 @@ func init() {
 			if service.BatchSize < 50 || service.BatchSize > 10000 {
 				sl.ReportError(service.BatchSize, "BatchSize", "batch_size", "invalid_scraper_monitor_batch_size", "")
 			}
-			if service.RetryCnt < 1 {
-				sl.ReportError(service.RetryCnt, "RetryCnt", "retry_cnt", "invalid_scraper_monitor_retry_cnt", "")
-			}
-			if service.RetryDelay < 1 {
-				sl.ReportError(service.RetryDelay, "RetryDelay", "retry_delay", "invalid_scraper_monitor_retry_delay", "")
-			}
 		case "ipfs":
 			// For "ipfs" services, `Port` is required.
 			if service.Port == 0 {

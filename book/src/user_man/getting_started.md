@@ -67,15 +67,11 @@ services:
     enabled: true
     sleep: 60                    # Time (in seconds) between scraping operations
     batch_size: 500              # Number of blocks processed in each batch (50-10,000)
-    retry_cnt: 3                 # Number of retries for failed operations
-    retry_delay: 10              # Delay (in seconds) between retries
 
   - name: "monitor"
     enabled: true
     sleep: 60                    # Time (in seconds) between updates
     batch_size: 500              # Number of blocks processed in each batch (50-10,000)
-    retry_cnt: 3                 # Number of retries for failed operations
-    retry_delay: 10              # Delay (in seconds) between retries
 
   - name: "ipfs"
     enabled: true
@@ -146,8 +142,6 @@ Defines various services provided by Khedra. Supported services:
 - **Scraper** and **Monitor**:
   - **`sleep`**: Duration (seconds) between operations.
   - **`batch_size`**: Number of blocks to process in each operation (50-10,000).
-  - **`retry_cnt`**: Number of retry attempts for failures.
-  - **`retry_delay`**: Time (seconds) between retries.
 - **IPFS**:
   - Requires `port` to be specified.
 
@@ -186,8 +180,6 @@ The configuration file and environment variables are validated on load with the 
 - `port`: For API and IPFS services, must be between 1024 and 65535.
 - `sleep`: Must be non-negative.
 - `batch_size`: Must be between 50 and 10,000.
-- `retry_cnt`: Must be at least 1.
-- `retry_delay`: Must be at least 1.
 
 ### Logging
 
