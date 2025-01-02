@@ -6,9 +6,9 @@ type Chain struct {
 	Enabled bool     `koanf:"enabled"`                                                 // Defaults to false if not specified
 }
 
-func NewChain() Chain {
+func NewChain(chain string) Chain {
 	return Chain{
-		Name:    "mainnet",
+		Name:    chain,
 		RPCs:    []string{"http://localhost:8545"},
 		Enabled: true,
 	}

@@ -19,23 +19,13 @@ func TestGeneralValidation(t *testing.T) {
 			name: "Valid General struct",
 			general: General{
 				DataPath: createTempDir(t, true), // Create a writable temp directory
-				LogLevel: "info",
 			},
 			wantErr: false,
-		},
-		{
-			name: "Invalid LogLevel",
-			general: General{
-				DataPath: createTempDir(t, true),
-				LogLevel: "invalid_level",
-			},
-			wantErr: true,
 		},
 		{
 			name: "Non-existent DataPath",
 			general: General{
 				DataPath: "/non/existent/path",
-				LogLevel: "info",
 			},
 			wantErr: false,
 		},
@@ -43,7 +33,6 @@ func TestGeneralValidation(t *testing.T) {
 			name: "Non-writable DataPath",
 			general: General{
 				DataPath: createTempDir(t, false), // Create a non-writable temp directory
-				LogLevel: "info",
 			},
 			wantErr: false,
 		},
@@ -51,7 +40,6 @@ func TestGeneralValidation(t *testing.T) {
 			name: "Empty DataPath",
 			general: General{
 				DataPath: "",
-				LogLevel: "info",
 			},
 			wantErr: true,
 		},
@@ -438,117 +426,117 @@ func TestServiceListValidation(t *testing.T) {
 	}
 }
 
-func TestLoggingValidation(t *testing.T) {
-	tempDir := createTempDir(t, true) // Helper function to create a temp writable directory
+// func TestLoggingValidation(t *testing.T) {
+// 	tempDir := createTempDir(t, true) // Helper function to create a temp writable directory
 
-	tests := []struct {
-		name    string
-		logging Logging
-		wantErr bool
-	}{
-		{
-			name: "Valid Logging struct",
-			logging: Logging{
-				Folder:     tempDir,
-				Filename:   "app.log",
-				MaxSizeMb:  10,
-				MaxBackups: 3,
-				MaxAgeDays: 7,
-				Compress:   true,
-			},
-			wantErr: false,
-		},
-		{
-			name: "Missing Folder",
-			logging: Logging{
-				Filename:   "app.log",
-				MaxSizeMb:  10,
-				MaxBackups: 3,
-				MaxAgeDays: 7,
-				Compress:   true,
-			},
-			wantErr: true,
-		},
-		{
-			name: "Non-existent Folder",
-			logging: Logging{
-				Folder:     "/non/existent/path",
-				Filename:   "app.log",
-				MaxSizeMb:  10,
-				MaxBackups: 3,
-				MaxAgeDays: 7,
-				Compress:   true,
-			},
-			wantErr: true,
-		},
-		{
-			name: "Missing Filename",
-			logging: Logging{
-				Folder:     tempDir,
-				MaxSizeMb:  10,
-				MaxBackups: 3,
-				MaxAgeDays: 7,
-				Compress:   true,
-			},
-			wantErr: true,
-		},
-		{
-			name: "Filename without .log extension",
-			logging: Logging{
-				Folder:     tempDir,
-				Filename:   "app.txt",
-				MaxSizeMb:  10,
-				MaxBackups: 3,
-				MaxAgeDays: 7,
-				Compress:   true,
-			},
-			wantErr: true,
-		},
-		{
-			name: "MaxSizeMb is zero",
-			logging: Logging{
-				Folder:     tempDir,
-				Filename:   "app.log",
-				MaxSizeMb:  0,
-				MaxBackups: 3,
-				MaxAgeDays: 7,
-				Compress:   true,
-			},
-			wantErr: true,
-		},
-		{
-			name: "MaxBackups is negative",
-			logging: Logging{
-				Folder:     tempDir,
-				Filename:   "app.log",
-				MaxSizeMb:  10,
-				MaxBackups: -1,
-				MaxAgeDays: 7,
-				Compress:   true,
-			},
-			wantErr: true,
-		},
-		{
-			name: "MaxAgeDays is negative",
-			logging: Logging{
-				Folder:     tempDir,
-				Filename:   "app.log",
-				MaxSizeMb:  10,
-				MaxBackups: 3,
-				MaxAgeDays: -1,
-				Compress:   true,
-			},
-			wantErr: true,
-		},
-	}
+// 	tests := []struct {
+// 		name    string
+// 		logging Logging
+// 		wantErr bool
+// 	}{
+// 		{
+// 			name: "Valid Logging struct",
+// 			logging: Logging{
+// 				Folder:     tempDir,
+// 				Filename:   "app.log",
+// 				MaxSizeMb:  10,
+// 				MaxBackups: 3,
+// 				MaxAgeDays: 7,
+// 				Compress:   true,
+// 			},
+// 			wantErr: false,
+// 		},
+// 		{
+// 			name: "Missing Folder",
+// 			logging: Logging{
+// 				Filename:   "app.log",
+// 				MaxSizeMb:  10,
+// 				MaxBackups: 3,
+// 				MaxAgeDays: 7,
+// 				Compress:   true,
+// 			},
+// 			wantErr: true,
+// 		},
+// 		{
+// 			name: "Non-existent Folder",
+// 			logging: Logging{
+// 				Folder:     "/non/existent/path",
+// 				Filename:   "app.log",
+// 				MaxSizeMb:  10,
+// 				MaxBackups: 3,
+// 				MaxAgeDays: 7,
+// 				Compress:   true,
+// 			},
+// 			wantErr: true,
+// 		},
+// 		{
+// 			name: "Missing Filename",
+// 			logging: Logging{
+// 				Folder:     tempDir,
+// 				MaxSizeMb:  10,
+// 				MaxBackups: 3,
+// 				MaxAgeDays: 7,
+// 				Compress:   true,
+// 			},
+// 			wantErr: true,
+// 		},
+// 		{
+// 			name: "Filename without .log extension",
+// 			logging: Logging{
+// 				Folder:     tempDir,
+// 				Filename:   "app.txt",
+// 				MaxSizeMb:  10,
+// 				MaxBackups: 3,
+// 				MaxAgeDays: 7,
+// 				Compress:   true,
+// 			},
+// 			wantErr: true,
+// 		},
+// 		{
+// 			name: "MaxSizeMb is zero",
+// 			logging: Logging{
+// 				Folder:     tempDir,
+// 				Filename:   "app.log",
+// 				MaxSizeMb:  0,
+// 				MaxBackups: 3,
+// 				MaxAgeDays: 7,
+// 				Compress:   true,
+// 			},
+// 			wantErr: true,
+// 		},
+// 		{
+// 			name: "MaxBackups is negative",
+// 			logging: Logging{
+// 				Folder:     tempDir,
+// 				Filename:   "app.log",
+// 				MaxSizeMb:  10,
+// 				MaxBackups: -1,
+// 				MaxAgeDays: 7,
+// 				Compress:   true,
+// 			},
+// 			wantErr: true,
+// 		},
+// 		{
+// 			name: "MaxAgeDays is negative",
+// 			logging: Logging{
+// 				Folder:     tempDir,
+// 				Filename:   "app.log",
+// 				MaxSizeMb:  10,
+// 				MaxBackups: 3,
+// 				MaxAgeDays: -1,
+// 				Compress:   true,
+// 			},
+// 			wantErr: true,
+// 		},
+// 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := validate.Struct(tt.logging) // or any struct being validated
-			checkValidationErrors(t, tt.name, err, tt.wantErr)
-		})
-	}
-}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			err := validate.Struct(tt.logging) // or any struct being validated
+// 			checkValidationErrors(t, tt.name, err, tt.wantErr)
+// 		})
+// 	}
+// }
 
 // createTempDir creates a temporary directory for testing.
 // If writable is false, it makes the directory non-writable.

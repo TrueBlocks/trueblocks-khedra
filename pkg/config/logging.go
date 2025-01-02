@@ -15,6 +15,7 @@ type Logging struct {
 	MaxBackups int    `koanf:"max_backups" validate:"required,min=1"`
 	MaxAgeDays int    `koanf:"max_age_days" validate:"required,min=1"`
 	Compress   bool   `koanf:"compress"`
+	LogLevel   string `koanf:"log_level" validate:"oneof=debug info warn error"`
 }
 
 func NewLogging() Logging {
@@ -25,6 +26,7 @@ func NewLogging() Logging {
 		MaxBackups: 3,
 		MaxAgeDays: 10,
 		Compress:   true,
+		LogLevel:   "info",
 	}
 }
 
@@ -38,11 +40,32 @@ func NewLoggers(cfg Logging) (*slog.Logger, *slog.Logger) {
 		MaxAge:     cfg.MaxAgeDays,
 		Compress:   cfg.Compress,
 	}
-	fileHandler := slog.NewJSONHandler(fileLog, nil)
+
+	fileHandler := slog.NewTextHandler(fileLog, &slog.HandlerOptions{
+		Level: convertLogLevel(cfg.LogLevel),
+	})
 	fileLogger := slog.New(fileHandler)
 
-	progressHandler := slog.NewTextHandler(os.Stderr, nil)
+	progressHandler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		Level: convertLogLevel(cfg.LogLevel),
+	})
 	progressLogger := slog.New(progressHandler)
 
 	return fileLogger, progressLogger
+}
+
+// convertLogLevel converts a string log level to a slog.Level.
+func convertLogLevel(level string) slog.Level {
+	switch level {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
 }

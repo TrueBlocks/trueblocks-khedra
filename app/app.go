@@ -10,9 +10,9 @@ import (
 
 type KhedraApp struct {
 	Cli        *cli.App
-	Config     *config.Config
-	FileLogger *slog.Logger
-	ProgLogger *slog.Logger
+	config     *config.Config
+	fileLogger *slog.Logger
+	progLogger *slog.Logger
 }
 
 func NewKhedraApp() *KhedraApp {
@@ -21,9 +21,9 @@ func NewKhedraApp() *KhedraApp {
 	cli := initializeCli()
 
 	k := &KhedraApp{
-		Config:     cfg,
-		FileLogger: fileLogger,
-		ProgLogger: progLogger,
+		config:     cfg,
+		fileLogger: fileLogger,
+		progLogger: progLogger,
 		Cli:        cli,
 	}
 

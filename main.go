@@ -9,13 +9,12 @@ import (
 func main() {
 	// Create a new Khedra app...
 	k := app.NewKhedraApp()
-
-	k.FileLogger.Info("Khedra started.")
-	defer k.FileLogger.Info("Khedra stopped.")
+	k.Debug("Khedra started.")
+	defer k.Debug("Khedra stopped.")
 
 	// ...and run it
 	if err := k.Run(); err != nil {
-		k.ProgLogger.Error(err.Error())
+		k.Error(err.Error())
 		os.Exit(1)
 	}
 }

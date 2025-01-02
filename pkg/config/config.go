@@ -13,21 +13,28 @@ type Config struct {
 }
 
 func NewConfig() Config {
+	chains := []Chain{NewChain("mainnet"), NewChain("sepolia")}
+	services := []Service{
+		NewService("scraper"),
+		NewService("monitor"),
+		NewService("api"),
+		NewService("ipfs"),
+	}
+
 	return Config{
-		General: NewGeneral(),
-		Chains:  []Chain{NewChain()},
-		Services: []Service{
-			NewService("scraper"),
-			NewService("monitor"),
-			NewService("api"),
-			NewService("ipfs"),
-		},
-		Logging: NewLogging(),
+		General:  NewGeneral(),
+		Chains:   chains,
+		Services: services,
+		Logging:  NewLogging(),
 	}
 }
 
 func establishConfig(fn string) bool {
 	cfg := NewConfig()
+	return writeConfig(&cfg, fn)
+}
+
+func writeConfig(cfg *Config, fn string) bool {
 	bytes, _ := yaml.Marshal(cfg)
 	coreFile.StringToAsciiFile(fn, string(bytes))
 	return coreFile.FileExists(fn)
