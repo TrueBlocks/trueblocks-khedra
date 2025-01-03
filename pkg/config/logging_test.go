@@ -15,10 +15,6 @@ func TestNewLogging(t *testing.T) {
 	assert.Equal(t, 10, logging.MaxSizeMb)
 	assert.Equal(t, 3, logging.MaxBackups)
 	assert.Equal(t, 10, logging.MaxAgeDays)
-	assert.True(t, logging.Compress)
-}
-
-func TestLogLevel(t *testing.T) {
-	logging := NewLogging()
 	assert.Equal(t, "info", logging.LogLevel)
+	assert.True(t, logging.Compress)
 }

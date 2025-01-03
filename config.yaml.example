@@ -5,57 +5,57 @@ general:
   data_dir: "~/.khedra/data"     # See note 1
 
 chains:
-  - name: "mainnet"              # Blockchain name (see notes 2, 3, and 4)
+  mainnet:                       # Blockchain name (see notes 2, 3, and 4)
     rpcs:                        # A list of RPC endpoints (at least one is required)
       - "rpc_endpoint_for_mainnet"
     enabled: true                # `true` if this chain is enabled
 
-  - name: "sepolia"
+  sepolia:
     rpcs:
       - "rpc_endpoint_for_sepolia"
     enabled: true
 
-  - name: "gnosis"                # Add as many chains as your machine can handle
+  gnosis:                         # Add as many chains as your machine can handle
     rpcs:
       - "rpc_endpoint_for_gnosis" # must be a reachable, valid URL if the chain is enabled
     enabled: false                # this chain is disabled
 
-  - name: "optimism"
+  optimism:
     rpcs:
       - "rpc_endpoint_for_optimism"
     enabled: false
 
-services:                        # See note 5
-  - name: "scraper"              # Required. (One of: api, scraper, monitor, ipfs, control)
-    enabled: true                # `true` if the service is enabled
-    sleep: 12                    # Seconds between scraping batches (see note 6)
-    batch_size: 500              # Number of blocks to process in a batch (range: 50-10000)
+services:                          # See note 5
+  scraper:                         # Required. (One of: api, scraper, monitor, ipfs, control)
+    enabled: true                  # `true` if the service is enabled
+    sleep: 12                      # Seconds between scraping batches (see note 6)
+    batch_size: 500                # Number of blocks to process in a batch (range: 50-10000)
 
-  - name: "monitor"
+  monitor:
     enabled: true
-    sleep: 12                    # Seconds between scraping batches (see note 6)
-    batch_size: 500              # Number of blocks processed in a batch (range: 50-10000)
+    sleep: 12                      # Seconds between scraping batches (see note 6)
+    batch_size: 500                # Number of blocks processed in a batch (range: 50-10000)
 
-  - name: "api"
+  api:
     enabled: true
-    port: 8080                   # Port number for API service (the port must be available)
+    port: 8080                     # Port number for API service (the port must be available)
 
-  - name: "ipfs"
+  ipfs:
     enabled: true
-    port: 5001                   # Port number for IPFS service (the port must be available)
+    port: 5001                     # Port number for IPFS service (the port must be available)
 
-  - name: "control"
-    enabled: true                # Always enabled - false values are invalid
-    port: 5001                   # Port number for IPFS service (the port must be available)
+  control:
+    enabled: true                  # Always enabled - false values are invalid
+    port: 5001                     # Port number for IPFS service (the port must be available)
 
 logging:
-  folder: "~/.khedra/logs"       # Path to log directory (must exist and be writable)
-  filename: "khedra.log"         # Log file name (must end with .log)
-  log_level: "info"              # One of: debug, info, warn, error
-  max_size_mb: 10                # Max log file size in MB
-  max_backups: 5                 # Number of backup log files to keep
-  max_age_days: 30               # Number of days to retain old logs
-  compress: true                 # Whether to compress backup logs
+  folder: "~/.khedra/logs"         # Path to log directory (must exist and be writable)
+  filename: "khedra.log"           # Log file name (must end with .log)
+  log_level: "info"                # One of: debug, info, warn, error
+  max_size_mb: 10                  # Max log file size in MB
+  max_backups: 5                   # Number of backup log files to keep
+  max_age_days: 30                 # Number of days to retain old logs
+  compress: true                   # Whether to compress backup logs
 
 #
 # **Notes:**

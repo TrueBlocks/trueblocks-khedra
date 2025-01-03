@@ -21,7 +21,7 @@ func NewKhedraApp() *KhedraApp {
 	cli := initializeCli()
 
 	k := &KhedraApp{
-		config:     cfg,
+		config:     &cfg,
 		fileLogger: fileLogger,
 		progLogger: progLogger,
 		Cli:        cli,

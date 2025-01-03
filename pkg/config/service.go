@@ -3,11 +3,11 @@ package config
 import "log"
 
 type Service struct {
-	Name      string `koanf:"name" validate:"required,oneof=api scraper monitor ipfs"`  // Must be non-empty
-	Enabled   bool   `koanf:"enabled"`                                                  // Defaults to false if not specified
-	Port      int    `koanf:"port,omitempty" validate:"opt_min=1024,opt_max=65535"`     // Must be between 1024 and 65535
-	Sleep     int    `koanf:"sleep,omitempty"`                                          // Must be non-negative
-	BatchSize int    `koanf:"batch_size,omitempty" validate:"opt_min=50,opt_max=10000"` // Must be between 50 and 10000
+	Name      string `koanf:"name" validate:"required,oneof=api scraper monitor ipfs"`
+	Enabled   bool   `koanf:"enabled"`
+	Port      int    `koanf:"port,omitempty" validate:"service_field"`
+	Sleep     int    `koanf:"sleep,omitempty" validate:"service_field"`
+	BatchSize int    `koanf:"batch_size,omitempty" yaml:"batch_size,omitempty" validate:"service_field"`
 }
 
 func NewService(serviceType string) Service {
@@ -17,14 +17,14 @@ func NewService(serviceType string) Service {
 			Name:      "scraper",
 			Enabled:   false,
 			Sleep:     10,
-			BatchSize: 500,
+			BatchSize: 500, // Valid default BatchSize
 		}
 	case "monitor":
 		return Service{
 			Name:      "monitor",
 			Enabled:   false,
 			Sleep:     12,
-			BatchSize: 500,
+			BatchSize: 500, // Valid default BatchSize
 		}
 	case "api":
 		return Service{

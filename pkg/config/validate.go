@@ -17,7 +17,6 @@ func init() {
 
 	validateStrictURL := func(fl validator.FieldLevel) bool {
 		rawURL := fl.Field().String()
-		// fmt.Println("validateStrictURL: ", rawURL)
 
 		// Access the parent struct (Chain) to check the Enabled field
 		parent := fl.Parent().Interface().(Chain)
@@ -39,7 +38,6 @@ func init() {
 		}
 
 		url := fl.Field().String()
-		// fmt.Println("validateStrictURL: ", url)
 		if err := rpc.PingRpc(url); err == nil {
 			return true
 		}
@@ -135,6 +133,39 @@ func init() {
 		}
 	}
 
+	// validateServiceField validates fields based on the service type
+	validateServiceField := func(fl validator.FieldLevel) bool {
+		// Ensure we're validating a Service object
+		service, ok := fl.Parent().Interface().(Service)
+		if !ok {
+			// Return true if it's not a Service (skip validation for non-Service fields)
+			return true
+		}
+
+		// Get the value of the field being validated
+		value := fl.Field().Int()
+
+		// Apply service-specific validation logic
+		switch service.Name {
+		case "scraper", "monitor":
+			if fl.FieldName() == "BatchSize" {
+				return value >= 50 && value <= 10000
+			}
+			if fl.FieldName() == "Sleep" {
+				return value >= 0 // Sleep must be non-negative
+			}
+		case "api", "ipfs":
+			if fl.FieldName() == "Port" {
+				return value >= 1024 && value <= 65535
+			}
+		default:
+			// Unknown service type
+			return false
+		}
+
+		return true
+	}
+
 	validate.RegisterValidation("strict_url", validateStrictURL)
 	validate.RegisterValidation("ping_one", validatePingOne)
 	validate.RegisterValidation("is_writable", validateIsWritable)
@@ -142,5 +173,6 @@ func init() {
 	validate.RegisterValidation("opt_min", validateOptMin)
 	validate.RegisterValidation("opt_max", validateOptMax)
 	validate.RegisterValidation("dirpath", validateDirPath)
+	validate.RegisterValidation("service_field", validateServiceField)
 	validate.RegisterStructValidation(validateService, Service{})
 }

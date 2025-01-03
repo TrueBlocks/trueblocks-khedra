@@ -20,71 +20,68 @@ import (
 // we can mock it during testing.
 var getConfigFn = mustGetConfigFn
 
-// MustLoadConfig returns a validated Config struct or fails fatally.
-func MustLoadConfig(fn string) *Config {
+func MustLoadConfig(filename string) Config {
 	var err error
 	var cfg Config
 	if cfg, err = loadConfig(); err != nil {
 		log.Fatalf("error loading config: %v", err)
 	}
-	return &cfg
+
+	// Apply environment variable overrides
+	for name, service := range cfg.Services {
+		envEnabled := os.Getenv(fmt.Sprintf("TB_KHEDRA_SERVICES_%s_ENABLED", strings.ToUpper(name)))
+		if envEnabled != "" {
+			service.Enabled, _ = strconv.ParseBool(envEnabled)
+		}
+
+		envPort := os.Getenv(fmt.Sprintf("TB_KHEDRA_SERVICES_%s_PORT", strings.ToUpper(name)))
+		if envPort != "" {
+			port, err := strconv.Atoi(envPort)
+			if err == nil {
+				service.Port = port
+			}
+		}
+
+		cfg.Services[name] = service
+	}
+
+	return cfg
 }
 
 func loadConfig() (Config, error) {
 	var fileK = koanf.New(".")
 	var envK = koanf.New(".")
 
-	// Load the base configuration file
 	fn := getConfigFn()
 	if err := fileK.Load(file.Provider(fn), yaml.Parser()); err != nil {
 		return Config{}, fmt.Errorf("koanf.Load failed for file %s: %v", fn, err)
 	}
 
-	// Unmarshal the configuration from the file
 	fileCfg := NewConfig()
 	if err := fileK.Unmarshal("", &fileCfg); err != nil {
 		return Config{}, fmt.Errorf("koanf.Unmarshal failed for file configuration: %v", err)
 	}
 
-	// Create a map of chain and service names to indices
-	chainNameToIndex := make(map[string]int)
-	for i, chain := range fileCfg.Chains {
-		chainNameToIndex[strings.ToLower(chain.Name)] = i
+	for key, chain := range fileCfg.Chains {
+		chain.Name = key
+		fileCfg.Chains[key] = chain
 	}
 
-	serviceNameToIndex := make(map[string]int)
-	for i, service := range fileCfg.Services {
-		serviceNameToIndex[strings.ToLower(service.Name)] = i
+	for key, service := range fileCfg.Services {
+		service.Name = key
+		fileCfg.Services[key] = service
 	}
 
-	// Build a recursive map of field types from the Config struct
 	fieldTypeMap := buildFieldTypeMap(reflect.TypeOf(Config{}), "")
 
-	// Load environment variables with proper key mapping and type handling
 	err := envK.Load(env.ProviderWithValue("TB_KHEDRA_", ".", func(key, value string) (string, interface{}) {
-		// Transform the environment variable key into a nested configuration key
 		transformedKey := strings.ToLower(strings.TrimPrefix(key, "TB_KHEDRA_"))
 		transformedKey = strings.ReplaceAll(transformedKey, "_", ".")
 
-		// Check for chains.* and services.*
-		parts := strings.Split(transformedKey, ".")
-		if len(parts) > 2 && parts[0] == "chains" {
-			chainName := parts[1]
-			if index, ok := chainNameToIndex[chainName]; ok {
-				// Replace chain name with index
-				parts[1] = fmt.Sprintf("%d", index)
-				transformedKey = strings.Join(parts, ".")
-			}
-		} else if len(parts) > 2 && parts[0] == "services" {
-			serviceName := parts[1]
-			if index, ok := serviceNameToIndex[serviceName]; ok {
-				// Replace service name with index
-				parts[1] = fmt.Sprintf("%d", index)
-				transformedKey = strings.Join(parts, ".")
-			}
+		if strings.HasSuffix(transformedKey, ".rpcs") {
+			return transformedKey, strings.Split(value, ",")
 		}
 
-		// Check the field type and handle arrays
 		if fieldType, ok := fieldTypeMap[transformedKey]; ok {
 			if fieldType.Kind() == reflect.Slice {
 				return transformedKey, strings.Split(value, ",")
@@ -97,38 +94,50 @@ func loadConfig() (Config, error) {
 			}
 		}
 
-		// Let Koanf handle the types automatically for other fields
 		return transformedKey, value
 	}), nil)
 	if err != nil {
 		return Config{}, fmt.Errorf("koanf.Load failed for environment variables: %v", err)
 	}
 
-	// Unmarshal the environment configuration
-	envCfg := NewConfig()
+	envCfg := Config{} // Empty config to unmarshal into
 	if err := envK.Unmarshal("", &envCfg); err != nil {
 		return Config{}, fmt.Errorf("koanf.Unmarshal failed for environment configuration: %v", err)
 	}
 
-	// Merge environment configuration into file configuration
-	finalCfg := mergeConfigs(fileCfg, envCfg)
+	for key, chain := range envCfg.Chains {
+		if existingChain, exists := fileCfg.Chains[key]; exists {
+			if len(chain.RPCs) > 0 {
+				existingChain.RPCs = chain.RPCs
+			}
+			existingChain.Enabled = chain.Enabled
+			fileCfg.Chains[key] = existingChain
+		} else {
+			return Config{}, fmt.Errorf("chain %s found in the environment but not in the configuration file", key)
+		}
+	}
 
-	// Ensure directories are established for paths
+	finalCfg := fileCfg
+
+	for key, chain := range fileCfg.Chains {
+		if len(chain.RPCs) == 0 {
+			return Config{}, fmt.Errorf("chain %s has an empty RPCs field, which is not allowed", key)
+		}
+	}
+
 	configPath := expandPath("~/.khedra")
 	coreFile.EstablishFolder(configPath)
 
-	finalCfg.General.DataPath = expandPath(finalCfg.General.DataPath)
-	coreFile.EstablishFolder(finalCfg.General.DataPath)
+	finalCfg.General.DataDir = expandPath(finalCfg.General.DataDir)
+	coreFile.EstablishFolder(finalCfg.General.DataDir)
 
 	finalCfg.Logging.Folder = expandPath(finalCfg.Logging.Folder)
 	coreFile.EstablishFolder(finalCfg.Logging.Folder)
 
-	// Validate the final configuration
 	if err := validate.Struct(finalCfg); err != nil {
 		return Config{}, err
 	}
 
-	// Return the final configuration
 	return finalCfg, nil
 }
 
@@ -161,8 +170,8 @@ func buildFieldTypeMap(t reflect.Type, prefix string) map[string]reflect.Type {
 // Merge the environment configuration into the file configuration
 func mergeConfigs(fileCfg, envCfg Config) Config {
 	// Merge General
-	if envCfg.General.DataPath != NewGeneral().DataPath {
-		fileCfg.General.DataPath = envCfg.General.DataPath
+	if envCfg.General.DataDir != NewGeneral().DataDir {
+		fileCfg.General.DataDir = envCfg.General.DataDir
 	}
 
 	// Merge Logging
@@ -189,30 +198,32 @@ func mergeConfigs(fileCfg, envCfg Config) Config {
 	}
 
 	// Merge Chains
-	for i, chain := range envCfg.Chains {
-		if i < len(fileCfg.Chains) {
+	for key, chain := range envCfg.Chains {
+		if existingChain, exists := fileCfg.Chains[key]; exists {
 			if len(chain.RPCs) > 0 {
-				fileCfg.Chains[i].RPCs = chain.RPCs
+				existingChain.RPCs = chain.RPCs
 			}
 			if chain.Enabled {
-				fileCfg.Chains[i].Enabled = chain.Enabled
+				existingChain.Enabled = chain.Enabled
 			}
+			fileCfg.Chains[key] = existingChain
 		} else {
 			// Add new chain from the environment
-			fileCfg.Chains = append(fileCfg.Chains, chain)
+			fileCfg.Chains[key] = chain
 		}
 	}
 
 	// Merge Services
-	for i, service := range envCfg.Services {
-		if i < len(fileCfg.Services) {
+	for name, service := range envCfg.Services {
+		if existingService, exists := fileCfg.Services[name]; exists {
 			if service.Port != 0 {
-				fileCfg.Services[i].Port = service.Port
+				existingService.Port = service.Port
 			}
-			fileCfg.Services[i].Enabled = service.Enabled
+			existingService.Enabled = service.Enabled
+			fileCfg.Services[name] = existingService
 		} else {
 			// Add new service from the environment
-			fileCfg.Services = append(fileCfg.Services, service)
+			fileCfg.Services[name] = service
 		}
 	}
 

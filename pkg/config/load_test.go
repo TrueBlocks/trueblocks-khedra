@@ -24,7 +24,6 @@ func TestMustGetConfigFn(t *testing.T) {
 }
 
 func TestMustLoadConfig_Defaults(t *testing.T) {
-	// Use a temporary directory to simulate missing config
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
 
@@ -40,11 +39,16 @@ func TestMustLoadConfig_Defaults(t *testing.T) {
 	defer os.Unsetenv("TEST_MODE")
 	cfg := MustLoadConfig(configFile)
 
-	// Expand the expected path
-	expectedFolder := expandPath("~/.khedra/logs")
-
-	// Verify defaults
-	assert.NotNil(t, cfg)
-	assert.Equal(t, expectedFolder, cfg.Logging.Folder)
-	assert.Equal(t, "khedra.log", cfg.Logging.Filename)
+	// Verify Services
+	for name, service := range cfg.Services {
+		switch name {
+		case "scraper", "monitor":
+			assert.GreaterOrEqual(t, service.BatchSize, 50)
+			assert.LessOrEqual(t, service.BatchSize, 10000)
+			assert.GreaterOrEqual(t, service.Sleep, 0)
+		case "api", "ipfs":
+			assert.GreaterOrEqual(t, service.Port, 1024)
+			assert.LessOrEqual(t, service.Port, 65535)
+		}
+	}
 }

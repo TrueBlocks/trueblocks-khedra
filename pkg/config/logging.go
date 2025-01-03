@@ -11,11 +11,11 @@ import (
 type Logging struct {
 	Folder     string `koanf:"folder" validate:"required,dirpath"`
 	Filename   string `koanf:"filename" validate:"required,endswith=.log"`
-	MaxSizeMb  int    `koanf:"max_size_mb" validate:"required,min=5"`
-	MaxBackups int    `koanf:"max_backups" validate:"required,min=1"`
-	MaxAgeDays int    `koanf:"max_age_days" validate:"required,min=1"`
+	MaxSizeMb  int    `koanf:"max_size_mb" yaml:"max_size_mb" validate:"required,min=5"`
+	MaxBackups int    `koanf:"max_backups" yaml:"max_backups" validate:"required,min=1"`
+	MaxAgeDays int    `koanf:"max_age_days" yaml:"max_age_days" validate:"required,min=1"`
 	Compress   bool   `koanf:"compress"`
-	LogLevel   string `koanf:"log_level" validate:"oneof=debug info warn error"`
+	LogLevel   string `koanf:"log_level" yaml:"log_level" validate:"oneof=debug info warn error"`
 }
 
 func NewLogging() Logging {

@@ -1,17 +1,21 @@
 # Introduction
 
-Blockchains are long running-processes that are continually creating new data. For this reason, any process that wishes to watch, monitor, or index a blockchain must also be long running.
+Blockchains are long running-processes that continually create new data (in the form of blocks). For this reason, any process that wishes to monitor, index, or access data from a blockchain must also be long running.
 
 **Khedra** is such a long-running process.
 
-Because we beleive that blockchains were intended to decentralize and make permissionless not only the data but also *access to the data*. We beleive blockchains must be run locally--by end users. This is the only way to ensure that the end user--the people at the very edge of the system--can not only see that data, but also verify that it's correct.
+In order to remain decentralized and permissionless, blockchains must be "freed" from the stranglehold of large data providers. One way to do that is to help people run blockchain nodes locally. However, as soon as one does that, one learns that blockchains are not very good databases. This is for a simple reason, they lack an index.
 
-TrueBlocks (of which **Chifra** and **Khedra** are a part) is a set of tools that helps users who are running their own blockchain nodes to make better use of the data. It works by indexing the data, and then by providing tools (including a built-in binary cache) to use that data in a variety of ways.
+TrueBlocks Core (of which **chifra** and **khedra** are a part) is a set of command-line tools, SDKs, and packages that help users who are running their own blockchain nodes make better use of the data. **Khedra** indexes and monitors the data. **Chifra** helps access the data providing various useful commands for exporting, filtering, and processing on-chain activity.
 
-Of primary importance are:
+Of primary importance in the design of both systems are:
 
-- speed
-- permisionless access
-- accuracy
-- depth of detail
-- ease of use
+- **speed** - we cache nearly everything
+- **permisionless access** - no servers, no API keys, you run your own infrastructure
+- **accuracy** - the goal is 100% off-chain reconciliation of account balances and state history
+- **depth of detail** - required to enable 100% accurate reconciliations
+- **ease of use** - so shoot us - this one is hard
+
+*Enjoy!*
+
+Please help us improve this software by providing any feedback or suggestions. Contact information and links to our socials are available [at our website](https://trueblocks.io).
