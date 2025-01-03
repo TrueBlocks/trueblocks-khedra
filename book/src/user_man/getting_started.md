@@ -89,25 +89,25 @@ chains:
     enabled: false
 
 services:                          # See note 5
-  - name: "scraper"                # Required. (One of: api, scraper, monitor, ipfs, control)
+  scraper:               # Required. (One of: api, scraper, monitor, ipfs, control)
     enabled: true                  # `true` if the service is enabled
     sleep: 12                      # Seconds between scraping batches (see note 6)
     batch_size: 500                # Number of blocks to process in a batch (range: 50-10000)
 
-  - name: "monitor"
+  monitor:
     enabled: true
     sleep: 12                      # Seconds between scraping batches (see note 6)
     batch_size: 500                # Number of blocks processed in a batch (range: 50-10000)
 
-  - name: "api"
+  api:
     enabled: true
     port: 8080                     # Port number for API service (the port must be available)
 
-  - name: "ipfs"
+  ipfs:
     enabled: true
     port: 5001                     # Port number for IPFS service (the port must be available)
 
-  - name: "control"
+  control:
     enabled: true                  # Always enabled - false values are invalid
     port: 5001                     # Port number for IPFS service (the port must be available)
 
