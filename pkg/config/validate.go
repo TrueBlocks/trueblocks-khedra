@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/rpc"
+	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -19,7 +20,7 @@ func init() {
 		rawURL := fl.Field().String()
 
 		// Access the parent struct (Chain) to check the Enabled field
-		parent := fl.Parent().Interface().(Chain)
+		parent := fl.Parent().Interface().(types.Chain)
 		if !parent.Enabled {
 			// Skip validation if the Chain is not enabled
 			return true
@@ -109,7 +110,7 @@ func init() {
 
 	// validateService validates the configuration of a service which depends on the service type
 	validateService := func(sl validator.StructLevel) {
-		service := sl.Current().Interface().(Service)
+		service := sl.Current().Interface().(types.Service)
 
 		switch service.Name {
 		case "api":
@@ -136,7 +137,7 @@ func init() {
 	// validateServiceField validates fields based on the service type
 	validateServiceField := func(fl validator.FieldLevel) bool {
 		// Ensure we're validating a Service object
-		service, ok := fl.Parent().Interface().(Service)
+		service, ok := fl.Parent().Interface().(types.Service)
 		if !ok {
 			// Return true if it's not a Service (skip validation for non-Service fields)
 			return true
@@ -174,5 +175,5 @@ func init() {
 	validate.RegisterValidation("opt_max", validateOptMax)
 	validate.RegisterValidation("dirpath", validateDirPath)
 	validate.RegisterValidation("service_field", validateServiceField)
-	validate.RegisterStructValidation(validateService, Service{})
+	validate.RegisterStructValidation(validateService, types.Service{})
 }

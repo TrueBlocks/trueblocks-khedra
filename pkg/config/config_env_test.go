@@ -5,25 +5,16 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMultipleChainsEnvironmentOverrides(t *testing.T) {
-	defer setTempEnvVar("TEST_MODE", "true")()
+	var configFile string
+
 	defer setTempEnvVar("TB_KHEDRA_CHAINS_MAINNET_RPCS", "http://rpc1.mainnet,http://rpc2.mainnet")()
 	defer setTempEnvVar("TB_KHEDRA_CHAINS_SEPOLIA_ENABLED", "true")()
-
-	// Use a temporary directory to simulate missing config
-	tmpDir := t.TempDir()
-	configFile := filepath.Join(tmpDir, "config.yaml")
-
-	// Mock getConfigFn to return the temporary config path
-	originalGetConfigFn := getConfigFn
-	getConfigFn = func() string { return configFile }
-	defer func() { getConfigFn = originalGetConfigFn }()
-
-	// Establish the config file if it doesn't exist
-	establishConfig(configFile)
+	defer setupTest(t, &configFile)()
 
 	// Load the configuration
 	cfg := MustLoadConfig(configFile)
@@ -33,22 +24,12 @@ func TestMultipleChainsEnvironmentOverrides(t *testing.T) {
 }
 
 func TestEnvironmentVariableOverridesForServices(t *testing.T) {
-	// Set environment variables to override the configuration
+	var configFile string
+
 	defer setTempEnvVar("TB_KHEDRA_SERVICES_API_ENABLED", "false")()
 	defer setTempEnvVar("TB_KHEDRA_SERVICES_API_PORT", "9090")()
 	defer setTempEnvVar("TEST_MODE", "true")()
-
-	// Create a temporary directory for the config file
-	tmpDir := t.TempDir()
-	configFile := filepath.Join(tmpDir, "config.yaml")
-
-	// Mock getConfigFn to return the temporary config path
-	originalGetConfigFn := getConfigFn
-	getConfigFn = func() string { return configFile }
-	defer func() { getConfigFn = originalGetConfigFn }()
-
-	// Establish the configuration file
-	establishConfig(configFile)
+	defer setupTest(t, &configFile)()
 
 	// Load the configuration
 	cfg := MustLoadConfig(configFile)
@@ -63,25 +44,13 @@ func TestEnvironmentVariableOverridesForServices(t *testing.T) {
 }
 
 func TestMultipleServicesEnvironmentOverrides(t *testing.T) {
-	// Set environment variables to override the configuration
+	var configFile string
+
 	defer setTempEnvVar("TB_KHEDRA_SERVICES_API_ENABLED", "false")()
 	defer setTempEnvVar("TB_KHEDRA_SERVICES_SCRAPER_ENABLED", "true")()
 	defer setTempEnvVar("TB_KHEDRA_SERVICES_SCRAPER_PORT", "8081")()
-	defer setTempEnvVar("TEST_MODE", "true")()
+	defer setupTest(t, &configFile)()
 
-	// Create a temporary directory for the config file
-	tmpDir := t.TempDir()
-	configFile := filepath.Join(tmpDir, "config.yaml")
-
-	// Mock getConfigFn to return the temporary config path
-	originalGetConfigFn := getConfigFn
-	getConfigFn = func() string { return configFile }
-	defer func() { getConfigFn = originalGetConfigFn }()
-
-	// Establish the configuration file
-	establishConfig(configFile)
-
-	// Load the configuration
 	cfg := MustLoadConfig(configFile)
 
 	// Check if the API and Scraper services exist in the configuration
@@ -98,21 +67,9 @@ func TestMultipleServicesEnvironmentOverrides(t *testing.T) {
 }
 
 func TestNoEnvironmentVariables(t *testing.T) {
-	defer setTempEnvVar("TEST_MODE", "true")()
+	var configFile string
+	defer setupTest(t, &configFile)()
 
-	// Use a temporary directory to simulate missing config
-	tmpDir := t.TempDir()
-	configFile := filepath.Join(tmpDir, "config.yaml")
-
-	// Mock getConfigFn to return the temporary config path
-	originalGetConfigFn := getConfigFn
-	getConfigFn = func() string { return configFile }
-	defer func() { getConfigFn = originalGetConfigFn }()
-
-	// Establish the config file if it doesn't exist
-	establishConfig(configFile)
-
-	// Load the configuration
 	cfg := MustLoadConfig(configFile)
 
 	assert.NotEqual(t, cfg.Chains["mainnet"], nil, "mainnet chain should exist in the configuration")
@@ -121,23 +78,12 @@ func TestNoEnvironmentVariables(t *testing.T) {
 }
 
 func TestEnvironmentVariableOverridesForChains(t *testing.T) {
-	defer setTempEnvVar("TEST_MODE", "true")()
+	var configFile string
+
 	defer setTempEnvVar("TB_KHEDRA_CHAINS_MAINNET_RPCS", "http://rpc1.mainnet,http://rpc2.mainnet")()
 	defer setTempEnvVar("TB_KHEDRA_CHAINS_MAINNET_ENABLED", "false")()
+	defer setupTest(t, &configFile)()
 
-	// Use a temporary directory to simulate missing config
-	tmpDir := t.TempDir()
-	configFile := filepath.Join(tmpDir, "config.yaml")
-
-	// Mock getConfigFn to return the temporary config path
-	originalGetConfigFn := getConfigFn
-	getConfigFn = func() string { return configFile }
-	defer func() { getConfigFn = originalGetConfigFn }()
-
-	// Establish the config file if it doesn't exist
-	establishConfig(configFile)
-
-	// Load the configuration
 	cfg := MustLoadConfig(configFile)
 
 	assert.Equal(t, []string{"http://rpc1.mainnet", "http://rpc2.mainnet"}, cfg.Chains["mainnet"].RPCs, "RPCs for mainnet should be overridden by environment variable")
@@ -145,20 +91,8 @@ func TestEnvironmentVariableOverridesForChains(t *testing.T) {
 }
 
 func TestInvalidBooleanValueForChains(t *testing.T) {
-	defer setTempEnvVar("TEST_MODE", "true")()
 	defer setTempEnvVar("TB_KHEDRA_CHAINS_MAINNET_ENABLED", "not_a_bool")()
-
-	// Use a temporary directory to simulate missing config
-	tmpDir := t.TempDir()
-	configFile := filepath.Join(tmpDir, "config.yaml")
-
-	// Mock getConfigFn to return the temporary config path
-	originalGetConfigFn := getConfigFn
-	getConfigFn = func() string { return configFile }
-	defer func() { getConfigFn = originalGetConfigFn }()
-
-	// Establish the config file if it doesn't exist
-	establishConfig(configFile)
+	defer setupTest(t, nil)()
 
 	// Attempt to load the configuration and expect an error
 	_, err := loadConfig()
@@ -176,5 +110,34 @@ func setTempEnvVar(key, value string) func() {
 		} else {
 			os.Unsetenv(key)
 		}
+	}
+}
+
+// setupTest sets up a temporary folder, updates the getConfigFn pointer, calls establishConfig,
+// and assigns the config file path to the provided string pointer if it is not nil.
+// Returns a cleanup function to restore the original state.
+func setupTest(t *testing.T, configFile *string) func() {
+	os.Setenv("TEST_MODE", "true")
+
+	// Use a temporary directory to simulate the config environment
+	tmpDir := t.TempDir()
+	tempConfigFile := filepath.Join(tmpDir, "config.yaml")
+
+	// If configFile pointer is not nil, assign the path to it
+	if configFile != nil {
+		*configFile = tempConfigFile
+	}
+
+	// Mock getConfigFn to return the temporary config path
+	originalGetConfigFn := getConfigFn
+	getConfigFn = func() string { return tempConfigFile }
+
+	// Establish the config file
+	types.EstablishConfig(tempConfigFile)
+
+	// Return a cleanup function to restore the original state
+	return func() {
+		os.Unsetenv("TEST_MODE")
+		getConfigFn = originalGetConfigFn
 	}
 }

@@ -5,11 +5,14 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMustGetConfigFn(t *testing.T) {
-	// Test fallback to create config if missing
+	var configFile string
+	defer setupTest(t, &configFile)()
+
 	tmpDir := t.TempDir()
 
 	// Mock mustGetConfigDir to point to temp directory
@@ -18,8 +21,6 @@ func TestMustGetConfigFn(t *testing.T) {
 	defer func() { getConfigFn = oldMustGetConfigDir }()
 
 	configPath := mustGetConfigFn()
-
-	// Verify the file is created
 	assert.FileExists(t, configPath)
 }
 
@@ -33,7 +34,7 @@ func TestMustLoadConfig_Defaults(t *testing.T) {
 	defer func() { getConfigFn = originalGetConfigFn }()
 
 	// Establish the config file if it doesn't exist
-	establishConfig(configFile)
+	types.EstablishConfig(configFile)
 
 	os.Setenv("TEST_MODE", "true")
 	defer os.Unsetenv("TEST_MODE")

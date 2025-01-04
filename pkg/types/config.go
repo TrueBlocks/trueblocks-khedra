@@ -1,4 +1,4 @@
-package config
+package types
 
 import (
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
@@ -32,7 +32,7 @@ func NewConfig() Config {
 	}
 }
 
-func establishConfig(fn string) bool {
+func EstablishConfig(fn string) bool {
 	cfg := NewConfig()
 
 	// Ensure all required fields have valid defaults
@@ -53,10 +53,10 @@ func establishConfig(fn string) bool {
 		cfg.Services[name] = service
 	}
 
-	return writeConfig(&cfg, fn)
+	return WriteConfig(&cfg, fn)
 }
 
-func writeConfig(cfg *Config, fn string) bool {
+func WriteConfig(cfg *Config, fn string) bool {
 	bytes, _ := yaml.Marshal(cfg)
 	coreFile.StringToAsciiFile(fn, string(bytes))
 	return coreFile.FileExists(fn)

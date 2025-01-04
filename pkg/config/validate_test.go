@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 	"github.com/go-playground/validator"
 )
 
@@ -12,33 +13,33 @@ func TestGeneralValidation(t *testing.T) {
 	// Test cases for validation
 	tests := []struct {
 		name    string
-		general General
+		general types.General
 		wantErr bool
 	}{
 		{
 			name: "Valid General struct",
-			general: General{
+			general: types.General{
 				DataDir: createTempDir(t, true), // Create a writable temp directory
 			},
 			wantErr: false,
 		},
 		{
 			name: "Non-existent DataDir",
-			general: General{
+			general: types.General{
 				DataDir: "/non/existent/path",
 			},
 			wantErr: false,
 		},
 		{
 			name: "Non-writable DataDir",
-			general: General{
+			general: types.General{
 				DataDir: createTempDir(t, false), // Create a non-writable temp directory
 			},
 			wantErr: false,
 		},
 		{
 			name: "Empty DataDir",
-			general: General{
+			general: types.General{
 				DataDir: "",
 			},
 			wantErr: true,
@@ -60,12 +61,12 @@ func TestChainValidation(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		chain   Chain
+		chain   types.Chain
 		wantErr bool
 	}{
 		{
 			name: "Valid Chain with one valid RPC",
-			chain: Chain{
+			chain: types.Chain{
 				Name:    "mainnet",
 				RPCs:    []string{"https://mainnet.infura.io/v3/YOUR_PROJECT_ID"},
 				Enabled: true,
@@ -74,7 +75,7 @@ func TestChainValidation(t *testing.T) {
 		},
 		{
 			name: "Valid Chain with multiple valid RPCs",
-			chain: Chain{
+			chain: types.Chain{
 				Name:    "sepolia",
 				RPCs:    []string{"https://sepolia.infura.io/v3/YOUR_PROJECT_ID", "https://another.valid.rpc"},
 				Enabled: false,
@@ -83,7 +84,7 @@ func TestChainValidation(t *testing.T) {
 		},
 		{
 			name: "Invalid Chain with missing Name",
-			chain: Chain{
+			chain: types.Chain{
 				Name:    "",
 				RPCs:    []string{"https://mainnet.infura.io/v3/YOUR_PROJECT_ID"},
 				Enabled: true,
@@ -92,7 +93,7 @@ func TestChainValidation(t *testing.T) {
 		},
 		{
 			name: "Invalid Chain with empty RPCs",
-			chain: Chain{
+			chain: types.Chain{
 				Name:    "mainnet",
 				RPCs:    []string{},
 				Enabled: true,
@@ -101,7 +102,7 @@ func TestChainValidation(t *testing.T) {
 		},
 		{
 			name: "Invalid Chain with an invalid RPC URL",
-			chain: Chain{
+			chain: types.Chain{
 				Name:    "mainnet",
 				RPCs:    []string{"invalid-url"},
 				Enabled: true,
@@ -110,7 +111,7 @@ func TestChainValidation(t *testing.T) {
 		},
 		{
 			name: "Valid Chain with missing Enabled field",
-			chain: Chain{
+			chain: types.Chain{
 				Name: "mainnet",
 				RPCs: []string{"https://mainnet.infura.io/v3/YOUR_PROJECT_ID"},
 			},
@@ -129,12 +130,12 @@ func TestChainValidation(t *testing.T) {
 func TestServiceValidation(t *testing.T) {
 	tests := []struct {
 		name    string
-		service Service
+		service types.Service
 		wantErr bool
 	}{
 		{
 			name: "Valid Service with Sleep positive",
-			service: Service{
+			service: types.Service{
 				Name:  "api",
 				Port:  8080,
 				Sleep: 5, // Valid Sleep
@@ -143,7 +144,7 @@ func TestServiceValidation(t *testing.T) {
 		},
 		{
 			name: "Valid Service with BatchSize at min",
-			service: Service{
+			service: types.Service{
 				Name:      "scraper",
 				BatchSize: 50, // Minimum valid BatchSize
 				Sleep:     1,
@@ -152,7 +153,7 @@ func TestServiceValidation(t *testing.T) {
 		},
 		{
 			name: "Valid Service with BatchSize at max",
-			service: Service{
+			service: types.Service{
 				Name:      "scraper",
 				BatchSize: 10000, // Maximum valid BatchSize
 				Sleep:     1,
@@ -161,7 +162,7 @@ func TestServiceValidation(t *testing.T) {
 		},
 		{
 			name: "Valid Service with Sleep unset (0)",
-			service: Service{
+			service: types.Service{
 				Name:  "api",
 				Port:  8080,
 				Sleep: 0, // Optional, no validation
@@ -170,14 +171,14 @@ func TestServiceValidation(t *testing.T) {
 		},
 		{
 			name: "Valid Service with all optional values unset (zero)",
-			service: Service{
+			service: types.Service{
 				Name: "api",
 			},
 			wantErr: true,
 		},
 		{
 			name: "Valid Service with Port within range",
-			service: Service{
+			service: types.Service{
 				Name: "api",
 				Port: 8080, // Valid Port
 			},
@@ -185,7 +186,7 @@ func TestServiceValidation(t *testing.T) {
 		},
 		{
 			name: "Invalid Service with Port below 1024",
-			service: Service{
+			service: types.Service{
 				Name: "api",
 				Port: 100, // Invalid Port
 			},
@@ -193,7 +194,7 @@ func TestServiceValidation(t *testing.T) {
 		},
 		{
 			name: "Invalid Service with Port above 65535",
-			service: Service{
+			service: types.Service{
 				Name: "api",
 				Port: 70000, // Invalid Port
 			},
@@ -201,7 +202,7 @@ func TestServiceValidation(t *testing.T) {
 		},
 		{
 			name: "Invalid Service with BatchSize below min",
-			service: Service{
+			service: types.Service{
 				Name:      "scraper",
 				BatchSize: 40, // Invalid BatchSize
 			},
@@ -209,7 +210,7 @@ func TestServiceValidation(t *testing.T) {
 		},
 		{
 			name: "Invalid Service with BatchSize above max",
-			service: Service{
+			service: types.Service{
 				Name:      "scraper",
 				BatchSize: 20000, // Invalid BatchSize
 			},
@@ -217,7 +218,7 @@ func TestServiceValidation(t *testing.T) {
 		},
 		{
 			name: "Valid Service with all fields set to valid values",
-			service: Service{
+			service: types.Service{
 				Name:      "api",
 				Enabled:   true,
 				Port:      8080,
@@ -239,12 +240,12 @@ func TestServiceValidation(t *testing.T) {
 func TestAPIServiceValidation(t *testing.T) {
 	tests := []struct {
 		name    string
-		service Service
+		service types.Service
 		wantErr bool
 	}{
 		{
 			name: "Valid API service with Port",
-			service: Service{
+			service: types.Service{
 				Name:    "api",
 				Enabled: true,
 				Port:    8080,
@@ -253,7 +254,7 @@ func TestAPIServiceValidation(t *testing.T) {
 		},
 		{
 			name: "Invalid API service without Port",
-			service: Service{
+			service: types.Service{
 				Name:    "api",
 				Enabled: true,
 			},
@@ -272,12 +273,12 @@ func TestAPIServiceValidation(t *testing.T) {
 func TestScraperServiceValidation(t *testing.T) {
 	tests := []struct {
 		name    string
-		service Service
+		service types.Service
 		wantErr bool
 	}{
 		{
 			name: "Valid Scraper service with required fields",
-			service: Service{
+			service: types.Service{
 				Name:      "scraper",
 				Enabled:   true,
 				Sleep:     60,
@@ -287,7 +288,7 @@ func TestScraperServiceValidation(t *testing.T) {
 		},
 		{
 			name: "Invalid Scraper service without Sleep",
-			service: Service{
+			service: types.Service{
 				Name:      "scraper",
 				Enabled:   true,
 				BatchSize: 500,
@@ -296,7 +297,7 @@ func TestScraperServiceValidation(t *testing.T) {
 		},
 		{
 			name: "Invalid Scraper service without BatchSize",
-			service: Service{
+			service: types.Service{
 				Name:    "scraper",
 				Enabled: true,
 				Sleep:   60,
@@ -316,12 +317,12 @@ func TestScraperServiceValidation(t *testing.T) {
 func TestMonitorServiceValidation(t *testing.T) {
 	tests := []struct {
 		name    string
-		service Service
+		service types.Service
 		wantErr bool
 	}{
 		{
 			name: "Valid Monitor service with required fields",
-			service: Service{
+			service: types.Service{
 				Name:      "monitor",
 				Enabled:   true,
 				Sleep:     60,
@@ -331,7 +332,7 @@ func TestMonitorServiceValidation(t *testing.T) {
 		},
 		{
 			name: "Invalid Monitor service without Sleep",
-			service: Service{
+			service: types.Service{
 				Name:      "monitor",
 				Enabled:   true,
 				BatchSize: 500,
@@ -340,7 +341,7 @@ func TestMonitorServiceValidation(t *testing.T) {
 		},
 		{
 			name: "Invalid Monitor service without BatchSize",
-			service: Service{
+			service: types.Service{
 				Name:    "monitor",
 				Enabled: true,
 				Sleep:   60,
@@ -360,12 +361,12 @@ func TestMonitorServiceValidation(t *testing.T) {
 func TestIPFSServiceValidation(t *testing.T) {
 	tests := []struct {
 		name    string
-		service Service
+		service types.Service
 		wantErr bool
 	}{
 		{
 			name: "Valid IPFS service with Port",
-			service: Service{
+			service: types.Service{
 				Name:    "ipfs",
 				Enabled: true,
 				Port:    5001,
@@ -374,7 +375,7 @@ func TestIPFSServiceValidation(t *testing.T) {
 		},
 		{
 			name: "Invalid IPFS service without Port",
-			service: Service{
+			service: types.Service{
 				Name:    "ipfs",
 				Enabled: true,
 			},
@@ -391,7 +392,7 @@ func TestIPFSServiceValidation(t *testing.T) {
 }
 
 func TestServiceListValidation(t *testing.T) {
-	services := []Service{
+	services := []types.Service{
 		{
 			Name:    "api",
 			Enabled: true,
@@ -431,12 +432,12 @@ func TestLoggingValidation(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		logging Logging
+		logging types.Logging
 		wantErr bool
 	}{
 		{
 			name: "Valid Logging struct",
-			logging: Logging{
+			logging: types.Logging{
 				Folder:     tempDir,
 				Filename:   "app.log",
 				MaxSizeMb:  10,
@@ -449,7 +450,7 @@ func TestLoggingValidation(t *testing.T) {
 		},
 		{
 			name: "Valid Logging level warn",
-			logging: Logging{
+			logging: types.Logging{
 				Folder:     tempDir,
 				Filename:   "app.log",
 				MaxSizeMb:  10,
@@ -462,7 +463,7 @@ func TestLoggingValidation(t *testing.T) {
 		},
 		{
 			name: "Invalid Logging level",
-			logging: Logging{
+			logging: types.Logging{
 				Folder:     tempDir,
 				Filename:   "app.log",
 				MaxSizeMb:  10,
@@ -475,7 +476,7 @@ func TestLoggingValidation(t *testing.T) {
 		},
 		{
 			name: "Missing Folder",
-			logging: Logging{
+			logging: types.Logging{
 				Filename:   "app.log",
 				MaxSizeMb:  10,
 				MaxBackups: 3,
@@ -487,7 +488,7 @@ func TestLoggingValidation(t *testing.T) {
 		},
 		{
 			name: "Non-existent Folder",
-			logging: Logging{
+			logging: types.Logging{
 				Folder:     "/non/existent/path",
 				Filename:   "app.log",
 				MaxSizeMb:  10,
@@ -500,7 +501,7 @@ func TestLoggingValidation(t *testing.T) {
 		},
 		{
 			name: "Missing Filename",
-			logging: Logging{
+			logging: types.Logging{
 				Folder:     tempDir,
 				MaxSizeMb:  10,
 				MaxBackups: 3,
@@ -512,7 +513,7 @@ func TestLoggingValidation(t *testing.T) {
 		},
 		{
 			name: "Filename without .log extension",
-			logging: Logging{
+			logging: types.Logging{
 				Folder:     tempDir,
 				Filename:   "app.txt",
 				MaxSizeMb:  10,
@@ -525,7 +526,7 @@ func TestLoggingValidation(t *testing.T) {
 		},
 		{
 			name: "MaxSizeMb is zero",
-			logging: Logging{
+			logging: types.Logging{
 				Folder:     tempDir,
 				Filename:   "app.log",
 				MaxSizeMb:  0,
@@ -538,7 +539,7 @@ func TestLoggingValidation(t *testing.T) {
 		},
 		{
 			name: "MaxBackups is negative",
-			logging: Logging{
+			logging: types.Logging{
 				Folder:     tempDir,
 				Filename:   "app.log",
 				MaxSizeMb:  10,
@@ -551,7 +552,7 @@ func TestLoggingValidation(t *testing.T) {
 		},
 		{
 			name: "MaxAgeDays is negative",
-			logging: Logging{
+			logging: types.Logging{
 				Folder:     tempDir,
 				Filename:   "app.log",
 				MaxSizeMb:  10,

@@ -1,4 +1,4 @@
-package config
+package types
 
 type Chain struct {
 	Name    string   `koanf:"name" validate:"required"`                                // Must be non-empty

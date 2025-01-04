@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
+	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
@@ -20,9 +21,9 @@ import (
 // we can mock it during testing.
 var getConfigFn = mustGetConfigFn
 
-func MustLoadConfig(filename string) Config {
+func MustLoadConfig(filename string) types.Config {
 	var err error
-	var cfg Config
+	var cfg types.Config
 	if cfg, err = loadConfig(); err != nil {
 		log.Fatalf("error loading config: %v", err)
 	}
@@ -48,18 +49,18 @@ func MustLoadConfig(filename string) Config {
 	return cfg
 }
 
-func loadConfig() (Config, error) {
+func loadConfig() (types.Config, error) {
 	var fileK = koanf.New(".")
 	var envK = koanf.New(".")
 
 	fn := getConfigFn()
 	if err := fileK.Load(file.Provider(fn), yaml.Parser()); err != nil {
-		return Config{}, fmt.Errorf("koanf.Load failed for file %s: %v", fn, err)
+		return types.Config{}, fmt.Errorf("koanf.Load failed for file %s: %v", fn, err)
 	}
 
-	fileCfg := NewConfig()
+	fileCfg := types.NewConfig()
 	if err := fileK.Unmarshal("", &fileCfg); err != nil {
-		return Config{}, fmt.Errorf("koanf.Unmarshal failed for file configuration: %v", err)
+		return types.Config{}, fmt.Errorf("koanf.Unmarshal failed for file configuration: %v", err)
 	}
 
 	for key, chain := range fileCfg.Chains {
@@ -72,7 +73,7 @@ func loadConfig() (Config, error) {
 		fileCfg.Services[key] = service
 	}
 
-	fieldTypeMap := buildFieldTypeMap(reflect.TypeOf(Config{}), "")
+	fieldTypeMap := buildFieldTypeMap(reflect.TypeOf(types.Config{}), "")
 
 	err := envK.Load(env.ProviderWithValue("TB_KHEDRA_", ".", func(key, value string) (string, interface{}) {
 		transformedKey := strings.ToLower(strings.TrimPrefix(key, "TB_KHEDRA_"))
@@ -97,12 +98,12 @@ func loadConfig() (Config, error) {
 		return transformedKey, value
 	}), nil)
 	if err != nil {
-		return Config{}, fmt.Errorf("koanf.Load failed for environment variables: %v", err)
+		return types.Config{}, fmt.Errorf("koanf.Load failed for environment variables: %v", err)
 	}
 
-	envCfg := Config{} // Empty config to unmarshal into
+	envCfg := types.Config{} // Empty config to unmarshal into
 	if err := envK.Unmarshal("", &envCfg); err != nil {
-		return Config{}, fmt.Errorf("koanf.Unmarshal failed for environment configuration: %v", err)
+		return types.Config{}, fmt.Errorf("koanf.Unmarshal failed for environment configuration: %v", err)
 	}
 
 	for key, chain := range envCfg.Chains {
@@ -113,7 +114,7 @@ func loadConfig() (Config, error) {
 			existingChain.Enabled = chain.Enabled
 			fileCfg.Chains[key] = existingChain
 		} else {
-			return Config{}, fmt.Errorf("chain %s found in the environment but not in the configuration file", key)
+			return types.Config{}, fmt.Errorf("chain %s found in the environment but not in the configuration file", key)
 		}
 	}
 
@@ -121,7 +122,7 @@ func loadConfig() (Config, error) {
 
 	for key, chain := range fileCfg.Chains {
 		if len(chain.RPCs) == 0 {
-			return Config{}, fmt.Errorf("chain %s has an empty RPCs field, which is not allowed", key)
+			return types.Config{}, fmt.Errorf("chain %s has an empty RPCs field, which is not allowed", key)
 		}
 	}
 
@@ -135,7 +136,7 @@ func loadConfig() (Config, error) {
 	coreFile.EstablishFolder(finalCfg.Logging.Folder)
 
 	if err := validate.Struct(finalCfg); err != nil {
-		return Config{}, err
+		return types.Config{}, err
 	}
 
 	return finalCfg, nil
@@ -168,32 +169,32 @@ func buildFieldTypeMap(t reflect.Type, prefix string) map[string]reflect.Type {
 }
 
 // Merge the environment configuration into the file configuration
-func mergeConfigs(fileCfg, envCfg Config) Config {
+func mergeConfigs(fileCfg, envCfg types.Config) types.Config {
 	// Merge General
-	if envCfg.General.DataDir != NewGeneral().DataDir {
+	if envCfg.General.DataDir != types.NewGeneral().DataDir {
 		fileCfg.General.DataDir = envCfg.General.DataDir
 	}
 
 	// Merge Logging
-	if envCfg.Logging.Folder != NewLogging().Folder {
+	if envCfg.Logging.Folder != types.NewLogging().Folder {
 		fileCfg.Logging.Folder = envCfg.Logging.Folder
 	}
-	if envCfg.Logging.Filename != NewLogging().Filename {
+	if envCfg.Logging.Filename != types.NewLogging().Filename {
 		fileCfg.Logging.Filename = envCfg.Logging.Filename
 	}
-	if envCfg.Logging.MaxSizeMb != NewLogging().MaxSizeMb {
+	if envCfg.Logging.MaxSizeMb != types.NewLogging().MaxSizeMb {
 		fileCfg.Logging.MaxSizeMb = envCfg.Logging.MaxSizeMb
 	}
-	if envCfg.Logging.MaxBackups != NewLogging().MaxBackups {
+	if envCfg.Logging.MaxBackups != types.NewLogging().MaxBackups {
 		fileCfg.Logging.MaxBackups = envCfg.Logging.MaxBackups
 	}
-	if envCfg.Logging.MaxAgeDays != NewLogging().MaxAgeDays {
+	if envCfg.Logging.MaxAgeDays != types.NewLogging().MaxAgeDays {
 		fileCfg.Logging.MaxAgeDays = envCfg.Logging.MaxAgeDays
 	}
-	if envCfg.Logging.Compress != NewLogging().Compress {
+	if envCfg.Logging.Compress != types.NewLogging().Compress {
 		fileCfg.Logging.Compress = envCfg.Logging.Compress
 	}
-	if envCfg.Logging.LogLevel != NewLogging().LogLevel {
+	if envCfg.Logging.LogLevel != types.NewLogging().LogLevel {
 		fileCfg.Logging.LogLevel = envCfg.Logging.LogLevel
 	}
 
@@ -246,7 +247,7 @@ func mustGetConfigFn() string {
 		return fn
 	}
 
-	_ = establishConfig(fn)
+	_ = types.EstablishConfig(fn)
 	return fn
 }
 
@@ -260,7 +261,7 @@ func mustGetConfigDir() string {
 		}
 	}
 
-	if writable := IsWritable(cfgDir); !writable {
+	if writable := isWritable(cfgDir); !writable {
 		log.Fatalf("log directory %s is not writable: %v", cfgDir, err)
 	}
 
@@ -286,8 +287,8 @@ func expandPath(path string) string {
 	return path
 }
 
-// IsWritable checks to see if a folder is writable
-func IsWritable(path string) bool {
+// isWritable checks to see if a folder is writable
+func isWritable(path string) bool {
 	tmpFile := filepath.Join(path, ".test")
 
 	if fil, err := os.Create(tmpFile); err != nil {

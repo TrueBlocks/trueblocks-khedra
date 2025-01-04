@@ -1,4 +1,4 @@
-package config
+package types
 
 import (
 	"path/filepath"
@@ -25,7 +25,7 @@ func TestEstablishConfig(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
 
-	created := establishConfig(configFile)
+	created := EstablishConfig(configFile)
 
 	// Verify the file is created and exists
 	assert.True(t, created)

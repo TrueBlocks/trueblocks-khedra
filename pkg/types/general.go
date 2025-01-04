@@ -1,4 +1,4 @@
-package config
+package types
 
 type General struct {
 	DataDir string `koanf:"data_dir" yaml:"data_dir" validate:"required"`
