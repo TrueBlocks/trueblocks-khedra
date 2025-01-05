@@ -4,22 +4,18 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
 
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
+	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
 )
-
-// Declare a variable for the function that retrieves the config file path so
-// we can mock it during testing.
-var getConfigFn = mustGetConfigFn
 
 func MustLoadConfig(filename string) types.Config {
 	var err error
@@ -53,7 +49,7 @@ func loadConfig() (types.Config, error) {
 	var fileK = koanf.New(".")
 	var envK = koanf.New(".")
 
-	fn := getConfigFn()
+	fn := types.GetConfigFn()
 	if err := fileK.Load(file.Provider(fn), yaml.Parser()); err != nil {
 		return types.Config{}, fmt.Errorf("koanf.Load failed for file %s: %v", fn, err)
 	}
@@ -126,16 +122,16 @@ func loadConfig() (types.Config, error) {
 		}
 	}
 
-	configPath := expandPath("~/.khedra")
+	configPath := utils.ExpandPath("~/.khedra")
 	coreFile.EstablishFolder(configPath)
 
-	finalCfg.General.DataDir = expandPath(finalCfg.General.DataDir)
+	finalCfg.General.DataDir = utils.ExpandPath(finalCfg.General.DataDir)
 	coreFile.EstablishFolder(finalCfg.General.DataDir)
 
-	finalCfg.Logging.Folder = expandPath(finalCfg.Logging.Folder)
+	finalCfg.Logging.Folder = utils.ExpandPath(finalCfg.Logging.Folder)
 	coreFile.EstablishFolder(finalCfg.Logging.Folder)
 
-	if err := validate.Struct(finalCfg); err != nil {
+	if err := types.Validate.Struct(finalCfg); err != nil {
 		return types.Config{}, err
 	}
 
@@ -166,141 +162,4 @@ func buildFieldTypeMap(t reflect.Type, prefix string) map[string]reflect.Type {
 	}
 
 	return fieldMap
-}
-
-// Merge the environment configuration into the file configuration
-func mergeConfigs(fileCfg, envCfg types.Config) types.Config {
-	// Merge General
-	if envCfg.General.DataDir != types.NewGeneral().DataDir {
-		fileCfg.General.DataDir = envCfg.General.DataDir
-	}
-
-	// Merge Logging
-	if envCfg.Logging.Folder != types.NewLogging().Folder {
-		fileCfg.Logging.Folder = envCfg.Logging.Folder
-	}
-	if envCfg.Logging.Filename != types.NewLogging().Filename {
-		fileCfg.Logging.Filename = envCfg.Logging.Filename
-	}
-	if envCfg.Logging.MaxSizeMb != types.NewLogging().MaxSizeMb {
-		fileCfg.Logging.MaxSizeMb = envCfg.Logging.MaxSizeMb
-	}
-	if envCfg.Logging.MaxBackups != types.NewLogging().MaxBackups {
-		fileCfg.Logging.MaxBackups = envCfg.Logging.MaxBackups
-	}
-	if envCfg.Logging.MaxAgeDays != types.NewLogging().MaxAgeDays {
-		fileCfg.Logging.MaxAgeDays = envCfg.Logging.MaxAgeDays
-	}
-	if envCfg.Logging.Compress != types.NewLogging().Compress {
-		fileCfg.Logging.Compress = envCfg.Logging.Compress
-	}
-	if envCfg.Logging.LogLevel != types.NewLogging().LogLevel {
-		fileCfg.Logging.LogLevel = envCfg.Logging.LogLevel
-	}
-
-	// Merge Chains
-	for key, chain := range envCfg.Chains {
-		if existingChain, exists := fileCfg.Chains[key]; exists {
-			if len(chain.RPCs) > 0 {
-				existingChain.RPCs = chain.RPCs
-			}
-			if chain.Enabled {
-				existingChain.Enabled = chain.Enabled
-			}
-			fileCfg.Chains[key] = existingChain
-		} else {
-			// Add new chain from the environment
-			fileCfg.Chains[key] = chain
-		}
-	}
-
-	// Merge Services
-	for name, service := range envCfg.Services {
-		if existingService, exists := fileCfg.Services[name]; exists {
-			if service.Port != 0 {
-				existingService.Port = service.Port
-			}
-			existingService.Enabled = service.Enabled
-			fileCfg.Services[name] = existingService
-		} else {
-			// Add new service from the environment
-			fileCfg.Services[name] = service
-		}
-	}
-
-	return fileCfg
-}
-
-// mustGetConfigFn returns the path to the config file which must
-// be either in the current folder or in the default location. If
-// there is no such file, establish it
-func mustGetConfigFn() string {
-	// current folder
-	fn := expandPath("config.yaml")
-	if coreFile.FileExists(fn) {
-		return fn
-	}
-
-	// expanded default config folder
-	fn = expandPath(filepath.Join(mustGetConfigDir(), "config.yaml"))
-	if coreFile.FileExists(fn) {
-		return fn
-	}
-
-	_ = types.EstablishConfig(fn)
-	return fn
-}
-
-func mustGetConfigDir() string {
-	var err error
-	cfgDir := expandPath("~/.khedra")
-
-	if !coreFile.FolderExists(cfgDir) {
-		if err = coreFile.EstablishFolder(cfgDir); err != nil {
-			log.Fatalf("error establishing log folder %s: %v", cfgDir, err)
-		}
-	}
-
-	if writable := isWritable(cfgDir); !writable {
-		log.Fatalf("log directory %s is not writable: %v", cfgDir, err)
-	}
-
-	return cfgDir
-}
-
-// expandPath returns an absolute path expanded for ~, $HOME or other env variables
-func expandPath(path string) string {
-	if strings.HasPrefix(path, "~/") || path == "~" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			log.Fatalf("error getting home directory: %v", err)
-		}
-		path = filepath.Join(home, strings.TrimPrefix(path, "~"))
-	}
-
-	var err error
-	path, err = filepath.Abs(os.ExpandEnv(path))
-	if err != nil {
-		log.Fatalf("error making path absolute: %v", err)
-	}
-
-	return path
-}
-
-// isWritable checks to see if a folder is writable
-func isWritable(path string) bool {
-	tmpFile := filepath.Join(path, ".test")
-
-	if fil, err := os.Create(tmpFile); err != nil {
-		fmt.Println(fmt.Errorf("folder %s is not writable: %v", path, err))
-		return false
-	} else {
-		fil.Close()
-		if err := os.Remove(tmpFile); err != nil {
-			fmt.Println(fmt.Errorf("error cleaning up test file in %s: %v", path, err))
-			return false
-		}
-	}
-
-	return true
 }

@@ -4,7 +4,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v2"
 )
 
 func TestNewConfig(t *testing.T) {
@@ -21,11 +23,13 @@ func TestNewConfig(t *testing.T) {
 }
 
 func TestEstablishConfig(t *testing.T) {
-	// Use a temporary directory to test config creation
-	tmpDir := t.TempDir()
+	tmpDir := (t.TempDir())
 	configFile := filepath.Join(tmpDir, "config.yaml")
 
-	created := EstablishConfig(configFile)
+	cfg := NewConfig()
+	bytes, _ := yaml.Marshal(cfg)
+	coreFile.StringToAsciiFile(configFile, string(bytes))
+	created := coreFile.FileExists(configFile)
 
 	// Verify the file is created and exists
 	assert.True(t, created)

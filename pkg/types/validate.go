@@ -1,4 +1,4 @@
-package config
+package types
 
 import (
 	"net/url"
@@ -7,20 +7,20 @@ import (
 	"strconv"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/rpc"
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
+	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
 	"github.com/go-playground/validator/v10"
 )
 
-var validate *validator.Validate
+var Validate *validator.Validate
 
 func init() {
-	validate = validator.New()
+	Validate = validator.New()
 
 	validateStrictURL := func(fl validator.FieldLevel) bool {
 		rawURL := fl.Field().String()
 
 		// Access the parent struct (Chain) to check the Enabled field
-		parent := fl.Parent().Interface().(types.Chain)
+		parent := fl.Parent().Interface().(Chain)
 		if !parent.Enabled {
 			// Skip validation if the Chain is not enabled
 			return true
@@ -48,7 +48,7 @@ func init() {
 	// validateIsWritable validates that a path exists and is writable
 	validateIsWritable := func(fl validator.FieldLevel) bool {
 		path := fl.Field().String()
-		path = expandPath(path)
+		path = utils.ExpandPath(path)
 
 		testFile := filepath.Join(path, ".writable_check")
 		file, err := os.Create(testFile)
@@ -64,7 +64,7 @@ func init() {
 	// validatePathExists validates that a path is non-empty and that the path exists
 	validatePathExists := func(fl validator.FieldLevel) bool {
 		path := fl.Field().String()
-		path = expandPath(path)
+		path = utils.ExpandPath(path)
 		_, err := os.Stat(path)
 		return err == nil
 	}
@@ -103,14 +103,14 @@ func init() {
 		if path == "" {
 			return false
 		}
-		path = expandPath(path)
+		path = utils.ExpandPath(path)
 		info, err := os.Stat(path)
 		return err == nil && info.IsDir()
 	}
 
 	// validateService validates the configuration of a service which depends on the service type
 	validateService := func(sl validator.StructLevel) {
-		service := sl.Current().Interface().(types.Service)
+		service := sl.Current().Interface().(Service)
 
 		switch service.Name {
 		case "api":
@@ -137,7 +137,7 @@ func init() {
 	// validateServiceField validates fields based on the service type
 	validateServiceField := func(fl validator.FieldLevel) bool {
 		// Ensure we're validating a Service object
-		service, ok := fl.Parent().Interface().(types.Service)
+		service, ok := fl.Parent().Interface().(Service)
 		if !ok {
 			// Return true if it's not a Service (skip validation for non-Service fields)
 			return true
@@ -167,13 +167,13 @@ func init() {
 		return true
 	}
 
-	validate.RegisterValidation("strict_url", validateStrictURL)
-	validate.RegisterValidation("ping_one", validatePingOne)
-	validate.RegisterValidation("is_writable", validateIsWritable)
-	validate.RegisterValidation("path_exists", validatePathExists)
-	validate.RegisterValidation("opt_min", validateOptMin)
-	validate.RegisterValidation("opt_max", validateOptMax)
-	validate.RegisterValidation("dirpath", validateDirPath)
-	validate.RegisterValidation("service_field", validateServiceField)
-	validate.RegisterStructValidation(validateService, types.Service{})
+	Validate.RegisterValidation("strict_url", validateStrictURL)
+	Validate.RegisterValidation("ping_one", validatePingOne)
+	Validate.RegisterValidation("is_writable", validateIsWritable)
+	Validate.RegisterValidation("path_exists", validatePathExists)
+	Validate.RegisterValidation("opt_min", validateOptMin)
+	Validate.RegisterValidation("opt_max", validateOptMax)
+	Validate.RegisterValidation("dirpath", validateDirPath)
+	Validate.RegisterValidation("service_field", validateServiceField)
+	Validate.RegisterStructValidation(validateService, Service{})
 }

@@ -1,7 +1,13 @@
 package types
 
 import (
+	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
+	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -34,30 +40,67 @@ func NewConfig() Config {
 
 func EstablishConfig(fn string) bool {
 	cfg := NewConfig()
-
-	// Ensure all required fields have valid defaults
-	for name, service := range cfg.Services {
-		switch service.Name {
-		case "scraper", "monitor":
-			if service.BatchSize == 0 {
-				service.BatchSize = 500 // Default BatchSize
-			}
-			if service.Sleep == 0 {
-				service.Sleep = 10 // Default Sleep
-			}
-		case "api", "ipfs":
-			if service.Port == 0 {
-				service.Port = 8080 // Default Port
-			}
-		}
-		cfg.Services[name] = service
-	}
-
-	return WriteConfig(&cfg, fn)
-}
-
-func WriteConfig(cfg *Config, fn string) bool {
 	bytes, _ := yaml.Marshal(cfg)
 	coreFile.StringToAsciiFile(fn, string(bytes))
-	return coreFile.FileExists(fn)
+	return true
+}
+
+// getConfigFn returns the path to the config file which must
+// be either in the current folder or in the default location. If
+// there is no such file, establish it
+func GetConfigFn() string {
+	if os.Getenv("TEST_MODE") == "true" {
+		tmpDir := os.TempDir()
+		return filepath.Join(tmpDir, "config.yaml")
+	}
+
+	// current folder
+	fn := utils.ExpandPath("config.yaml")
+	if coreFile.FileExists(fn) {
+		return fn
+	}
+
+	// expanded default config folder
+	fn = utils.ExpandPath(filepath.Join(mustGetConfigPath(), "config.yaml"))
+	if coreFile.FileExists(fn) {
+		return fn
+	}
+
+	_ = EstablishConfig(fn)
+	return fn
+}
+
+func mustGetConfigPath() string {
+	var err error
+	cfgDir := utils.ExpandPath("~/.khedra")
+
+	if !coreFile.FolderExists(cfgDir) {
+		if err = coreFile.EstablishFolder(cfgDir); err != nil {
+			log.Fatalf("error establishing log folder %s: %v", cfgDir, err)
+		}
+	}
+
+	if writable := isWritable(cfgDir); !writable {
+		log.Fatalf("log directory %s is not writable: %v", cfgDir, err)
+	}
+
+	return cfgDir
+}
+
+// isWritable checks to see if a folder is writable
+func isWritable(path string) bool {
+	tmpFile := filepath.Join(path, ".test")
+
+	if fil, err := os.Create(tmpFile); err != nil {
+		fmt.Println(fmt.Errorf("folder %s is not writable: %v", path, err))
+		return false
+	} else {
+		fil.Close()
+		if err := os.Remove(tmpFile); err != nil {
+			fmt.Println(fmt.Errorf("error cleaning up test file in %s: %v", path, err))
+			return false
+		}
+	}
+
+	return true
 }

@@ -1,0 +1,4 @@
+{
+  "args": ["--disable-web-security", "--no-sandbox"]
+}
+

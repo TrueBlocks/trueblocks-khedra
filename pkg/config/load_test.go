@@ -11,27 +11,13 @@ import (
 
 func TestMustGetConfigFn(t *testing.T) {
 	var configFile string
-	defer setupTest(t, &configFile)()
-
-	tmpDir := t.TempDir()
-
-	// Mock mustGetConfigDir to point to temp directory
-	oldMustGetConfigDir := mustGetConfigDir
-	getConfigFn = func() string { return tmpDir }
-	defer func() { getConfigFn = oldMustGetConfigDir }()
-
-	configPath := mustGetConfigFn()
-	assert.FileExists(t, configPath)
+	defer types.SetupTest(t, &configFile, types.GetConfigFn, types.EstablishConfig)()
+	assert.FileExists(t, configFile)
 }
 
 func TestMustLoadConfig_Defaults(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
-
-	// Mock getConfigFn to return the temporary config path
-	originalGetConfigFn := getConfigFn
-	getConfigFn = func() string { return configFile }
-	defer func() { getConfigFn = originalGetConfigFn }()
 
 	// Establish the config file if it doesn't exist
 	types.EstablishConfig(configFile)
