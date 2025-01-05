@@ -9,7 +9,7 @@ import (
 )
 
 type Logging struct {
-	Folder     string `koanf:"folder" validate:"required,dirpath"`
+	Folder     string `koanf:"folder" validate:"required,folder_exists"`
 	Filename   string `koanf:"filename" validate:"required,endswith=.log"`
 	MaxSizeMb  int    `koanf:"max_size_mb" yaml:"max_size_mb" validate:"required,min=5"`
 	MaxBackups int    `koanf:"max_backups" yaml:"max_backups" validate:"required,min=1"`

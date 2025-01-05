@@ -1,6 +1,7 @@
 package app
 
 import (
+	"log"
 	"log/slog"
 	"os"
 
@@ -17,7 +18,11 @@ type KhedraApp struct {
 }
 
 func NewKhedraApp() *KhedraApp {
-	cfg := config.MustLoadConfig("config.yaml")
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
+
 	fileLogger, progLogger := types.NewLoggers(cfg.Logging)
 	cli := initializeCli()
 

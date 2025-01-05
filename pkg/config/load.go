@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"reflect"
 	"strconv"
@@ -17,35 +16,7 @@ import (
 	"github.com/knadh/koanf/v2"
 )
 
-func MustLoadConfig(filename string) types.Config {
-	var err error
-	var cfg types.Config
-	if cfg, err = loadConfig(); err != nil {
-		log.Fatalf("error loading config: %v", err)
-	}
-
-	// Apply environment variable overrides
-	for name, service := range cfg.Services {
-		envEnabled := os.Getenv(fmt.Sprintf("TB_KHEDRA_SERVICES_%s_ENABLED", strings.ToUpper(name)))
-		if envEnabled != "" {
-			service.Enabled, _ = strconv.ParseBool(envEnabled)
-		}
-
-		envPort := os.Getenv(fmt.Sprintf("TB_KHEDRA_SERVICES_%s_PORT", strings.ToUpper(name)))
-		if envPort != "" {
-			port, err := strconv.Atoi(envPort)
-			if err == nil {
-				service.Port = port
-			}
-		}
-
-		cfg.Services[name] = service
-	}
-
-	return cfg
-}
-
-func loadConfig() (types.Config, error) {
+func LoadConfig() (types.Config, error) {
 	var fileK = koanf.New(".")
 	var envK = koanf.New(".")
 
@@ -133,6 +104,23 @@ func loadConfig() (types.Config, error) {
 
 	if err := types.Validate.Struct(finalCfg); err != nil {
 		return types.Config{}, err
+	}
+
+	for name, service := range finalCfg.Services {
+		envEnabled := os.Getenv(fmt.Sprintf("TB_KHEDRA_SERVICES_%s_ENABLED", strings.ToUpper(name)))
+		if envEnabled != "" {
+			service.Enabled, _ = strconv.ParseBool(envEnabled)
+		}
+
+		envPort := os.Getenv(fmt.Sprintf("TB_KHEDRA_SERVICES_%s_PORT", strings.ToUpper(name)))
+		if envPort != "" {
+			port, err := strconv.Atoi(envPort)
+			if err == nil {
+				service.Port = port
+			}
+		}
+
+		finalCfg.Services[name] = service
 	}
 
 	return finalCfg, nil

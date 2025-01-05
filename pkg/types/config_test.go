@@ -9,10 +9,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func TestNewConfig(t *testing.T) {
+func TestConfigNew(t *testing.T) {
 	cfg := NewConfig()
-
-	// Check default values
 	assert.NotNil(t, cfg.Logging)
 	assert.Equal(t, "~/.khedra/logs", cfg.Logging.Folder)
 	assert.Equal(t, "khedra.log", cfg.Logging.Filename)
@@ -22,7 +20,7 @@ func TestNewConfig(t *testing.T) {
 	assert.True(t, cfg.Logging.Compress)
 }
 
-func TestEstablishConfig(t *testing.T) {
+func TestConfigEstablish(t *testing.T) {
 	tmpDir := (t.TempDir())
 	configFile := filepath.Join(tmpDir, "config.yaml")
 
@@ -31,7 +29,6 @@ func TestEstablishConfig(t *testing.T) {
 	coreFile.StringToAsciiFile(configFile, string(bytes))
 	created := coreFile.FileExists(configFile)
 
-	// Verify the file is created and exists
 	assert.True(t, created)
 	assert.FileExists(t, configFile)
 }

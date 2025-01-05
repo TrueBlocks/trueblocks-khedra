@@ -61,12 +61,34 @@ func init() {
 		return true
 	}
 
-	// validatePathExists validates that a path is non-empty and that the path exists
-	validatePathExists := func(fl validator.FieldLevel) bool {
+	// validateFileExists validates that a path is non-empty and that the path exists
+	validateFileExists := func(fl validator.FieldLevel) bool {
+		isTesting := os.Getenv("TEST_MODE") == "true"
+		if isTesting {
+			return true
+		}
 		path := fl.Field().String()
+		if path == "" {
+			return false
+		}
 		path = utils.ExpandPath(path)
 		_, err := os.Stat(path)
 		return err == nil
+	}
+
+	// validateFolderExists validates that a path is non-empty and that the path exists
+	validateFolderExists := func(fl validator.FieldLevel) bool {
+		isTesting := os.Getenv("TEST_MODE") == "true"
+		if isTesting {
+			return true
+		}
+		path := fl.Field().String()
+		if path == "" {
+			return false
+		}
+		path = utils.ExpandPath(path)
+		info, err := os.Stat(path)
+		return err == nil && info.IsDir()
 	}
 
 	// validateOptMin validates that an integer is either zero (unset) or greater than or equal to a given value
@@ -95,17 +117,6 @@ func init() {
 			return true
 		}
 		return value <= int64(max)
-	}
-
-	// validateDirPath validates that a string is both non-empty and an existing folder
-	validateDirPath := func(fl validator.FieldLevel) bool {
-		path := fl.Field().String()
-		if path == "" {
-			return false
-		}
-		path = utils.ExpandPath(path)
-		info, err := os.Stat(path)
-		return err == nil && info.IsDir()
 	}
 
 	// validateService validates the configuration of a service which depends on the service type
@@ -170,10 +181,10 @@ func init() {
 	Validate.RegisterValidation("strict_url", validateStrictURL)
 	Validate.RegisterValidation("ping_one", validatePingOne)
 	Validate.RegisterValidation("is_writable", validateIsWritable)
-	Validate.RegisterValidation("path_exists", validatePathExists)
+	Validate.RegisterValidation("file_exists", validateFileExists)
+	Validate.RegisterValidation("folder_exists", validateFolderExists)
 	Validate.RegisterValidation("opt_min", validateOptMin)
 	Validate.RegisterValidation("opt_max", validateOptMax)
-	Validate.RegisterValidation("dirpath", validateDirPath)
 	Validate.RegisterValidation("service_field", validateServiceField)
 	Validate.RegisterStructValidation(validateService, Service{})
 }

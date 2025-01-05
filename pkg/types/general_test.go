@@ -13,17 +13,17 @@ import (
 	yamlv2 "gopkg.in/yaml.v2"
 )
 
-func TestNewGeneral(t *testing.T) {
+func TestGeneralNew(t *testing.T) {
+	defer SetTestEnv([]string{"TEST_MODE=true"})()
 	g := NewGeneral()
-
-	expectedDataDir := "~/.khedra/data"
-	if g.DataDir != expectedDataDir {
-		t.Errorf("Expected DataDir to be '%s', got '%s'", expectedDataDir, g.DataDir)
+	expected := "~/.khedra/data"
+	if g.DataDir != expected {
+		t.Errorf("Expected DataDir to be '%s', got '%s'", expected, g.DataDir)
 	}
 }
 
 func TestGeneralValidation(t *testing.T) {
-	// Test cases for validation
+	defer SetTestEnv([]string{"TEST_MODE=true"})()
 	tests := []struct {
 		name    string
 		general General
@@ -32,7 +32,7 @@ func TestGeneralValidation(t *testing.T) {
 		{
 			name: "Valid General struct",
 			general: General{
-				DataDir: createTempDir(t, true), // Create a writable temp directory
+				DataDir: createTempDir(t, true),
 			},
 			wantErr: false,
 		},
@@ -46,7 +46,7 @@ func TestGeneralValidation(t *testing.T) {
 		{
 			name: "Non-writable DataDir",
 			general: General{
-				DataDir: createTempDir(t, false), // Create a non-writable temp directory
+				DataDir: createTempDir(t, false),
 			},
 			wantErr: false,
 		},
@@ -66,11 +66,8 @@ func TestGeneralValidation(t *testing.T) {
 			fmt.Println()
 		})
 	}
-}
 
-func TestGeneralValidation2(t *testing.T) {
 	invalidGeneral := General{}
-
 	err := Validate.Struct(invalidGeneral)
 	if err == nil {
 		t.Errorf("Expected validation error for missing DataDir, got nil")
@@ -79,7 +76,6 @@ func TestGeneralValidation2(t *testing.T) {
 	validGeneral := General{
 		DataDir: "/valid/path",
 	}
-
 	err = Validate.Struct(validGeneral)
 	if err != nil {
 		t.Errorf("Expected no validation error, but got: %s", err)

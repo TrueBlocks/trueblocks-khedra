@@ -3,13 +3,11 @@ package types
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/alecthomas/assert/v2"
 )
 
-func TestNewLogging(t *testing.T) {
+func TestLoggingNew(t *testing.T) {
 	logging := NewLogging()
-
-	// Check default values
 	assert.Equal(t, "~/.khedra/logs", logging.Folder)
 	assert.Equal(t, "khedra.log", logging.Filename)
 	assert.Equal(t, 10, logging.MaxSizeMb)

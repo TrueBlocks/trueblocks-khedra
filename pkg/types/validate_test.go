@@ -118,7 +118,7 @@ func TestServiceValidation(t *testing.T) {
 	}
 }
 
-func TestAPIServiceValidation(t *testing.T) {
+func TestServiceAPIValidation(t *testing.T) {
 	tests := []struct {
 		name    string
 		service Service
@@ -151,7 +151,7 @@ func TestAPIServiceValidation(t *testing.T) {
 	}
 }
 
-func TestScraperServiceValidation(t *testing.T) {
+func TestServiceScraperValidation(t *testing.T) {
 	tests := []struct {
 		name    string
 		service Service
@@ -195,7 +195,7 @@ func TestScraperServiceValidation(t *testing.T) {
 	}
 }
 
-func TestMonitorServiceValidation(t *testing.T) {
+func TestServiceMonitorValidation(t *testing.T) {
 	tests := []struct {
 		name    string
 		service Service
@@ -239,7 +239,7 @@ func TestMonitorServiceValidation(t *testing.T) {
 	}
 }
 
-func TestIPFSServiceValidation(t *testing.T) {
+func TestServiceIPFSValidation(t *testing.T) {
 	tests := []struct {
 		name    string
 		service Service
@@ -311,6 +311,7 @@ func TestServiceListValidation(t *testing.T) {
 // createTempDir creates a temporary directory for testing.
 // If writable is false, it makes the directory non-writable.
 func createTempDir(t *testing.T, writable bool) string {
+	t.Helper()
 	dir, err := os.MkdirTemp("", "test_general")
 	if err != nil {
 		t.Fatalf("Failed to create temp directory: %v", err)
@@ -327,8 +328,7 @@ func createTempDir(t *testing.T, writable bool) string {
 }
 
 func checkValidationErrors(t *testing.T, name string, err error, wantErr bool) {
-	t.Helper() // Marks this function as a helper, so the line numbers in errors refer to the caller.
-
+	t.Helper()
 	if (err != nil) != wantErr {
 		if err != nil {
 			if validationErrors, ok := err.(validator.ValidationErrors); ok {
