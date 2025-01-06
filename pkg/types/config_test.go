@@ -32,3 +32,4 @@ func TestConfigEstablish(t *testing.T) {
 	assert.True(t, created)
 	assert.FileExists(t, configFile)
 }
+

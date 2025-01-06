@@ -2,26 +2,22 @@ package types
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
-	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
-	"github.com/knadh/koanf/maps"
-	"github.com/knadh/koanf/parsers/yaml"
-	"github.com/knadh/koanf/providers/file"
-	"github.com/knadh/koanf/v2"
-	yamlv2 "gopkg.in/yaml.v2"
+	"github.com/stretchr/testify/assert"
 )
 
+// TestGeneralNew tests the initialization of the General type to ensure it is
+// created correctly with valid default or input values.
 func TestGeneralNew(t *testing.T) {
 	defer SetTestEnv([]string{"TEST_MODE=true"})()
 	g := NewGeneral()
 	expected := "~/.khedra/data"
-	if g.DataDir != expected {
-		t.Errorf("Expected DataDir to be '%s', got '%s'", expected, g.DataDir)
-	}
+	assert.Equal(t, expected, g.DataDir, "Expected DataDir to be '%s', got '%s'", expected, g.DataDir)
 }
 
+// TestGeneralValidation validates the functionality of the General type to ensure
+// that invalid data is caught and proper validation rules are applied.
 func TestGeneralValidation(t *testing.T) {
 	defer SetTestEnv([]string{"TEST_MODE=true"})()
 	tests := []struct {
@@ -62,60 +58,37 @@ func TestGeneralValidation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := Validate.Struct(tt.general)
-			checkValidationErrors(t, tt.name, err, tt.wantErr)
+			if tt.wantErr {
+				assert.Error(t, err, "Expected error for test case '%s'", tt.name)
+			} else {
+				assert.NoError(t, err, "Did not expect error for test case '%s'", tt.name)
+			}
 			fmt.Println()
 		})
 	}
 
 	invalidGeneral := General{}
 	err := Validate.Struct(invalidGeneral)
-	if err == nil {
-		t.Errorf("Expected validation error for missing DataDir, got nil")
-	}
+	assert.Error(t, err, "Expected validation error for missing DataDir, got nil")
 
 	validGeneral := General{
 		DataDir: "/valid/path",
 	}
 	err = Validate.Struct(validGeneral)
-	if err != nil {
-		t.Errorf("Expected no validation error, but got: %s", err)
-	}
+	assert.NoError(t, err, "Expected no validation error, but got: %s", err)
 }
 
-func TestReadAndWrite(t *testing.T) {
+// TestGeneralReadAndWrite tests the reading and writing operations of the General type
+// to confirm accurate data handling and storage.
+func TestGeneralReadAndWrite(t *testing.T) {
 	tempFilePath := "temp_config.yaml"
-	defer os.Remove(tempFilePath)
-
 	content := `
-data_dir: "/tmp/khedra/data"
+data_dir: "expected/folder/name"
 `
-	err := coreFile.StringToAsciiFile(tempFilePath, content)
-	if err != nil {
-		t.Fatalf("Failed to write temporary file: %s", err)
+
+	assertions := func(t *testing.T, general *General) {
+		assert.Equal(t, "expected/folder/name", general.DataDir, "Expected data_dir to be 'expected/folder/name', got '%s'", general.DataDir)
 	}
 
-	k := koanf.New(".")
-	err = k.Load(file.Provider(tempFilePath), yaml.Parser())
-	if err != nil {
-		t.Fatalf("Failed to load configuration using koanf: %s", err)
-	}
-
-	dataDir := k.String("data_dir")
-	if dataDir != "/tmp/khedra/data" {
-		t.Errorf("Expected data_dir to be '/tmp/khedra/data', got '%s'", dataDir)
-	}
-
-	output := maps.Unflatten(k.All(), ".")
-	outputFilePath := "output_config.yaml"
-	defer os.Remove(outputFilePath)
-
-	yamlContent, err := yamlv2.Marshal(output)
-	if err != nil {
-		t.Fatalf("Failed to marshal config to YAML: %s", err)
-	}
-
-	err = coreFile.StringToAsciiFile(outputFilePath, string(yamlContent))
-	if err != nil {
-		t.Fatalf("Failed to write output file: %s", err)
-	}
+	ReadAndWriteTest[General](t, tempFilePath, content, assertions)
 }

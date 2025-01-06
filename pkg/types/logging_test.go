@@ -157,8 +157,37 @@ func TestLoggingValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := Validate.Struct(tt.logging) // or any struct being validated
-			checkValidationErrors(t, tt.name, err, tt.wantErr)
+			err := Validate.Struct(tt.logging)
+			if tt.wantErr {
+				assert.Error(t, err, "Expected error for test case '%s'", tt.name)
+			} else {
+				assert.NoError(t, err, "Did not expect error for test case '%s'", tt.name)
+			}
 		})
 	}
+}
+
+func TestLoggingReadAndWrite(t *testing.T) {
+	tempFilePath := "temp_config.yaml"
+	content := `
+  folder: ~/.khedra/logs
+  filename: khedra.log
+  log_level: debug
+  max_size_mb: 10
+  max_backups: 3
+  max_age_days: 10
+  compress: true
+`
+
+	assertions := func(t *testing.T, logging *Logging) {
+		assert.Equal(t, "~/.khedra/logs", logging.Folder, "Folder should match the expected value")
+		assert.Equal(t, "khedra.log", logging.Filename, "Filename should match the expected value")
+		assert.Equal(t, "debug", logging.LogLevel, "LogLevel should match the expected value")
+		assert.Equal(t, 10, logging.MaxSizeMb, "MaxSizeMb should match the expected value")
+		assert.Equal(t, 3, logging.MaxBackups, "MaxBackups should match the expected value")
+		assert.Equal(t, 10, logging.MaxAgeDays, "MaxAgeDays should match the expected value")
+		assert.True(t, logging.Compress, "Compress should be true")
+	}
+
+	ReadAndWriteTest[Logging](t, tempFilePath, content, assertions)
 }

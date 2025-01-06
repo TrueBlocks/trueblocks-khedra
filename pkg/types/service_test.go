@@ -2,11 +2,76 @@ package types
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
-	"github.com/go-playground/validator"
+	"github.com/stretchr/testify/assert"
 )
+
+func TestNewService(t *testing.T) {
+	tests := []struct {
+		name        string
+		serviceType string
+		expected    Service
+		shouldPanic bool
+	}{
+		{
+			name:        "Create scraper service",
+			serviceType: "scraper",
+			expected: Service{
+				Name:      "scraper",
+				Enabled:   false,
+				Sleep:     10,
+				BatchSize: 500,
+			},
+		},
+		{
+			name:        "Create monitor service",
+			serviceType: "monitor",
+			expected: Service{
+				Name:      "monitor",
+				Enabled:   false,
+				Sleep:     12,
+				BatchSize: 500,
+			},
+		},
+		{
+			name:        "Create API service",
+			serviceType: "api",
+			expected: Service{
+				Name:    "api",
+				Enabled: false,
+				Port:    8080,
+			},
+		},
+		{
+			name:        "Create IPFS service",
+			serviceType: "ipfs",
+			expected: Service{
+				Name:    "ipfs",
+				Enabled: false,
+				Port:    5001,
+			},
+		},
+		{
+			name:        "Unknown service type",
+			serviceType: "unknown",
+			shouldPanic: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.shouldPanic {
+				assert.Panics(t, func() {
+					NewService(tt.serviceType)
+				}, "Expected panic for unknown service type")
+			} else {
+				service := NewService(tt.serviceType)
+				assert.Equal(t, tt.expected, service)
+			}
+		})
+	}
+}
 
 func TestServiceValidation(t *testing.T) {
 	tests := []struct {
@@ -305,47 +370,5 @@ func TestServiceListValidation(t *testing.T) {
 				t.Errorf("Validation failed for service %d: %v", i+1, err)
 			}
 		})
-	}
-}
-
-// createTempDir creates a temporary directory for testing.
-// If writable is false, it makes the directory non-writable.
-func createTempDir(t *testing.T, writable bool) string {
-	t.Helper()
-	dir, err := os.MkdirTemp("", "test_general")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-
-	if !writable {
-		err := os.Chmod(dir, 0500) // Read and execute permissions only
-		if err != nil {
-			t.Fatalf("Failed to make directory non-writable: %v", err)
-		}
-	}
-
-	return dir
-}
-
-func checkValidationErrors(t *testing.T, name string, err error, wantErr bool) {
-	t.Helper()
-	if (err != nil) != wantErr {
-		if err != nil {
-			if validationErrors, ok := err.(validator.ValidationErrors); ok {
-				for _, fieldErr := range validationErrors {
-					t.Errorf("Validation error in test '%s' on field '%s': tag='%s', param='%s', value='%v'",
-						name,
-						fieldErr.Field(),
-						fieldErr.Tag(),
-						fieldErr.Param(),
-						fieldErr.Value(),
-					)
-				}
-			} else {
-				t.Errorf("Unexpected error in test '%s': %v", name, err)
-			}
-		} else {
-			t.Errorf("Test '%s': expected error = %v, got error = %v", name, wantErr, err != nil)
-		}
 	}
 }

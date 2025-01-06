@@ -1,7 +1,5 @@
 package types
 
-import "log"
-
 type Service struct {
 	Name      string `koanf:"name" validate:"required,oneof=api scraper monitor ipfs"`
 	Enabled   bool   `koanf:"enabled"`
@@ -40,6 +38,6 @@ func NewService(serviceType string) Service {
 		}
 	}
 
-	log.Fatal("Unknown service type: ", serviceType)
+	panic("Unknown service type: " + serviceType)
 	return Service{}
 }

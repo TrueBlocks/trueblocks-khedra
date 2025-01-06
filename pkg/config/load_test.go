@@ -8,9 +8,8 @@ import (
 )
 
 func TestConfigMustLoad(t *testing.T) {
-	var configFile string
-	defer types.SetupTestOld(t, &configFile, types.GetConfigFn, types.EstablishConfig)()
-	assert.FileExists(t, configFile)
+	defer types.SetupTest([]string{})()
+	assert.FileExists(t, types.GetConfigFn())
 }
 
 func TestConfigMustLoadDefaults(t *testing.T) {
