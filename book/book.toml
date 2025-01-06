@@ -8,3 +8,6 @@ title = "The Khedra Book"
 [output.html]
 numbered = false
 default-theme = "rust"
+
+[preprocessor.mermaid]
+
