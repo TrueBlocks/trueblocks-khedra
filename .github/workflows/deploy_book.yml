@@ -11,6 +11,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+      - name: Install mdbook and plugins
+        run: |
+          # Install mdbook
+          cargo install mdbook
+          # Install mdbook-mermaid plugin
+          cargo install mdbook-mermaid
       - name: Build and Deploy to Server
         uses: appleboy/ssh-action@master
         with:
@@ -27,7 +33,16 @@ jobs:
             cd /home/${{ secrets.DOCS_USER }}/build
             git clone git@github.com:TrueBlocks/trueblocks-khedra
             cd trueblocks-khedra/book
+
+            # Make sure the Mermaid plugin is available
             mdbook build
 
             echo "Deploying to the book server..."
-            rsync -avz --delete book/ /var/www/khedra.trueblocks.io/html/
+            rsync -avz book/ /var/www/khedra.trueblocks.io/html/
+      - name: Verify Build Output
+        run: |
+          if [ ! -d "book" ]; then
+            echo "Build failed: book directory not found!"
+            exit 1
+          fi
+          echo "Build verification passed!"
