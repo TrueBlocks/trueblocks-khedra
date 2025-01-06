@@ -38,6 +38,10 @@ func NewService(serviceType string) Service {
 		}
 	}
 
-	panic("Unknown service type: " + serviceType)
+	if true {
+		// The `true` above avoids a linter warning...
+		panic("Unknown service type: " + serviceType)
+	}
+
 	return Service{}
 }

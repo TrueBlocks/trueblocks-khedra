@@ -1,8 +1,8 @@
 # Summary
 
-- [Introduction](index.md)
+- [Introduction](_index.md)
 - [About the Name](about_the_name.md)
-- [User Manual](user_man/README.md)
+- [User Manual](user_man/_index.md)
   - [Introduction](user_man/introduction.md)
   - [Getting Started](user_man/getting_started.md)
   - [Understanding Khedra](user_man/understanding_khedra.md)
@@ -10,7 +10,7 @@
   - [Advanced Operations](user_man/advanced_operations.md)
   - [Maintenance and Troubleshooting](user_man/maintenance_and_troubleshooting.md)
   - [Appendices](user_man/appendices.md)
-- [Technical Spec](tech_spec/README.md)
+- [Technical Spec](tech_spec/_index.md)
   - [Introduction](tech_spec/introduction.md)
   - [System Architecture](tech_spec/system_architecture.md)
   - [Core Functionalities](tech_spec/core_functionalities.md)
