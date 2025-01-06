@@ -2,7 +2,7 @@
 
 ## Purpose of this Document
 
-This document defines the technical architecture, design, and functionalities of Khedra, enabling developers and engineers to understand its internal workings and design principles. For a less technical overview of the application, refer to the [User Manual](../user_man/).
+This document defines the technical architecture, design, and functionalities of Khedra, enabling developers and engineers to understand its internal workings and design principles. For a less technical overview of the application, refer to the [User Manual](../user_manual/).
 
 ## Intended Audience
 

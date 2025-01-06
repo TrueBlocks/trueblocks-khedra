@@ -1,13 +1,14 @@
 [book]
-authors = ["TrueBlocks, LLC"]
-language = "en"
-multilingual = false
-src = "src"
-title = "The Khedra Book"
+    authors = ["TrueBlocks, LLC"]
+    language = "en"
+    multilingual = false
+    src = "src"
+    title = "The Khedra Book"
 
 [output.html]
-numbered = false
-default-theme = "rust"
+    numbered = false
+    default-theme = "rust"
+    theme = "theme"
 
 [preprocessor.mermaid]
 
