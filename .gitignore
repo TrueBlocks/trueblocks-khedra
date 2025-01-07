@@ -1,7 +1,4 @@
-file
-save
-coverage
-x
+.vscode/launch.json
 *.exe
 *.exe~
 *.dll
@@ -9,11 +6,17 @@ x
 *.dylib
 *.test
 *.out
-# vendor/
 go.work
 go.work.sum
 .env
+shit
+x
 khedra
 khedra.log
-config.yaml
 .DS_Store
+file
+save
+coverage
+trueblocks-node
+config.yaml
+trueBlocks.toml

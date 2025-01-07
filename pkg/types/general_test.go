@@ -90,5 +90,5 @@ data_dir: "expected/folder/name"
 		assert.Equal(t, "expected/folder/name", general.DataDir, "Expected data_dir to be 'expected/folder/name', got '%s'", general.DataDir)
 	}
 
-	ReadAndWriteTest[General](t, tempFilePath, content, assertions)
+	ReadAndWriteWithAssertions[General](t, tempFilePath, content, assertions)
 }

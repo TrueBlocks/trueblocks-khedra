@@ -50,11 +50,11 @@ func SetupTest(env []string) func() {
 	}
 }
 
-// ReadAndWriteTest writes the provided content to a temporary file, reads it
+// ReadAndWriteWithAssertions writes the provided content to a temporary file, reads it
 // back using koanf, performs assertions on the loaded configuration, and
 // writes the output to another file. It takes the temporary file path,
 // content to write, a function for assertions, and a testing object.
-func ReadAndWriteTest[T any](t *testing.T, tempFilePath string, content string, assertions func(*testing.T, *T)) {
+func ReadAndWriteWithAssertions[T any](t *testing.T, tempFilePath string, content string, assertions func(*testing.T, *T)) {
 	defer os.Remove(tempFilePath)
 
 	err := coreFile.StringToAsciiFile(tempFilePath, content)
@@ -90,12 +90,8 @@ func ReadAndWriteTest[T any](t *testing.T, tempFilePath string, content string, 
 		return strings.Join(chars, "")
 	}
 
-	// fmt.Println(utils.RemoveAny(string(marshaledContent), "\n\r\t\"` "))
-	// fmt.Println(utils.RemoveAny(content, "\n\r\t\"` "))
 	marshalCleaned := cleanAndSort(string(marshaledContent))
 	contentCleaned := cleanAndSort(content)
-	// fmt.Println(marshalCleaned)
-	// fmt.Println(contentCleaned)
 	if marshalCleaned != contentCleaned {
 		t.Errorf("Mismatch between marshaled content and input content.\nMarshaled:\n%s\nInput:\n%s", marshalCleaned, contentCleaned)
 	}

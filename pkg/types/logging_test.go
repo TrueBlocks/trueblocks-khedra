@@ -1,6 +1,9 @@
 package types
 
 import (
+	"bytes"
+	"log/slog"
+	"regexp"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -189,5 +192,64 @@ func TestLoggingReadAndWrite(t *testing.T) {
 		assert.True(t, logging.Compress, "Compress should be true")
 	}
 
-	ReadAndWriteTest[Logging](t, tempFilePath, content, assertions)
+	ReadAndWriteWithAssertions[Logging](t, tempFilePath, content, assertions)
+}
+
+func TestCustomHandlerLogFormatting(t *testing.T) {
+	var output bytes.Buffer
+	handler := &customHandler{
+		writer: &output,
+		level:  slog.LevelInfo,
+	}
+
+	logger := slog.New(handler)
+	logger.Info("Test message", slog.Int("key", 42))
+
+	logOutput := stripAnsiCodes(output.String())
+
+	expectedSubstring := "INFO"
+	assert.Contains(t, logOutput, expectedSubstring, "Expected log output to contain log level")
+	assert.Contains(t, logOutput, "Test message", "Expected log output to contain the message")
+	assert.Contains(t, logOutput, "key=42", "Expected log output to contain attributes")
+}
+
+func TestCustomHandlerLogLevels(t *testing.T) {
+	var output bytes.Buffer
+	handler := &customHandler{
+		writer: &output,
+		level:  slog.LevelWarn,
+	}
+
+	logger := slog.New(handler)
+	logger.Info("This should not be logged")
+	logger.Warn("This should be logged")
+
+	logOutput := stripAnsiCodes(output.String())
+
+	assert.NotContains(t, logOutput, "This should not be logged", "Logs below the configured level should not be written")
+	assert.Contains(t, logOutput, "This should be logged", "Logs at or above the configured level should be written")
+}
+
+func TestNewLoggersIntegration(t *testing.T) {
+	var fileOutput, progOutput bytes.Buffer
+
+	fileHandler := &customHandler{writer: &fileOutput, level: slog.LevelInfo}
+	progHandler := &customHandler{writer: &progOutput, level: slog.LevelInfo}
+
+	fileLogger := slog.New(fileHandler)
+	progLogger := slog.New(progHandler)
+
+	fileLogger.Info("File logger message")
+	progLogger.Info("Prog logger message")
+
+	fileLogOutput := stripAnsiCodes(fileOutput.String())
+	progLogOutput := stripAnsiCodes(progOutput.String())
+
+	assert.Contains(t, fileLogOutput, "File logger message", "Expected log to appear in file logger output")
+	assert.Contains(t, progLogOutput, "Prog logger message", "Expected log to appear in progress logger output")
+}
+
+func stripAnsiCodes(input string) string {
+	re := regexp.MustCompile(`\x1b\[[0-9;]*m`)
+	return re.ReplaceAllString(input, "")
 }

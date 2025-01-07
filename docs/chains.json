@@ -1,0 +1,26 @@
+{
+  "mainnet": {
+    "chain": "mainnet",
+    "chainId": "1",
+    "remoteExplorer": "https://etherscan.io",
+    "symbol": "ETH"
+  },
+  "sepolia": {
+    "chain": "sepolia",
+    "chainId": "11155111",
+    "remoteExplorer": "https://sepolia.otterscan.io/",
+    "symbol": "ETH"
+  },
+  "optimism": {
+    "chain": "optimism",
+    "chainId": "10",
+    "remoteExplorer": "https://optimistic.etherscan.io",
+    "symbol": "ETH"
+  },
+  "gnosis": {
+    "chain": "gnosis",
+    "chainId": "100",
+    "remoteExplorer": "https://gnosisscan.io/",
+    "symbol": "xDAI"
+  }
+}

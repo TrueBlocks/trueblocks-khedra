@@ -3,6 +3,7 @@ package types
 import (
 	"os"
 	"testing"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -124,5 +125,5 @@ enabled: true
 		assert.True(t, chain.Enabled, "Expected enabled to be true, got %v", chain.Enabled)
 	}
 
-	ReadAndWriteTest[Chain](t, tempFilePath, content, assertions)
+	ReadAndWriteWithAssertions[Chain](t, tempFilePath, content, assertions)
 }
