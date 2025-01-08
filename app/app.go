@@ -17,7 +17,7 @@ type KhedraApp struct {
 }
 
 func NewKhedraApp() *KhedraApp {
-	cfg, _, err := LoadConfig()
+	cfg, err := LoadConfig()
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
@@ -100,7 +100,7 @@ type App struct {
 	Monitor  OnOff
 	Sleep    int
 	BlockCnt int
-	LogLevel slog.Level
+	Level    slog.Level
 }
 
 // NewApp creates a new App instance with the default values.
@@ -110,10 +110,10 @@ func NewApp() *App {
 		blockCnt = int(base.MustParseUint64(bc))
 	}
 
-	customLogger, logLevel := NewCustomLogger()
+	custom Logger, level := NewCustomLogger()
 	app := &App{
-		Logger:   customLogger,
-		LogLevel: logLevel,
+		Logger:   custom Logger,
+		Level:    level,
 		Sleep:    6,
 		Scrape:   Off,
 		Api:      Off,

@@ -135,7 +135,7 @@ func init() {
 				sl.ReportError(service.Sleep, "Sleep", "sleep", "required_scraper_monitor_sleep", "")
 			}
 			if service.BatchSize < 50 || service.BatchSize > 10000 {
-				sl.ReportError(service.BatchSize, "BatchSize", "batch_size", "invalid_scraper_monitor_batch_size", "")
+				sl.ReportError(service.BatchSize, "BatchSize", "batchSize", "invalid_scraper_monitor_batchSize", "")
 			}
 		case "ipfs":
 			// For "ipfs" services, `Port` is required.

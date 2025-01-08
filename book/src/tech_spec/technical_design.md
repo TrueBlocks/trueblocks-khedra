@@ -4,7 +4,7 @@
 
 Khedra uses a `.env` file for configuration. Key variables include:
 
-- `TB_NODE_DATADIR`: Directory for storing data.
+- `TB_NODE_DATAFOLDER`: Directory for storing data.
 - `TB_NODE_MAINNETRPC`: RPC endpoint for Ethereum mainnet.
 - `TB_NODE_CHAINS`: List of chains to index.
 

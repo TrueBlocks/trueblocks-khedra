@@ -1,3 +1,5 @@
+SRC_GO := $(shell find . -name '*.go')
+
 #-------------------------------------------------
 bin=../bin
 
@@ -6,14 +8,14 @@ exec=khedra
 dest=$(bin)/$(exec)
 
 #-------------------------------------------------
-all:
+all: $(SRC_GO)
 	@make app
 
 every:
 	@cd ../build ; make ; cd -
 	@make app
 
-app: **/*.go
+app: $(SRC_GO)
 	@echo Building khedra...
 	@mkdir -p $(bin)
 	@go build -o $(dest) *.go

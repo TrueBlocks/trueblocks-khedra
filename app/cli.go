@@ -249,7 +249,7 @@ Environment:
 -------------
 You MUST export the following values to the environment:
 
-  TB_NODE_DATADIR:    A directory to store the indexer's data (required, created if necessary)
+  TB_NODE_DATAFOLDER:    A directory to store the indexer's data (required, created if necessary)
   TB_NODE_MAINNETRPC: A valid RPC endpoint for Ethereum mainnet (required)
 
 You MAY also export these environment variables:

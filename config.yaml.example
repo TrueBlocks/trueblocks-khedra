@@ -2,7 +2,7 @@
 # Version: 2.0
 
 general:
-  data_dir: "~/.khedra/data"     # See note 1
+  dataFolder: "~/.khedra/data"   # See note 1
 
 chains:
   mainnet:                       # Blockchain name (see notes 2, 3, and 4)
@@ -29,12 +29,12 @@ services:                          # See note 5
   scraper:                         # Required. (One of: api, scraper, monitor, ipfs, control)
     enabled: true                  # `true` if the service is enabled
     sleep: 12                      # Seconds between scraping batches (see note 6)
-    batch_size: 500                # Number of blocks to process in a batch (range: 50-10000)
+    batchSize: 500                 # Number of blocks to process in a batch (range: 50-10000)
 
   monitor:
     enabled: true
     sleep: 12                      # Seconds between scraping batches (see note 6)
-    batch_size: 500                # Number of blocks processed in a batch (range: 50-10000)
+    batchSize: 500                 # Number of blocks processed in a batch (range: 50-10000)
 
   api:
     enabled: true
@@ -51,16 +51,16 @@ services:                          # See note 5
 logging:
   folder: "~/.khedra/logs"         # Path to log directory (must exist and be writable)
   filename: "khedra.log"           # Log file name (must end with .log)
-  log_level: "info"                # One of: debug, info, warn, error
-  max_size_mb: 10                  # Max log file size in MB
-  max_backups: 5                   # Number of backup log files to keep
-  max_age_days: 30                 # Number of days to retain old logs
+  level: "info"                    # One of: debug, info, warn, error
+  maxSize: 10                      # Max log file size in MB
+  maxBackups: 5                    # Number of backup log files to keep
+  maxAge: 30                       # Number of days to retain old logs
   compress: true                   # Whether to compress backup logs
 
 #
 # **Notes:**
 #
-# 1. The `data_dir` value must be a valid, existing directory that is writable. You may wish to change this value to a location with suitable disc scape. Depending on configuration, the Unchained Index and binary caches may approach 200GB.
+# 1. The `dataFolder` value must be a valid, existing directory that is writable. You may wish to change this value to a location with suitable disc scape. Depending on configuration, the Unchained Index and binary caches may approach 200GB.
 #
 # 2. The `chains` section is required. At least one chain must be enabled.
 #

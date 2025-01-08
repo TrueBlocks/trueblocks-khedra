@@ -2,155 +2,182 @@ package app
 
 import (
 	"fmt"
-	"os"
-	"reflect"
-	"strconv"
 	"strings"
 
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
 )
 
-func LoadConfig() (types.Config, bool, error) {
-	var fileK = koanf.New(".")
-	var envK = koanf.New(".")
-
-	fn := types.GetConfigFn()
-	if err := fileK.Load(file.Provider(fn), yaml.Parser()); err != nil {
-		return types.Config{}, true, fmt.Errorf("koanf.Load failed for file %s: %v", fn, err)
-	}
-
-	fileCfg := types.NewConfig()
-	if err := fileK.Unmarshal("", &fileCfg); err != nil {
-		return types.Config{}, true, fmt.Errorf("koanf.Unmarshal failed for file configuration: %v", err)
-	}
-
-	for key, chain := range fileCfg.Chains {
-		chain.Name = key
-		fileCfg.Chains[key] = chain
-	}
-
-	for key, service := range fileCfg.Services {
-		service.Name = key
-		fileCfg.Services[key] = service
-	}
-
-	fieldTypeMap := buildFieldTypeMap(reflect.TypeOf(types.Config{}), "")
-
-	err := envK.Load(env.ProviderWithValue("TB_KHEDRA_", ".", func(key, value string) (string, interface{}) {
-		transformedKey := strings.ToLower(strings.TrimPrefix(key, "TB_KHEDRA_"))
-		transformedKey = strings.ReplaceAll(transformedKey, "_", ".")
-
-		if strings.HasSuffix(transformedKey, ".rpcs") {
-			return transformedKey, strings.Split(value, ",")
-		}
-
-		if fieldType, ok := fieldTypeMap[transformedKey]; ok {
-			if fieldType.Kind() == reflect.Slice {
-				return transformedKey, strings.Split(value, ",")
-			} else if fieldType.Kind() == reflect.Bool {
-				parsedValue, err := strconv.ParseBool(value)
-				if err != nil {
-					return "", fmt.Errorf("invalid boolean value for %s: %v", key, err)
-				}
-				return transformedKey, parsedValue
-			}
-		}
-
-		return transformedKey, value
-	}), nil)
+func LoadConfig() (types.Config, error) {
+	fileCfg, err := loadFileConfig()
 	if err != nil {
-		return types.Config{}, true, fmt.Errorf("koanf.Load failed for environment variables: %v", err)
+		return types.Config{}, fmt.Errorf("failed to load file configuration: %w", err)
 	}
 
-	envCfg := types.Config{} // Empty config to unmarshal into
-	if err := envK.Unmarshal("", &envCfg); err != nil {
-		return types.Config{}, true, fmt.Errorf("koanf.Unmarshal failed for environment configuration: %v", err)
+	envCfg, err := loadEnvConfig()
+	if err != nil {
+		return types.Config{}, fmt.Errorf("failed to load environment configuration: %w", err)
 	}
 
-	for key, chain := range envCfg.Chains {
-		if existingChain, exists := fileCfg.Chains[key]; exists {
-			if len(chain.RPCs) > 0 {
-				existingChain.RPCs = chain.RPCs
-			}
-			existingChain.Enabled = chain.Enabled
-			fileCfg.Chains[key] = existingChain
-		} else {
-			return types.Config{}, true, fmt.Errorf("chain %s found in the environment but not in the configuration file", key)
-		}
+	mergedCfg, err := mergeConfigs(fileCfg, envCfg)
+	if err != nil {
+		return types.Config{}, fmt.Errorf("failed to merge configurations: %w", err)
 	}
 
-	finalCfg := fileCfg
-
-	for key, chain := range fileCfg.Chains {
-		if len(chain.RPCs) == 0 {
-			return types.Config{}, true, fmt.Errorf("chain %s has an empty RPCs field, which is not allowed", key)
-		}
+	if err := validateConfig(mergedCfg); err != nil {
+		return types.Config{}, fmt.Errorf("configuration validation failed: %w", err)
 	}
 
-	configPath := utils.ExpandPath("~/.khedra")
-	coreFile.EstablishFolder(configPath)
-
-	finalCfg.General.DataDir = utils.ExpandPath(finalCfg.General.DataDir)
-	coreFile.EstablishFolder(finalCfg.General.DataDir)
-
-	finalCfg.Logging.Folder = utils.ExpandPath(finalCfg.Logging.Folder)
-	coreFile.EstablishFolder(finalCfg.Logging.Folder)
-
-	if err := types.Validate.Struct(finalCfg); err != nil {
-		return types.Config{}, true, err
+	if err := initializeFolders(mergedCfg); err != nil {
+		return types.Config{}, fmt.Errorf("failed to initialize folders: %w", err)
 	}
 
-	for name, service := range finalCfg.Services {
-		envEnabled := os.Getenv(fmt.Sprintf("TB_KHEDRA_SERVICES_%s_ENABLED", strings.ToUpper(name)))
-		if envEnabled != "" {
-			service.Enabled, _ = strconv.ParseBool(envEnabled)
-		}
+	// if err := types.Validate.Struct(mergedCfg); err != nil {
+	// 	return types.Config{}, fmt.Errorf("validation error: %v", err)
+	// }
 
-		envPort := os.Getenv(fmt.Sprintf("TB_KHEDRA_SERVICES_%s_PORT", strings.ToUpper(name)))
-		if envPort != "" {
-			port, err := strconv.Atoi(envPort)
-			if err == nil {
-				service.Port = port
-			}
-		}
-
-		finalCfg.Services[name] = service
-	}
-
-	return finalCfg, true, nil
+	return mergedCfg, nil
 }
 
-// Recursively build a map of field types from a struct
-func buildFieldTypeMap(t reflect.Type, prefix string) map[string]reflect.Type {
-	fieldMap := make(map[string]reflect.Type)
+// func LoadConfig() (types.Config, bool, error) {
+// 	var fileK = koanf.New(".")
+// 	var envK = koanf.New(".")
 
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		fieldKey := prefix + strings.ToLower(field.Name)
+// 	fn := types.GetConfigFn()
+// 	if err := fileK.Load(file.Provider(fn), yaml.Parser()); err != nil {
+// 		return types.Config{}, true, fmt.Errorf("koanf.Load failed for file %s: %v", fn, err)
+// 	}
 
-		// Add the field to the map
-		fieldMap[fieldKey] = field.Type
+// 	fileCfg := types.NewConfig()
+// 	if err := fileK.Unmarshal("", &fileCfg); err != nil {
+// 		return types.Config{}, true, fmt.Errorf("koanf.Unmarshal failed for file configuration: %v", err)
+// 	}
 
-		// Recursively parse nested structs and slices
-		if field.Type.Kind() == reflect.Struct {
-			for k, v := range buildFieldTypeMap(field.Type, fieldKey+".") {
-				fieldMap[k] = v
-			}
-		} else if field.Type.Kind() == reflect.Slice && field.Type.Elem().Kind() == reflect.Struct {
-			for k, v := range buildFieldTypeMap(field.Type.Elem(), fieldKey+".") {
-				fieldMap[k] = v
-			}
-		}
-	}
+// 	for key, chain := range fileCfg.Chains {
+// 		chain.Name = key
+// 		fileCfg.Chains[key] = chain
+// 	}
 
-	return fieldMap
-}
+// 	for key, service := range fileCfg.Services {
+// 		service.Name = key
+// 		fileCfg.Services[key] = service
+// 	}
+
+// 	fieldTypeMap := buildFieldTypeMap(reflect.TypeOf(types.Config{}), "")
+
+// 	err := envK.Load(env.ProviderWithValue("TB_KHEDRA_", ".", func(key, value string) (string, interface{}) {
+// 		transformedKey := strings.ToLower(strings.TrimPrefix(key, "TB_KHEDRA_"))
+// 		transformedKey = strings.ReplaceAll(transformedKey, "_", ".")
+
+// 		if strings.HasSuffix(transformedKey, ".rpcs") {
+// 			return transformedKey, strings.Split(value, ",")
+// 		}
+
+// 		if fieldType, ok := fieldTypeMap[transformedKey]; ok {
+// 			if fieldType.Kind() == reflect.Slice {
+// 				return transformedKey, strings.Split(value, ",")
+// 			} else if fieldType.Kind() == reflect.Bool {
+// 				parsedValue, err := strconv.ParseBool(value)
+// 				if err != nil {
+// 					return "", fmt.Errorf("invalid boolean value for %s: %v", key, err)
+// 				}
+// 				return transformedKey, parsedValue
+// 			}
+// 		}
+
+// 		return transformedKey, value
+// 	}), nil)
+// 	if err != nil {
+// 		return types.Config{}, true, fmt.Errorf("koanf.Load failed for environment variables: %v", err)
+// 	}
+
+// 	envCfg := types.Config{} // Empty config to unmarshal into
+// 	if err := envK.Unmarshal("", &envCfg); err != nil {
+// 		return types.Config{}, true, fmt.Errorf("koanf.Unmarshal failed for environment configuration: %v", err)
+// 	}
+
+// 	for key, chain := range envCfg.Chains {
+// 		if existingChain, exists := fileCfg.Chains[key]; exists {
+// 			if len(chain.RPCs) > 0 {
+// 				existingChain.RPCs = chain.RPCs
+// 			}
+// 			existingChain.Enabled = chain.Enabled
+// 			fileCfg.Chains[key] = existingChain
+// 		} else {
+// 			return types.Config{}, true, fmt.Errorf("chain %s found in the environment but not in the configuration file", key)
+// 		}
+// 	}
+
+// 	finalCfg := fileCfg
+
+// 	for key, chain := range fileCfg.Chains {
+// 		if len(chain.RPCs) == 0 {
+// 			return types.Config{}, true, fmt.Errorf("chain %s has an empty RPCs field, which is not allowed", key)
+// 		}
+// 	}
+
+// 	configPath := utils.ExpandPath("~/.khedra")
+// 	coreFile.EstablishFolder(configPath)
+
+// 	finalCfg.General.DataFolder = utils.ExpandPath(finalCfg.General.DataFolder)
+// 	coreFile.EstablishFolder(finalCfg.General.DataFolder)
+
+// 	finalCfg.Logging.Folder = utils.ExpandPath(finalCfg.Logging.Folder)
+// 	coreFile.EstablishFolder(finalCfg.Logging.Folder)
+
+// 	if err := types.Validate.Struct(finalCfg); err != nil {
+// 		return types.Config{}, true, err
+// 	}
+
+// 	for name, service := range finalCfg.Services {
+// 		envEnabled := os.Getenv(fmt.Sprintf("TB_KHEDRA_SERVICES_%s_ENABLED", strings.ToUpper(name)))
+// 		if envEnabled != "" {
+// 			service.Enabled, _ = strconv.ParseBool(envEnabled)
+// 		}
+
+// 		envPort := os.Getenv(fmt.Sprintf("TB_KHEDRA_SERVICES_%s_PORT", strings.ToUpper(name)))
+// 		if envPort != "" {
+// 			port, err := strconv.Atoi(envPort)
+// 			if err == nil {
+// 				service.Port = port
+// 			}
+// 		}
+
+// 		finalCfg.Services[name] = service
+// 	}
+
+// 	return finalCfg, true, nil
+// }
+
+// // Recursively build a map of field types from a struct
+// func buildFieldTypeMap(t reflect.Type, prefix string) map[string]reflect.Type {
+// 	fieldMap := make(map[string]reflect.Type)
+
+// 	for i := 0; i < t.NumField(); i++ {
+// 		field := t.Field(i)
+// 		fieldKey := prefix + strings.ToLower(field.Name)
+
+// 		// Add the field to the map
+// 		fieldMap[fieldKey] = field.Type
+
+// 		// Recursively parse nested structs and slices
+// 		if field.Type.Kind() == reflect.Struct {
+// 			for k, v := range buildFieldTypeMap(field.Type, fieldKey+".") {
+// 				fieldMap[k] = v
+// 			}
+// 		} else if field.Type.Kind() == reflect.Slice && field.Type.Elem().Kind() == reflect.Struct {
+// 			for k, v := range buildFieldTypeMap(field.Type.Elem(), fieldKey+".") {
+// 				fieldMap[k] = v
+// 			}
+// 		}
+// 	}
+
+// 	return fieldMap
+// }
 
 /*
 func init() {
@@ -172,14 +199,14 @@ func (a *App) EstablishConfig() error {
 	}
 	var ok bool
 	var err error
-	if a.Config.ConfigPath, ok = os.LookupEnv("TB_NODE_DATADIR"); !ok {
-		return errors.New("environment variable `TB_NODE_DATADIR` is required but not found")
+	if a.Config.ConfigPath, ok = os.LookupEnv("TB_NODE_DATAFOLDER"); !ok {
+		return errors.New("environment variable `TB_NODE_DATAFOLDER` is required but not found")
 	} else {
 		if a.Config.ConfigPath, err = cleanDataPath(a.Config.ConfigPath); err != nil {
 			return err
 		}
 	}
-	a.Logger.Info("data directory", "dataDir", a.Config.ConfigPath)
+	a.Logger.Info("data directory", "dataFolder", a.Config.ConfigPath)
 
 	var targets string
 	chainStr, ok := os.LookupEnv("TB_NODE_CHAINS")
@@ -315,3 +342,168 @@ var configTmpl string = `[version]
 [chains]{{.ChainDescriptors}}
 `
 */
+
+func loadFileConfig() (types.Config, error) {
+	fileK := koanf.New(".")
+	fn := types.GetConfigFn()
+
+	if err := fileK.Load(file.Provider(fn), yaml.Parser()); err != nil {
+		return types.Config{}, fmt.Errorf("failed to load file config %s: %v", fn, err)
+	}
+
+	fileCfg := types.NewConfig()
+	if err := fileK.Unmarshal("", &fileCfg); err != nil {
+		return types.Config{}, fmt.Errorf("failed to unmarshal file config: %v", err)
+	}
+
+	for key, chain := range fileCfg.Chains {
+		chain.Name = key
+		fileCfg.Chains[key] = chain
+	}
+
+	for key, service := range fileCfg.Services {
+		service.Name = key
+		fileCfg.Services[key] = service
+	}
+
+	return fileCfg, nil
+}
+
+func loadEnvConfig() (types.Config, error) {
+	envK := koanf.New(".")
+	prefix := "TB_KHEDRA_"
+
+	err := envK.Load(env.ProviderWithValue(prefix, ".", func(key, value string) (string, interface{}) {
+		transformedKey := strings.ToLower(strings.TrimPrefix(key, prefix))
+		transformedKey = strings.ReplaceAll(transformedKey, "_", ".")
+		if strings.HasSuffix(transformedKey, ".rpcs") {
+			return transformedKey, strings.Split(value, ",")
+		}
+
+		return transformedKey, value
+	}), nil)
+
+	if err != nil {
+		return types.Config{}, fmt.Errorf("failed to load environment variables: %v", err)
+	}
+
+	envCfg := types.Config{}
+	if err := envK.Unmarshal("", &envCfg); err != nil {
+		return types.Config{}, fmt.Errorf("failed to unmarshal environment config: %v", err)
+	}
+
+	return envCfg, nil
+}
+
+func mergeConfigs(fileCfg, envCfg types.Config) (types.Config, error) {
+	for key, chain := range envCfg.Chains {
+		if existingChain, exists := fileCfg.Chains[key]; exists {
+			existingChain.RPCs = mergeStringSlice(existingChain.RPCs, chain.RPCs)
+			existingChain.Enabled = mergeBool(existingChain.Enabled, chain.Enabled)
+			fileCfg.Chains[key] = existingChain
+		} else {
+			return types.Config{}, fmt.Errorf("chain %s found in environment but not in file config", key)
+		}
+	}
+
+	for key, service := range envCfg.Services {
+		if existingService, exists := fileCfg.Services[key]; exists {
+			existingService.BatchSize = mergeInt(existingService.BatchSize, service.BatchSize)
+			existingService.Port = mergeInt(existingService.Port, service.Port)
+			existingService.Enabled = mergeBool(existingService.Enabled, service.Enabled)
+			fileCfg.Services[key] = existingService
+		} else {
+			fileCfg.Services[key] = service
+		}
+	}
+
+	fileCfg.Logging = mergeLogging(fileCfg.Logging, envCfg.Logging)
+	fileCfg.General = mergeGeneral(fileCfg.General, envCfg.General)
+
+	return fileCfg, nil
+}
+
+func mergeStringSlice(fileValue, envValue []string) []string {
+	if len(envValue) > 0 {
+		return envValue
+	}
+	return fileValue
+}
+
+func mergeInt(fileValue, envValue int) int {
+	if envValue > 0 {
+		return envValue
+	}
+	return fileValue
+}
+
+func mergeBool(fileValue, envValue bool) bool {
+	if envValue {
+		return envValue
+	}
+	return fileValue
+}
+
+func mergeLogging(fileLogging, envLogging types.Logging) types.Logging {
+	if envLogging.Folder != "" {
+		fileLogging.Folder = envLogging.Folder
+	}
+	if envLogging.Filename != "" {
+		fileLogging.Filename = envLogging.Filename
+	}
+	if envLogging.MaxSize > 0 {
+		fileLogging.MaxSize = envLogging.MaxSize
+	}
+	if envLogging.MaxBackups > 0 {
+		fileLogging.MaxBackups = envLogging.MaxBackups
+	}
+	if envLogging.MaxAge > 0 {
+		fileLogging.MaxAge = envLogging.MaxAge
+	}
+	if envLogging.Compress {
+		fileLogging.Compress = envLogging.Compress
+	}
+	return fileLogging
+}
+
+func mergeGeneral(fileGeneral, envGeneral types.General) types.General {
+	if envGeneral.DataFolder != "" {
+		fileGeneral.DataFolder = envGeneral.DataFolder
+	}
+	return fileGeneral
+}
+
+func validateConfig(cfg types.Config) error {
+	for key, chain := range cfg.Chains {
+		if len(chain.RPCs) == 0 {
+			return fmt.Errorf("chain %s has no RPCs defined", key)
+		}
+	}
+
+	if cfg.Logging.Folder == "" {
+		return fmt.Errorf("logging folder is not defined")
+	}
+	if cfg.Logging.Filename == "" {
+		return fmt.Errorf("logging filename is not defined")
+	}
+	if cfg.General.DataFolder == "" {
+		return fmt.Errorf("general data directory is not defined")
+	}
+
+	return nil
+}
+
+func initializeFolders(cfg types.Config) error {
+	folders := []string{
+		cfg.Logging.Folder,
+		cfg.General.DataFolder,
+	}
+
+	for _, folder := range folders {
+		if err := coreFile.EstablishFolder(folder); err != nil {
+			return fmt.Errorf("failed to create folder %s: %v", folder, err)
+		}
+	}
+
+	return nil
+}

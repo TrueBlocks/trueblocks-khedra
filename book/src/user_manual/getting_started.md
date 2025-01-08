@@ -49,10 +49,10 @@ You may use environment variables to override specific options. This document ou
 
    You may override configuration options using environment variables, each of which must take the form `TB_KHEDRA_<section>_<key>`.
 
-   For example, the following overrides the `general.data_dir` value.
+   For example, the following overrides the `general.dataFolder` value.
 
      ```bash
-     export TB_KHEDRA_GENERAL_DATADIR="/path/override"
+     export TB_KHEDRA_GENERAL_DATAFOLDER="/path/override"
      ```
 
     You'll notice that underbars (`_`) in the `<key>` names are not needed.
@@ -68,7 +68,7 @@ The `config.yaml` file (shown here with default values) is structured as follows
 # Version: 2.0
 
 general:
-  data_dir: "~/.khedra/data"     # See note 1
+  dataFolder: "~/.khedra/data"     # See note 1
 
 chains:
   mainnet:                       # Blockchain name (see notes 2, 3, and 4)
@@ -92,12 +92,12 @@ services:                          # See note 5
   scraper:               # Required. (One of: api, scraper, monitor, ipfs, control)
     enabled: true                  # `true` if the service is enabled
     sleep: 12                      # Seconds between scraping batches (see note 6)
-    batch_size: 500                # Number of blocks to process in a batch (range: 50-10000)
+    batchSize: 500                # Number of blocks to process in a batch (range: 50-10000)
 
   monitor:
     enabled: true
     sleep: 12                      # Seconds between scraping batches (see note 6)
-    batch_size: 500                # Number of blocks processed in a batch (range: 50-10000)
+    batchSize: 500                # Number of blocks processed in a batch (range: 50-10000)
 
   api:
     enabled: true
@@ -114,16 +114,16 @@ services:                          # See note 5
 logging:
   folder: "~/.khedra/logs"         # Path to log directory (must exist and be writable)
   filename: "khedra.log"           # Log file name (must end with .log)
-  log_level: "info"                # One of: debug, info, warn, error
-  max_size_mb: 10                  # Max log file size in MB
-  max_backups: 5                   # Number of backup log files to keep
-  max_age_days: 30                 # Number of days to retain old logs
+  level: "info"                    # One of: debug, info, warn, error
+  maxSize: 10                      # Max log file size in MB
+  maxBackups: 5                    # Number of backup log files to keep
+  maxAge: 30                       # Number of days to retain old logs
   compress: true                   # Whether to compress backup logs
 ```
 
 **Notes:**
 
-1. The `data_dir` value must be a valid, existing directory that is writable. You may wish to change this value to a location with suitable disc scape. Depending on configuration, the Unchained Index and binary caches may approach 200GB.
+1. The `dataFolder` value must be a valid, existing directory that is writable. You may wish to change this value to a location with suitable disc scape. Depending on configuration, the Unchained Index and binary caches may approach 200GB.
 
 2. The `chains` section is required. At least one chain must be enabled.
 
@@ -147,22 +147,22 @@ The environment variable naming convention is:
 
 For example:
 
-- To override the `general.data_dir` value:
+- To override the `general.dataFolder` value:
 
   ```bash
-  export TB_KHEDRA_GENERAL_DATADIR="/path/override"
+  export TB_KHEDRA_GENERAL_DATAFOLDER="/path/override"
   ```
 
-- To override `logging.log_level`:
+- To override `logging.level`:
 
   ```bash
-  export TB_KHEDRA_LOGGING_LOGLEVEL="debug"
+  export TB_KHEDRA_LOGGING_LEVEL="debug"
   ```
 
-- To override `services[0].batch_size`:
+- To override `services[0].batchSize`:
 
   ```bash
-  export TB_KHEDRA_GENERAL_LOGLEVEL="debug"
+  export TB_KHEDRA_LOGGING_BATCHSIZE="100"
   ```
 
 Underbars (`_`) in `<key>` names are not used and should be omitted.
@@ -221,7 +221,7 @@ The values set by environment variables must conform to the same validation rule
 
 ### General Settings
 
-- **`data_dir`**: The location where **khedra** stores all of its data. This directory must exist and be writable.
+- **`dataFolder`**: The location where **khedra** stores all of its data. This directory must exist and be writable.
 
 ### Chains (Blockchains)
 
@@ -245,7 +245,7 @@ Defines various services provided by **Khedra**. Supported services:
   - Requires `port` to be specified.
 - **Scraper** and **Monitor**:
   - **`sleep`**: Duration (seconds) between operations.
-  - **`batch_size`**: Number of blocks to process in each operation (50-10,000).
+  - **`batchSize`**: Number of blocks to process in each operation (50-10,000).
 - **IPFS**:
   - Requires `port` to be specified.
 
@@ -255,10 +255,10 @@ Controls the application's logging behavior:
 
 - **`folder`**: Directory for storing logs.
 - **`filename`**: Name of the log file.
-- **`log_level`**: Logging level. Possible values: `debug`, `info`, `warn`, `error`.
-- **`max_size_mb`**: Maximum log file size before rotation.
-- **`max_backups`**: Number of old log files to retain.
-- **`max_age_days`**: Retention period for old logs.
+- **`level`**: Logging level. Possible values: `debug`, `info`, `warn`, `error`.
+- **`maxSize`**: Maximum log file size before rotation.
+- **`maxBackups`**: Number of old log files to retain.
+- **`maxAge`**: Retention period for old logs.
 - **`compress`**: Whether to compress rotated logs.
 
 ---
@@ -269,7 +269,7 @@ The configuration file and environment variables are validated on load with the 
 
 ### General
 
-- `data_dir`: Must be a valid, existing directory and writable.
+- `dataFolder`: Must be a valid, existing directory and writable.
 
 ### Chains
 
@@ -284,16 +284,16 @@ The configuration file and environment variables are validated on load with the 
 - `enabled`: Defaults to `false` if not specified.
 - `port`: For API and IPFS services, must be between 1024 and 65535.
 - `sleep`: Must be non-negative.
-- `batch_size`: Must be between 50 and 10,000.
+- `batchSize`: Must be between 50 and 10,000.
 
 ### Logging
 
 - `folder`: Must exist and be writable.
 - `filename`: Must end with `.log`.
-- `log_level`: Must be one of `debug`, `info`, `warn`, `error`.
-- `max_size_mb`: Minimum value of 5.
-- `max_backups`: Minimum value of 1.
-- `max_age_days`: Minimum value of 1.
+- `level`: Must be one of `debug`, `info`, `warn`, `error`.
+- `maxSize`: Minimum value of 5.
+- `maxBackups`: Minimum value of 1.
+- `maxAge`: Minimum value of 1.
 
 ---
 
@@ -333,7 +333,7 @@ If the configuration file is not found or incomplete, **Khedra** uses the follow
    Use environment variables to override specific configurations:
 
    ```bash
-   export TB_KHEDRA_GENERAL_DATADIR="/new/path"
+   export TB_KHEDRA_GENERAL_DATAFOLDER="/new/path"
    ./khedra
    ```
 

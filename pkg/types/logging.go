@@ -7,59 +7,55 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 type Logging struct {
 	Folder     string `koanf:"folder" validate:"required,folder_exists"`
 	Filename   string `koanf:"filename" validate:"required,endswith=.log"`
-	MaxSizeMb  int    `koanf:"max_size_mb" yaml:"max_size_mb" validate:"required,min=5"`
-	MaxBackups int    `koanf:"max_backups" yaml:"max_backups" validate:"required,min=1"`
-	MaxAgeDays int    `koanf:"max_age_days" yaml:"max_age_days" validate:"required,min=1"`
+	MaxSize    int    `koanf:"maxSize" yaml:"maxSize" validate:"required,min=5"`
+	MaxBackups int    `koanf:"maxBackups" yaml:"maxBackups" validate:"required,min=1"`
+	MaxAge     int    `koanf:"maxAge" yaml:"maxAge" validate:"required,min=1"`
 	Compress   bool   `koanf:"compress"`
-	LogLevel   string `koanf:"log_level" yaml:"log_level" validate:"oneof=debug info warn error"`
+	Level      string `koanf:"level" yaml:"level" validate:"oneof=debug info warn error"`
 }
 
 func NewLogging() Logging {
 	return Logging{
 		Folder:     "~/.khedra/logs",
 		Filename:   "khedra.log",
-		MaxSizeMb:  10,
+		MaxSize:    10,
 		MaxBackups: 3,
-		MaxAgeDays: 10,
+		MaxAge:     10,
 		Compress:   true,
-		LogLevel:   "info",
+		Level:      "info",
 	}
 }
 
 // NewLoggers creates and returns two loggers: one (fileLogger) for
 // logging to a file and another (progressLogger) for logging to stderr.
-func NewLoggers(cfg Logging) (*slog.Logger, *slog.Logger) {
-	fileHandler := &customHandler{
-		writer: &lumberjack.Logger{
-			Filename:   filepath.Join(cfg.Folder, cfg.Filename),
-			MaxSize:    cfg.MaxSizeMb,
-			MaxBackups: cfg.MaxBackups,
-			MaxAge:     cfg.MaxAgeDays,
-			Compress:   cfg.Compress,
-		},
-		level: convertLogLevel(cfg.LogLevel),
+func NewLoggers(logging Logging) (*slog.Logger, *slog.Logger) {
+	fileWriter := &lumberjack.Logger{
+		Filename:   filepath.Join(logging.Folder, logging.Filename),
+		MaxSize:    logging.MaxSize,
+		MaxBackups: logging.MaxBackups,
+		MaxAge:     logging.MaxAge,
+		Compress:   logging.Compress,
 	}
+
+	fileHandler := newCustomHandler(fileWriter, logging.Level)
 	fileLogger := slog.New(fileHandler)
 
-	progressHandler := &customHandler{
-		writer: os.Stderr,
-		level:  convertLogLevel(cfg.LogLevel),
-	}
+	progressHandler := newCustomHandler(os.Stderr, logging.Level)
 	progressLogger := slog.New(progressHandler)
 
 	return fileLogger, progressLogger
 }
 
-// convertLogLevel converts a string log level to a slog.Level.
-func convertLogLevel(level string) slog.Level {
+// convertLevel converts a string log level to a slog.Level.
+func convertLevel(level string) slog.Level {
 	switch level {
 	case "debug":
 		return slog.LevelDebug
@@ -75,67 +71,100 @@ func convertLogLevel(level string) slog.Level {
 }
 
 type customHandler struct {
-	writer io.Writer
-	level  slog.Level
+	writer      io.Writer
+	baseHandler slog.Handler
+	attrs       []slog.Attr // Stores attributes added via WithAttrs
+	groups      []string    // Stores group names added via WithGroup
+}
+
+func newCustomHandler(w io.Writer, l string) *customHandler {
+	return &customHandler{
+		writer: w,
+		baseHandler: slog.NewTextHandler(
+			w,
+			&slog.HandlerOptions{Level: convertLevel(l)},
+		),
+	}
 }
 
 func (h *customHandler) Handle(ctx context.Context, r slog.Record) error {
-	if r.Level < h.level {
+	if !h.baseHandler.Enabled(ctx, r.Level) {
 		return nil
 	}
+
 	levels := map[string]string{
 		"DEBU": "DEBG",
 		"INFO": "INFO",
 		"WARN": "WARN",
 		"ERRO": "EROR",
 	}
+
 	lev := r.Level.String()[:4]
 	timeFormat := r.Time.Format("02-01|15:04:05.000")
 	formattedMessage := r.Message
 	if r.NumAttrs() > 0 {
 		formattedMessage = fmt.Sprintf("%-25.25s", r.Message)
 	}
+
 	logMsg := fmt.Sprintf("%4.4s[%s] %s ", levels[lev], timeFormat, formattedMessage)
+
+	if len(h.groups) > 0 {
+		logMsg += fmt.Sprintf("groups=[%s] ", strings.Join(h.groups, "."))
+	}
+
+	for _, attr := range h.attrs {
+		logMsg += fmt.Sprintf("%s=%v ", attr.Key, attr.Value)
+	}
+
 	r.Attrs(func(attr slog.Attr) bool {
-		logMsg += fmt.Sprintf(" %s=%v", colors.Green+attr.Key+colors.Off, attr.Value)
+		logMsg += fmt.Sprintf("%s=%v ", attr.Key, attr.Value)
 		return true
 	})
+
 	fmt.Fprintln(h.writer, logMsg)
 	return nil
 }
 
-func (h *customHandler) Enabled(_ context.Context, level slog.Level) bool {
-	return level >= h.level
+func (h *customHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return h.baseHandler.Enabled(ctx, level)
 }
 
 func (h *customHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	return h
+	// Create a copy of the handler
+	newHandler := *h
+	// Merge new attributes with existing ones
+	newHandler.attrs = append(newHandler.attrs, attrs...)
+	return &newHandler
 }
 
 func (h *customHandler) WithGroup(name string) slog.Handler {
-	return h
+	// Create a copy of the handler
+	newHandler := *h
+	// Add the new group to the list of groups
+	newHandler.groups = append(newHandler.groups, name)
+	return &newHandler
 }
 
 /*
 func NewCustomLogger() (*slog.Logger, slog.Level) {
 	logger.SetLoggerWriter(io.Discard)
-	logLevel := slog.LevelInfo
-	if ll, ok := os.LookupEnv("TB_LOGLEVEL"); ok {
+	level := slog.LevelInfo
+	if ll, ok := os.LookupEnv("TB_KHEDRA_LOGGING_LEVEL"); ok {
 		switch strings.ToLower(ll) {
 		case "debug":
-			logLevel = slog.LevelDebug
+			level = slog.LevelDebug
 		case "info":
-			logLevel = slog.LevelInfo
+			level = slog.LevelInfo
 		case "warn":
-			logLevel = slog.LevelWarn
+			level = slog.LevelWarn
 		case "error":
-			logLevel = slog.LevelError
+			level = slog.LevelError
 		}
 	}
 	customHandler := &customHandler{
 		writer: os.Stderr,
-		level:  logLevel,
+		level:  level,
 	}
-	return slog.New(customHandler), logLevel
+	return slog.New(customHandler), level
 }
 */

@@ -5,7 +5,7 @@ type Service struct {
 	Enabled   bool   `koanf:"enabled"`
 	Port      int    `koanf:"port,omitempty" validate:"service_field"`
 	Sleep     int    `koanf:"sleep,omitempty" validate:"service_field"`
-	BatchSize int    `koanf:"batch_size,omitempty" yaml:"batch_size,omitempty" validate:"service_field"`
+	BatchSize int    `koanf:"batchSize,omitempty" yaml:"batchSize,omitempty" validate:"service_field"`
 }
 
 func NewService(serviceType string) Service {
@@ -15,14 +15,14 @@ func NewService(serviceType string) Service {
 			Name:      "scraper",
 			Enabled:   false,
 			Sleep:     10,
-			BatchSize: 500, // Valid default BatchSize
+			BatchSize: 500,
 		}
 	case "monitor":
 		return Service{
 			Name:      "monitor",
 			Enabled:   false,
 			Sleep:     12,
-			BatchSize: 500, // Valid default BatchSize
+			BatchSize: 500,
 		}
 	case "api":
 		return Service{

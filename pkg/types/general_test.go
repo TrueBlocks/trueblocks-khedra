@@ -1,7 +1,6 @@
 package types
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,7 +12,7 @@ func TestGeneralNew(t *testing.T) {
 	defer SetTestEnv([]string{"TEST_MODE=true"})()
 	g := NewGeneral()
 	expected := "~/.khedra/data"
-	assert.Equal(t, expected, g.DataDir, "Expected DataDir to be '%s', got '%s'", expected, g.DataDir)
+	assert.Equal(t, expected, g.DataFolder, "Expected DataFolder to be '%s', got '%s'", expected, g.DataFolder)
 }
 
 // TestGeneralValidation validates the functionality of the General type to ensure
@@ -28,28 +27,28 @@ func TestGeneralValidation(t *testing.T) {
 		{
 			name: "Valid General struct",
 			general: General{
-				DataDir: createTempDir(t, true),
+				DataFolder: createTempDir(t, true),
 			},
 			wantErr: false,
 		},
 		{
-			name: "Non-existent DataDir",
+			name: "Non-existent DataFolder",
 			general: General{
-				DataDir: "/non/existent/path",
+				DataFolder: "/non/existent/path",
 			},
 			wantErr: false,
 		},
 		{
-			name: "Non-writable DataDir",
+			name: "Non-writable DataFolder",
 			general: General{
-				DataDir: createTempDir(t, false),
+				DataFolder: createTempDir(t, false),
 			},
 			wantErr: false,
 		},
 		{
-			name: "Empty DataDir",
+			name: "Empty DataFolder",
 			general: General{
-				DataDir: "",
+				DataFolder: "",
 			},
 			wantErr: true,
 		},
@@ -63,16 +62,15 @@ func TestGeneralValidation(t *testing.T) {
 			} else {
 				assert.NoError(t, err, "Did not expect error for test case '%s'", tt.name)
 			}
-			fmt.Println()
 		})
 	}
 
 	invalidGeneral := General{}
 	err := Validate.Struct(invalidGeneral)
-	assert.Error(t, err, "Expected validation error for missing DataDir, got nil")
+	assert.Error(t, err, "Expected validation error for missing DataFolder, got nil")
 
 	validGeneral := General{
-		DataDir: "/valid/path",
+		DataFolder: "/valid/path",
 	}
 	err = Validate.Struct(validGeneral)
 	assert.NoError(t, err, "Expected no validation error, but got: %s", err)
@@ -83,11 +81,11 @@ func TestGeneralValidation(t *testing.T) {
 func TestGeneralReadAndWrite(t *testing.T) {
 	tempFilePath := "temp_config.yaml"
 	content := `
-data_dir: "expected/folder/name"
+dataFolder: "expected/folder/name"
 `
 
 	assertions := func(t *testing.T, general *General) {
-		assert.Equal(t, "expected/folder/name", general.DataDir, "Expected data_dir to be 'expected/folder/name', got '%s'", general.DataDir)
+		assert.Equal(t, "expected/folder/name", general.DataFolder, "Expected dataFolder to be 'expected/folder/name', got '%s'", general.DataFolder)
 	}
 
 	ReadAndWriteWithAssertions[General](t, tempFilePath, content, assertions)

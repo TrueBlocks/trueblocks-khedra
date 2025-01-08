@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"time"
 )
@@ -34,4 +35,10 @@ func (k *KhedraApp) Prog(msg string, v ...any) {
 		fmt.Fprintf(os.Stdout, "%s\r", message)
 		os.Stdout.Sync()
 	}
+}
+
+func (k *KhedraApp) Fatal(msg string) {
+	log.Fatal(msg)
+	// k.progLogger.Fatal(msg, v...)
+	os.Exit(1)
 }

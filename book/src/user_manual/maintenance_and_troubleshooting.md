@@ -19,7 +19,7 @@ go build -o khedra .
 Logs are written to the standard output by default. Set the log level in the `.env` file:
 
 ```env
-TB_LOGLEVEL="Debug"
+TB_KHEDRA_LOGGING_LEVEL="Debug"
 ```
 
 ## Contacting Support
