@@ -3,6 +3,7 @@ package app
 import (
 	"log"
 	"log/slog"
+	"os"
 
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 	"github.com/urfave/cli/v2"
@@ -16,25 +17,20 @@ type KhedraApp struct {
 }
 
 func NewKhedraApp() *KhedraApp {
+	os.Args = cleanArgs(os.Args)
+	k := &KhedraApp{}
+	k.Cli = initializeCli(k)
+
 	cfg, err := LoadConfig()
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
-
-	fileLogger, progLogger := types.NewLoggers(cfg.Logging)
-	cli := initializeCli()
-
-	k := &KhedraApp{
-		config:     &cfg,
-		fileLogger: fileLogger,
-		progLogger: progLogger,
-		Cli:        cli,
-	}
+	k.config = &cfg
+	k.fileLogger, k.progLogger = types.NewLoggers(cfg.Logging)
 
 	return k
 }
 
-// Run runs the Khedra cli
 func (k *KhedraApp) Run(args []string) error {
 	return k.Cli.Run(args)
 }
@@ -156,3 +152,57 @@ func (a *App) Fatal(err error) {
 	os.Exit(1)
 }
 */
+
+func parseArgsInternal(args []string) (hasHelp bool, hasVersion bool, commands []string, nonFlagCount int) {
+	commands = []string{}
+	if len(args) == 0 {
+		hasHelp = true
+		return
+	}
+
+	helpForms := map[string]bool{
+		"--help": true, "-help": true, "help": true,
+		"--h": true, "-h": true,
+	}
+
+	versionForms := map[string]bool{
+		"--version": true, "-version": true, "version": true,
+		"--v": true, "-v": true,
+	}
+
+	for i, arg := range args {
+		if helpForms[arg] {
+			hasHelp = true
+			continue
+		}
+		if versionForms[arg] {
+			hasVersion = true
+			continue
+		}
+		commands = append(commands, arg)
+		if i != 0 && len(arg) == 0 || arg[0] != '-' {
+			nonFlagCount++
+		}
+	}
+
+	return
+}
+
+func cleanArgs(args []string) []string {
+	programName := args[:1] // program name
+
+	hasHelp, hasVersion, commands, _ := parseArgsInternal(args[1:])
+	if hasHelp {
+		result := append(programName, "help")
+		if len(commands) > 0 {
+			return append(result, commands[0])
+		}
+		return result
+	}
+
+	if hasVersion {
+		return append(programName, "version")
+	}
+
+	return append(programName, commands...)
+}

@@ -1,74 +1,134 @@
 package app
 
 import (
-	"log/slog"
+	"fmt"
+	"os"
+	"os/exec"
+	"strings"
 
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
+	sdk "github.com/TrueBlocks/trueblocks-sdk/v4"
 	"github.com/urfave/cli/v2"
 )
 
-func initializeCli() *cli.App {
+var execCommand = exec.Command
+
+func initializeCli(k *KhedraApp) *cli.App {
+	showError := func(c *cli.Context, showHelp bool, err error) {
+		_, _ = c.App.Writer.Write([]byte("\n" + colors.Red + "Error: " + err.Error() + colors.Off + "\n\n"))
+		if showHelp {
+			cli.ShowAppHelp(c)
+		}
+	}
+
+	var onUsageError = func(c *cli.Context, err error, isSubcommand bool) error {
+		showError(c, true, err)
+		return nil
+	}
+
 	return &cli.App{
-		Name:  "khedra",
-		Usage: "A tool to index, monitor, serve, and share blockchain data",
+		Name:    "khedra",
+		Usage:   "A tool to index, monitor, serve, and share blockchain data",
+		Version: sdk.Version(),
 		Commands: []*cli.Command{
 			{
-				Name:  "init",
-				Usage: "Initializes Khedra",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:  "mode",
-						Usage: "Initialization mode (all, blooms, none)",
-					},
-				},
+				Name:         "init",
+				Usage:        "Initializes Khedra",
+				OnUsageError: onUsageError,
 				Action: func(c *cli.Context) error {
-					slog.Info("command calls: init", "mode", c.String("mode"))
-					return nil
+					if _, _, err := validateArgs(os.Args[1:], 1, 1); err != nil {
+						return err
+					}
+					return k.initAction(c)
 				},
 			},
 			{
-				Name:  "scrape",
-				Usage: "Controls the blockchain scraper",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:  "state",
-						Usage: "Scraper state (on, off)",
-					},
-				},
+				Name:         "daemon",
+				Usage:        "Runs Khedra's services",
+				OnUsageError: onUsageError,
 				Action: func(c *cli.Context) error {
-					slog.Info("command calls: scrape", "state", c.String("state"))
-					return nil
+					if _, _, err := validateArgs(os.Args[1:], 1, 1); err != nil {
+						return err
+					}
+					return k.daemonAction(c)
 				},
 			},
 			{
-				Name:  "api",
-				Usage: "Starts or stops the API server",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:  "state",
-						Usage: "API state (on, off)",
-					},
-				},
+				Name:         "version",
+				Usage:        "Displays Khedra's version",
+				Hidden:       true,
+				OnUsageError: onUsageError,
 				Action: func(c *cli.Context) error {
-					slog.Info("command calls: api", "state", c.String("state"))
-					return nil
+					if _, _, err := validateArgs(os.Args[1:], 0, 0); err != nil {
+						return err
+					}
+					return k.versionAction(c)
 				},
 			},
 			{
-				Name:  "sleep",
-				Usage: "Sets the duration between updates",
-				Flags: []cli.Flag{
-					&cli.IntFlag{
-						Name:  "duration",
-						Usage: "Sleep duration in seconds",
+				Name:  "config",
+				Usage: "Manages Khedra configuration",
+				Subcommands: []*cli.Command{
+					{
+						Name:         "edit",
+						Usage:        "Opens the configuration file for editing",
+						OnUsageError: onUsageError,
+						Action: func(c *cli.Context) error {
+							if _, _, err := validateArgs(os.Args[1:], 2, 2); err != nil {
+								return err
+							}
+							return k.configEditAction(c)
+						},
+					},
+					{
+						Name:         "show",
+						Usage:        "Displays the current configuration",
+						OnUsageError: onUsageError,
+						Action: func(c *cli.Context) error {
+							if _, _, err := validateArgs(os.Args[1:], 2, 2); err != nil {
+								return err
+							}
+							return k.configShowAction(c)
+						},
 					},
 				},
-				Action: func(c *cli.Context) error {
-					slog.Info("command calls: sleep", "duration", c.Int("duration"))
-					return nil
-				},
+				OnUsageError: onUsageError,
 			},
 		},
+		OnUsageError: onUsageError,
+		CommandNotFound: func(c *cli.Context, command string) {
+			var err error
+			if unknown := getUnknownCmd(os.Args[1:]); len(unknown) > 0 {
+				err = fmt.Errorf("command '%s' not found", unknown)
+			} else {
+				err = fmt.Errorf("use only one command at a time")
+			}
+			showError(c, true, err)
+		},
+		ExitErrHandler: func(c *cli.Context, err error) {
+			if err != nil {
+				showError(c, true, err)
+			}
+		},
 	}
+}
+
+func validateArgs(args []string, expectedCmdCount, expectedFlagCount int) ([]string, int, error) {
+	_, _, flags, cmdCnt := parseArgsInternal(args)
+	if cmdCnt != expectedCmdCount || len(flags) != expectedFlagCount {
+		if cmdCnt > expectedCmdCount {
+			var err error
+			if unknown := getUnknownCmd(os.Args[1:]); len(unknown) > 0 {
+				err = fmt.Errorf("command '%s' not found", unknown)
+			} else {
+				err = fmt.Errorf("use only one command at a time")
+			}
+			return nil, 0, err
+		}
+		return nil, 0, fmt.Errorf("argument mismatch: %v %v %d %d", args, flags, cmdCnt, len(flags))
+	}
+
+	return flags, cmdCnt, nil
 }
 
 /*
@@ -260,3 +320,13 @@ You MAY also export these environment variables:
 
 You may put these values in a .env file in the current folder. See env.example.`
 */
+
+func getUnknownCmd(args []string) string {
+	okay := map[string]bool{"init": true, "daemon": true, "config": true, "version": true, "help": true, "edit": true, "show": true}
+	for _, arg := range args {
+		if !okay[arg] && !strings.HasPrefix(arg, "-") {
+			return arg
+		}
+	}
+	return ""
+}
