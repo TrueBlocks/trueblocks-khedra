@@ -21,7 +21,6 @@ type Config struct {
 func NewConfig() Config {
 	chains := map[string]Chain{
 		"mainnet": NewChain("mainnet"),
-		"sepolia": NewChain("sepolia"),
 	}
 	services := map[string]Service{
 		"scraper": NewService("scraper"),

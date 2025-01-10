@@ -16,17 +16,12 @@ func TestConfigNew(t *testing.T) {
 	assert.Equal(t, "~/.khedra/data", cfg.General.DataFolder)
 
 	assert.NotNil(t, cfg.Chains)
-	assert.Equal(t, 2, len(cfg.Chains))
+	assert.Equal(t, 1, len(cfg.Chains))
 	assert.NotNil(t, cfg.Chains["mainnet"])
 	assert.NotNil(t, cfg.Chains["sepolia"])
 
 	service := cfg.Chains["mainnet"]
 	assert.Equal(t, "mainnet", service.Name)
-	assert.Equal(t, "http://localhost:8545", service.RPCs[0])
-	assert.True(t, service.Enabled)
-
-	service = cfg.Chains["sepolia"]
-	assert.Equal(t, "sepolia", service.Name)
 	assert.Equal(t, "http://localhost:8545", service.RPCs[0])
 	assert.True(t, service.Enabled)
 

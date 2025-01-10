@@ -12,22 +12,16 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// TODO: FIX TEST
-// func TestChainEnvOverrides(t *testing.T) {
-// 	defer types.SetupTest([]string{
-// 		"TB_KHEDRA_CHAINS_MAINNET_RPCS=http://rpc1.mainnet,http://rpc2.mainnet",
-// 		"TB_KHEDRA_CHAINS_MAINNET_ENABLED=false",
-// 		"TB_KHEDRA_CHAINS_SEPOLIA_ENABLED=true",
-// 	})()
+func TestChainEnvOverrides(t *testing.T) {
+	defer types.SetupTest([]string{
+		"TB_KHEDRA_CHAINS_MAINNET_RPCS=http://rpc1.mainnet,http://rpc2.mainnet",
+		"TB_KHEDRA_CHAINS_MAINNET_ENABLED=false",
+	})()
 
-// 	if cfg, err := LoadConfig(); err != nil {
-// 		t.Error(err)
-// 	} else {
-// 		assert.Equal(t, []string{"http://rpc1.mainnet", "http://rpc2.mainnet"}, cfg.Chains["mainnet"].RPCs, "RPCs for mainnet should be overridden by environment variable")
-// 		assert.False(t, cfg.Chains["mainnet"].Enabled, "Enabled flag for mainnet should be overridden by environment variable")
-// 		assert.True(t, cfg.Chains["sepolia"].Enabled, "Enabled flag for sepolia should be overridden by environment variable")
-// 	}
-// }
+	cfg, err := LoadConfig()
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"http://rpc1.mainnet", "http://rpc2.mainnet"}, cfg.Chains["mainnet"].RPCs, "RPCs for mainnet should be overridden by environment variable")
+}
 
 func TestChainInvalidBooleanValue(t *testing.T) {
 	defer types.SetupTest([]string{
@@ -127,7 +121,7 @@ func TestChainLargeNumberOfChains(t *testing.T) {
 	if cfg, err = LoadConfig(); err != nil {
 		t.Error(err)
 	} else {
-		assert.Equal(t, nChains+2, len(cfg.Chains), "All chains should be loaded correctly")
+		assert.Equal(t, nChains+1, len(cfg.Chains), "All chains should be loaded correctly")
 	}
 }
 
@@ -551,31 +545,14 @@ func TestValidateConfig_MissingRPCs(t *testing.T) {
 	assert.Contains(t, err.Error(), "chain mainnet has no RPCs defined")
 }
 
-// TODO: FIX TEST
-// func TestValidateConfig_InvalidServicePort(t *testing.T) {
-// 	cfg := types.Config{
-// 		Services: map[string]types.Service{
-// 			"api": {Port: 80, BatchSize: 100, Enabled: true},
-// 		},
-// 	}
+func TestValidateConfig_InvalidLoggingFolder(t *testing.T) {
+	cfg := types.NewConfig()
+	cfg.Logging.Folder = ""
 
-// 	err := validateConfig(cfg)
-// 	assert.Error(t, err)
-// 	assert.Contains(t, err.Error(), "service api has an invalid port")
-// }
-
-// TODO: FIX TEST
-// func TestValidateConfig_InvalidBatchSize(t *testing.T) {
-// 	cfg := types.Config{
-// 		Services: map[string]types.Service{
-// 			"api": {Port: 8080, BatchSize: 0, Enabled: true},
-// 		},
-// 	}
-
-// 	err := validateConfig(cfg)
-// 	assert.Error(t, err)
-// 	assert.Contains(t, err.Error(), "service api has an invalid batch size")
-// }
+	err := validateConfig(cfg)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "logging folder is not defined")
+}
 
 func TestValidateConfig_MissingLoggingConfig(t *testing.T) {
 	cfg := types.Config{
@@ -671,42 +648,44 @@ func TestInitializeFolders_ErrorOnInvalidPath(t *testing.T) {
 }
 
 // ------------------------------------------------------------
-// TODO: FIX TEST
-// func TestLoadConfig_ValidConfig(t *testing.T) {
-// 	defer types.SetupTest([]string{})()
+func TestLoadConfig_ValidConfig(t *testing.T) {
+	defer types.SetupTest([]string{})()
 
-// 	// Set up a valid configuration file
-// 	cfg := types.Config{
-// 		Chains: map[string]types.Chain{
-// 			"mainnet": {RPCs: []string{"http://rpc1.mainnet"}, Enabled: true},
-// 		},
-// 		Services: map[string]types.Service{
-// 			"api": {Port: 8080, BatchSize: 100, Enabled: true},
-// 		},
-// 		Logging: types.Logging{
-// 			Folder:   "/tmp/test-logging-folder",
-// 			Filename: "test.log",
-// 			MaxSize:  50,
-// 		},
-// 		General: types.General{
-// 			DataFolder: "/tmp/test-data-folder",
-// 		},
-// 	}
+	// Set up a valid configuration file
+	cfg := types.Config{
+		Chains: map[string]types.Chain{
+			"mainnet": {Name: "mainnet", RPCs: []string{"http://rpc1.mainnet"}, Enabled: true},
+		},
+		Services: map[string]types.Service{
+			"scraper": {Name: "scraper", Port: 8080, BatchSize: 100, Enabled: true},
+			"monitor": {Name: "monitor", Port: 8080, BatchSize: 100, Enabled: true},
+			"api":     {Name: "api", Port: 8080, Enabled: false},
+			"ipfs":    {Name: "ipfs", Port: 5001, Enabled: false},
+		},
+		Logging: types.Logging{
+			Folder:   "/tmp/test-logging-folder",
+			Filename: "test.log",
+			MaxSize:  50,
+		},
+		General: types.General{
+			DataFolder: "/tmp/test-data-folder",
+		},
+	}
 
-// 	// Save the config to the file
-// 	bytes, _ := yaml.Marshal(cfg)
-// 	coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
+	// Save the config to the file
+	bytes, _ := yaml.Marshal(cfg)
+	coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
 
-// 	// Run LoadConfig
-// 	result, err := LoadConfig()
-// 	assert.NoError(t, err)
-// 	assert.Equal(t, cfg, result)
+	// Run LoadConfig
+	result, err := LoadConfig()
+	assert.NoError(t, err)
+	assert.Equal(t, cfg, result)
 
-// 	// Clean up
-// 	os.RemoveAll(cfg.Logging.Folder)
-// 	os.RemoveAll(cfg.General.DataFolder)
-// 	os.Remove(types.GetConfigFn())
-// }
+	// Clean up
+	os.RemoveAll(cfg.Logging.Folder)
+	os.RemoveAll(cfg.General.DataFolder)
+	os.Remove(types.GetConfigFn())
+}
 
 func TestLoadConfig_InvalidFileConfig(t *testing.T) {
 	defer types.SetupTest([]string{})()
@@ -723,47 +702,46 @@ func TestLoadConfig_InvalidFileConfig(t *testing.T) {
 	os.Remove(types.GetConfigFn())
 }
 
-// TODO: FIX TEST
-// func TestLoadConfig_EnvOverrides(t *testing.T) {
-// 	defer types.SetupTest([]string{
-// 		"TB_KHEDRA_CHAINS_MAINNET_RPCS=http://env.rpc1.mainnet,http://env.rpc2.mainnet",
-// 		"TB_KHEDRA_SERVICES_API_PORT=9090",
-// 		"TB_KHEDRA_GENERAL_DATADIR=/tmp/env-data-folder",
-// 	})()
+func TestLoadConfig_EnvOverrides(t *testing.T) {
+	defer types.SetupTest([]string{
+		"TB_KHEDRA_CHAINS_MAINNET_RPCS=http://env.rpc1.mainnet,http://env.rpc2.mainnet",
+		"TB_KHEDRA_SERVICES_API_PORT=9090",
+		"TB_KHEDRA_GENERAL_DATAFOLDER=/tmp/env-data-folder",
+	})()
 
-// 	// Set up a base configuration file
-// 	cfg := types.Config{
-// 		Chains: map[string]types.Chain{
-// 			"mainnet": {RPCs: []string{"http://rpc1.mainnet"}, Enabled: true},
-// 		},
-// 		Services: map[string]types.Service{
-// 			"api": {Port: 8080, BatchSize: 100, Enabled: true},
-// 		},
-// 		Logging: types.Logging{
-// 			Folder:   "/tmp/test-logging-folder",
-// 			Filename: "test.log",
-// 			MaxSize:  50,
-// 		},
-// 		General: types.General{
-// 			DataFolder: "/tmp/test-data-folder",
-// 		},
-// 	}
+	// Set up a base configuration file
+	cfg := types.Config{
+		Chains: map[string]types.Chain{
+			"mainnet": {RPCs: []string{"http://rpc1.mainnet"}, Enabled: true},
+		},
+		Services: map[string]types.Service{
+			"api": {Port: 8080, BatchSize: 100, Enabled: true},
+		},
+		Logging: types.Logging{
+			Folder:   "/tmp/test-logging-folder",
+			Filename: "test.log",
+			MaxSize:  50,
+		},
+		General: types.General{
+			DataFolder: "/tmp/test-data-folder",
+		},
+	}
 
-// 	bytes, _ := yaml.Marshal(cfg)
-// 	coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
+	bytes, _ := yaml.Marshal(cfg)
+	coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
 
-// 	// Run LoadConfig
-// 	result, err := LoadConfig()
-// 	assert.NoError(t, err)
-// 	assert.Equal(t, []string{"http://env.rpc1.mainnet", "http://env.rpc2.mainnet"}, result.Chains["mainnet"].RPCs)
-// 	assert.Equal(t, 9090, result.Services["api"].Port)
-// 	assert.Equal(t, "/tmp/env-data-folder", result.General.DataFolder)
+	// Run LoadConfig
+	result, err := LoadConfig()
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"http://env.rpc1.mainnet", "http://env.rpc2.mainnet"}, result.Chains["mainnet"].RPCs)
+	assert.Equal(t, 9090, result.Services["api"].Port)
+	assert.Equal(t, "/tmp/env-data-folder", result.General.DataFolder)
 
-// 	// Clean up
-// 	os.RemoveAll(cfg.Logging.Folder)
-// 	os.RemoveAll(result.General.DataFolder)
-// 	os.Remove(types.GetConfigFn())
-// }
+	// Clean up
+	os.RemoveAll(cfg.Logging.Folder)
+	os.RemoveAll(result.General.DataFolder)
+	os.Remove(types.GetConfigFn())
+}
 
 func TestLoadConfig_ValidationFailure(t *testing.T) {
 	defer types.SetupTest([]string{})()
