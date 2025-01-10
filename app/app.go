@@ -3,7 +3,6 @@ package app
 import (
 	"log"
 	"log/slog"
-	"os"
 
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 	"github.com/urfave/cli/v2"
@@ -36,8 +35,8 @@ func NewKhedraApp() *KhedraApp {
 }
 
 // Run runs the Khedra cli
-func (k *KhedraApp) Run() error {
-	return k.Cli.Run(os.Args)
+func (k *KhedraApp) Run(args []string) error {
+	return k.Cli.Run(args)
 }
 
 /*
