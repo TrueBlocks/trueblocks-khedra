@@ -2,10 +2,14 @@ package app
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
+	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
+	"github.com/joho/godotenv"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
@@ -180,16 +184,6 @@ func LoadConfig() (types.Config, error) {
 // }
 
 /*
-func init() {
-	if pwd, err := os.Getwd(); err == nil {
-		if file.FileExists(filepath.Join(pwd, ".env")) {
-			if err = godotenv.Load(filepath.Join(pwd, ".env")); err != nil {
-				fmt.Fprintf(os.Stderr, "Found .env, but could not read it\n")
-			}
-		}
-	}
-}
-
 // EstablishConfig either reads an existing configuration file or creates it if it doesn't exist.
 func (a *App) EstablishConfig() error {
 	for _, arg := range os.Args {
@@ -495,8 +489,8 @@ func validateConfig(cfg types.Config) error {
 
 func initializeFolders(cfg types.Config) error {
 	folders := []string{
-		cfg.Logging.Folder,
-		cfg.General.DataFolder,
+		utils.ExpandPath(cfg.Logging.Folder),
+		utils.ExpandPath(cfg.General.DataFolder),
 	}
 
 	for _, folder := range folders {
@@ -506,4 +500,14 @@ func initializeFolders(cfg types.Config) error {
 	}
 
 	return nil
+}
+
+func init() {
+	if pwd, err := os.Getwd(); err == nil {
+		if coreFile.FileExists(filepath.Join(pwd, ".env")) {
+			if err = godotenv.Load(filepath.Join(pwd, ".env")); err != nil {
+				fmt.Fprintf(os.Stderr, "Found .env, but could not read it\n")
+			}
+		}
+	}
 }
