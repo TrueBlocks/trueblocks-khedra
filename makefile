@@ -16,7 +16,6 @@ every:
 	@make app
 
 app: $(SRC_GO)
-	@echo Building khedra...
 	@mkdir -p $(bin)
 	@go build -o $(dest) *.go
 
@@ -28,7 +27,7 @@ install:
 	@make build
 	@mv khedra ~/go/bin
 
-test:
+test: $(SRC_GO)
 	@go test ./...
 
 #-------------------------------------------------

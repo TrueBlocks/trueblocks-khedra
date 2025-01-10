@@ -41,12 +41,14 @@ func SetTestEnv(env []string) func() {
 // format "KEY=VALUE". Returns a cleanup function which may be deferred to remove the
 // temporary configuration file and unset the environment variables.
 func SetupTest(env []string) func() {
+	originalArgs := os.Args
 	cleanupFn := SetTestEnv(env)
 	tempConfigFile := GetConfigFn()
 	EstablishConfig(tempConfigFile)
 	return func() {
 		cleanupFn()
 		os.Remove(tempConfigFile)
+		os.Args = originalArgs
 	}
 }
 
@@ -122,16 +124,16 @@ func checkValidationErrors(t *testing.T, name string, err error, wantErr bool) {
 		if err != nil {
 			if validationErrors, ok := err.(validator.ValidationErrors); ok {
 				for _, fieldErr := range validationErrors {
-					t.Errorf("Validation error in test '%s' on field '%s': tag='%s', param='%s', value='%v'",
+					t.Errorf("Validation error in test '%s' on field '%s': value='%v', param='%s', tag='%s'",
 						name,
 						fieldErr.Field(),
-						fieldErr.Tag(),
-						fieldErr.Param(),
 						fieldErr.Value(),
+						fieldErr.Param(),
+						fieldErr.Tag(),
 					)
 				}
 			} else {
-				t.Errorf("Unexpected error in test '%s': %v", name, err)
+				t.Errorf("Unexpected error in test '%s': expected error = %v, got error = %v", name, wantErr, err != nil)
 			}
 		} else {
 			t.Errorf("Test '%s': expected error = %v, got error = %v", name, wantErr, err != nil)

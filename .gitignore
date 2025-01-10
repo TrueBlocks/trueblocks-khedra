@@ -9,7 +9,7 @@
 go.work
 go.work.sum
 .env
-shit
+shit*
 x
 khedra
 khedra.log

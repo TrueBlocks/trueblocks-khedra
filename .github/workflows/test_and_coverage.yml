@@ -10,6 +10,8 @@ jobs:
   test:
     name: Run Tests and Generate Coverage
     runs-on: ubuntu-latest
+    env:
+      TB_GITHUB_TESTING: "true"
     steps:
       # Checkout the repository
       - name: Checkout code
