@@ -14,6 +14,8 @@ import (
 var execCommand = exec.Command
 
 func initializeCli(k *KhedraApp) *cli.App {
+	os.Args = cleanArgs(os.Args)
+
 	showError := func(c *cli.Context, showHelp bool, err error) {
 		_, _ = c.App.Writer.Write([]byte("\n" + colors.Red + "Error: " + err.Error() + colors.Off + "\n\n"))
 		if showHelp {
@@ -36,7 +38,7 @@ func initializeCli(k *KhedraApp) *cli.App {
 				Usage:        "Initializes Khedra",
 				OnUsageError: onUsageError,
 				Action: func(c *cli.Context) error {
-					if _, _, err := validateArgs(os.Args[1:], 1, 1); err != nil {
+					if err := validateArgs(os.Args[1:], 1, 1); err != nil {
 						return err
 					}
 					return k.initAction(c)
@@ -47,7 +49,7 @@ func initializeCli(k *KhedraApp) *cli.App {
 				Usage:        "Runs Khedra's services",
 				OnUsageError: onUsageError,
 				Action: func(c *cli.Context) error {
-					if _, _, err := validateArgs(os.Args[1:], 1, 1); err != nil {
+					if err := validateArgs(os.Args[1:], 1, 1); err != nil {
 						return err
 					}
 					return k.daemonAction(c)
@@ -59,7 +61,7 @@ func initializeCli(k *KhedraApp) *cli.App {
 				Hidden:       true,
 				OnUsageError: onUsageError,
 				Action: func(c *cli.Context) error {
-					if _, _, err := validateArgs(os.Args[1:], 0, 0); err != nil {
+					if err := validateArgs(os.Args[1:], 0, 0); err != nil {
 						return err
 					}
 					return k.versionAction(c)
@@ -74,7 +76,7 @@ func initializeCli(k *KhedraApp) *cli.App {
 						Usage:        "Opens the configuration file for editing",
 						OnUsageError: onUsageError,
 						Action: func(c *cli.Context) error {
-							if _, _, err := validateArgs(os.Args[1:], 2, 2); err != nil {
+							if err := validateArgs(os.Args[1:], 2, 2); err != nil {
 								return err
 							}
 							return k.configEditAction(c)
@@ -85,7 +87,7 @@ func initializeCli(k *KhedraApp) *cli.App {
 						Usage:        "Displays the current configuration",
 						OnUsageError: onUsageError,
 						Action: func(c *cli.Context) error {
-							if _, _, err := validateArgs(os.Args[1:], 2, 2); err != nil {
+							if err := validateArgs(os.Args[1:], 2, 2); err != nil {
 								return err
 							}
 							return k.configShowAction(c)
@@ -111,24 +113,6 @@ func initializeCli(k *KhedraApp) *cli.App {
 			}
 		},
 	}
-}
-
-func validateArgs(args []string, expectedCmdCount, expectedFlagCount int) ([]string, int, error) {
-	_, _, flags, cmdCnt := parseArgsInternal(args)
-	if cmdCnt != expectedCmdCount || len(flags) != expectedFlagCount {
-		if cmdCnt > expectedCmdCount {
-			var err error
-			if unknown := getUnknownCmd(os.Args[1:]); len(unknown) > 0 {
-				err = fmt.Errorf("command '%s' not found", unknown)
-			} else {
-				err = fmt.Errorf("use only one command at a time")
-			}
-			return nil, 0, err
-		}
-		return nil, 0, fmt.Errorf("argument mismatch: %v %v %d %d", args, flags, cmdCnt, len(flags))
-	}
-
-	return flags, cmdCnt, nil
 }
 
 /*

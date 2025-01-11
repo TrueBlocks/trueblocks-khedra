@@ -34,7 +34,9 @@ func TestInitializeCliCommands(t *testing.T) {
 }
 
 func TestConfigShowCommand(t *testing.T) {
-	types.SetupTest([]string{})
+	types.SetupTest([]string{
+		"EDITOR=testing",
+	})
 	os.Args = []string{"khedra", "config", "show"}
 
 	k := &KhedraApp{}
@@ -51,8 +53,8 @@ func TestConfigShowCommand(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	fmt.Println("output:", string(output))
-	assert.Contains(t, string(output), `configShowAction`)
+	// fmt.Println("output:", string(output))
+	assert.Contains(t, string(output), `general:`)
 }
 
 func TestConfigEditCommand(t *testing.T) {

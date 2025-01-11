@@ -1,8 +1,13 @@
 package app
 
 import (
+	"errors"
+	"fmt"
+	"os"
 	"reflect"
 	"testing"
+
+	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 )
 
 func TestParseArgsInternal(t *testing.T) {
@@ -137,6 +142,65 @@ func TestCleanArgs(t *testing.T) {
 			result := cleanArgs(tt.args)
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("expected %v, got %v", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestValidateArgs(t *testing.T) {
+	types.SetupTest([]string{})
+	tests := []struct {
+		name              string
+		args              []string
+		expectedCmdCount  int
+		expectedFlagCount int
+		expectedErr       error
+	}{
+		{
+			name:              "Valid single command",
+			args:              []string{"khedra", "init"},
+			expectedCmdCount:  1,
+			expectedFlagCount: 1,
+			expectedErr:       nil,
+		},
+		{
+			name:              "Valid multi-word command",
+			args:              []string{"khedra", "config", "edit"},
+			expectedCmdCount:  2,
+			expectedFlagCount: 2,
+			expectedErr:       nil,
+		},
+		{
+			name:              "Unknown command",
+			args:              []string{"khedra", "unknown"},
+			expectedCmdCount:  1,
+			expectedFlagCount: 0,
+			expectedErr:       fmt.Errorf("argument mismatch: %v %v %d %d", []string{"unknown"}, []string{"unknown"}, 1, 1),
+		},
+		{
+			name:              "Extra command",
+			args:              []string{"khedra", "init", "daemon"},
+			expectedCmdCount:  1,
+			expectedFlagCount: 0,
+			expectedErr:       fmt.Errorf("use only one command at a time"),
+		},
+		{
+			name:              "Argument mismatch",
+			args:              []string{"khedra", "init"},
+			expectedCmdCount:  1,
+			expectedFlagCount: 2, // wrong on purpose for testing
+			expectedErr:       fmt.Errorf("argument mismatch: %v %v %d %d", []string{"init"}, []string{"init"}, 1, 1),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			os.Args = tt.args
+			err := validateArgs(tt.args[1:], tt.expectedCmdCount, tt.expectedFlagCount)
+			fmt.Println(tt.args, tt.expectedErr, err)
+
+			if !errors.Is(err, tt.expectedErr) && (err == nil || tt.expectedErr == nil || err.Error() != tt.expectedErr.Error()) {
+				t.Errorf("expected [ %v ], got [ %v ]", tt.expectedErr, err)
 			}
 		})
 	}

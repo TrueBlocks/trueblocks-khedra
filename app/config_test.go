@@ -589,14 +589,12 @@ func TestInitializeFolders_AllFoldersExist(t *testing.T) {
 		},
 	}
 
-	// Ensure folders exist before running the test
 	os.MkdirAll(cfg.Logging.Folder, os.ModePerm)
 	os.MkdirAll(cfg.General.DataFolder, os.ModePerm)
 
 	err := initializeFolders(cfg)
 	assert.NoError(t, err)
 
-	// Clean up
 	os.RemoveAll(cfg.Logging.Folder)
 	os.RemoveAll(cfg.General.DataFolder)
 }
@@ -611,20 +609,17 @@ func TestInitializeFolders_CreateMissingFolders(t *testing.T) {
 		},
 	}
 
-	// Ensure folders do not exist before running the test
 	os.RemoveAll(cfg.Logging.Folder)
 	os.RemoveAll(cfg.General.DataFolder)
 
 	err := initializeFolders(cfg)
 	assert.NoError(t, err)
 
-	// Verify that folders were created
 	_, err = os.Stat(cfg.Logging.Folder)
 	assert.NoError(t, err)
 	_, err = os.Stat(cfg.General.DataFolder)
 	assert.NoError(t, err)
 
-	// Clean up
 	os.RemoveAll(cfg.Logging.Folder)
 	os.RemoveAll(cfg.General.DataFolder)
 }
@@ -643,15 +638,12 @@ func TestInitializeFolders_ErrorOnInvalidPath(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to create folder")
 
-	// Clean up
 	os.RemoveAll(cfg.General.DataFolder)
 }
 
-// ------------------------------------------------------------
 func TestLoadConfig_ValidConfig(t *testing.T) {
 	defer types.SetupTest([]string{})()
 
-	// Set up a valid configuration file
 	cfg := types.Config{
 		Chains: map[string]types.Chain{
 			"mainnet": {Name: "mainnet", RPCs: []string{"http://rpc1.mainnet"}, Enabled: true},
@@ -672,16 +664,13 @@ func TestLoadConfig_ValidConfig(t *testing.T) {
 		},
 	}
 
-	// Save the config to the file
 	bytes, _ := yaml.Marshal(cfg)
 	coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
 
-	// Run LoadConfig
 	result, err := LoadConfig()
 	assert.NoError(t, err)
 	assert.Equal(t, cfg, result)
 
-	// Clean up
 	os.RemoveAll(cfg.Logging.Folder)
 	os.RemoveAll(cfg.General.DataFolder)
 	os.Remove(types.GetConfigFn())
@@ -690,15 +679,12 @@ func TestLoadConfig_ValidConfig(t *testing.T) {
 func TestLoadConfig_InvalidFileConfig(t *testing.T) {
 	defer types.SetupTest([]string{})()
 
-	// Write an invalid configuration file
 	os.WriteFile(types.GetConfigFn(), []byte("invalid_yaml"), 0644)
 
-	// Run LoadConfig
 	_, err := LoadConfig()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to load file configuration")
 
-	// Clean up
 	os.Remove(types.GetConfigFn())
 }
 
@@ -709,7 +695,6 @@ func TestLoadConfig_EnvOverrides(t *testing.T) {
 		"TB_KHEDRA_GENERAL_DATAFOLDER=/tmp/env-data-folder",
 	})()
 
-	// Set up a base configuration file
 	cfg := types.Config{
 		Chains: map[string]types.Chain{
 			"mainnet": {RPCs: []string{"http://rpc1.mainnet"}, Enabled: true},
@@ -730,14 +715,12 @@ func TestLoadConfig_EnvOverrides(t *testing.T) {
 	bytes, _ := yaml.Marshal(cfg)
 	coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
 
-	// Run LoadConfig
 	result, err := LoadConfig()
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"http://env.rpc1.mainnet", "http://env.rpc2.mainnet"}, result.Chains["mainnet"].RPCs)
 	assert.Equal(t, 9090, result.Services["api"].Port)
 	assert.Equal(t, "/tmp/env-data-folder", result.General.DataFolder)
 
-	// Clean up
 	os.RemoveAll(cfg.Logging.Folder)
 	os.RemoveAll(result.General.DataFolder)
 	os.Remove(types.GetConfigFn())
@@ -746,7 +729,6 @@ func TestLoadConfig_EnvOverrides(t *testing.T) {
 func TestLoadConfig_ValidationFailure(t *testing.T) {
 	defer types.SetupTest([]string{})()
 
-	// Set up an invalid configuration file
 	cfg := types.Config{
 		Chains: map[string]types.Chain{
 			"mainnet": {RPCs: []string{}, Enabled: true},
@@ -764,15 +746,12 @@ func TestLoadConfig_ValidationFailure(t *testing.T) {
 		},
 	}
 
-	// Save the config to the file
 	bytes, _ := yaml.Marshal(cfg)
 	coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
 
-	// Run LoadConfig
 	_, err := LoadConfig()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "validation failed")
 
-	// Clean up
 	os.Remove(types.GetConfigFn())
 }
