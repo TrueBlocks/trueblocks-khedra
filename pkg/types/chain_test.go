@@ -1,28 +1,23 @@
 package types
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestChainNewChain(t *testing.T) {
+// Testing status: reviewed
+
+func TestNewChain(t *testing.T) {
 	c := NewChain("TestChain")
 
-	expectedName := "TestChain"
-	assert.Equal(t, expectedName, c.Name, "Expected Name to be '%s', got '%s'", expectedName, c.Name)
-
-	expectedRPCs := []string{"http://localhost:8545"}
-	assert.Equal(t, expectedRPCs, c.RPCs, "Expected RPCs to be '%v', got '%v'", expectedRPCs, c.RPCs)
-
-	assert.True(t, c.Enabled, "Expected Enabled to be true, got %v", c.Enabled)
+	assert.Equal(t, "TestChain", c.Name)
+	assert.Equal(t, []string{"http://localhost:8545"}, c.RPCs)
+	assert.True(t, c.Enabled)
 }
 
 func TestChainValidation(t *testing.T) {
-	os.Setenv("TEST_MODE", "true")
-	defer os.Unsetenv("TEST_MODE")
-
+	SetupTest([]string{})
 	tests := []struct {
 		name    string
 		chain   Chain
@@ -93,21 +88,6 @@ func TestChainValidation(t *testing.T) {
 			}
 		})
 	}
-
-	os.Setenv("TEST_MODE", "true")
-	invalidChain := Chain{}
-
-	err := Validate.Struct(invalidChain)
-	assert.Error(t, err, "Expected validation error for missing Name and RPCs, got nil")
-
-	validChain := Chain{
-		Name:    "ValidChain",
-		RPCs:    []string{"http://localhost:8545"},
-		Enabled: true,
-	}
-
-	err = Validate.Struct(validChain)
-	assert.NoError(t, err, "Expected no validation error, but got: %s", err)
 }
 
 func TestChainReadAndWrite(t *testing.T) {

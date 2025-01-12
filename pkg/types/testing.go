@@ -8,7 +8,6 @@ import (
 
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
-	"github.com/go-playground/validator"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
@@ -42,11 +41,11 @@ func SetTestEnv(env []string) func() {
 // temporary configuration file and unset the environment variables.
 func SetupTest(env []string) func() {
 	originalArgs := os.Args
-	cleanupFn := SetTestEnv(env)
+	envCleanup := SetTestEnv(env)
 	tempConfigFile := GetConfigFn()
 	EstablishConfig(tempConfigFile)
 	return func() {
-		cleanupFn()
+		envCleanup()
 		os.Remove(tempConfigFile)
 		os.Args = originalArgs
 	}
@@ -116,27 +115,4 @@ func createTempDir(t *testing.T, writable bool) string {
 	}
 
 	return dir
-}
-
-func checkValidationErrors(t *testing.T, name string, err error, wantErr bool) {
-	t.Helper()
-	if (err != nil) != wantErr {
-		if err != nil {
-			if validationErrors, ok := err.(validator.ValidationErrors); ok {
-				for _, fieldErr := range validationErrors {
-					t.Errorf("Validation error in test '%s' on field '%s': value='%v', param='%s', tag='%s'",
-						name,
-						fieldErr.Field(),
-						fieldErr.Value(),
-						fieldErr.Param(),
-						fieldErr.Tag(),
-					)
-				}
-			} else {
-				t.Errorf("Unexpected error in test '%s': expected error = %v, got error = %v", name, wantErr, err != nil)
-			}
-		} else {
-			t.Errorf("Test '%s': expected error = %v, got error = %v", name, wantErr, err != nil)
-		}
-	}
 }

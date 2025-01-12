@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
+	_ "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/env"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
 	"gopkg.in/yaml.v2"
 )
@@ -54,13 +55,13 @@ func GetConfigFn() string {
 	}
 
 	// current folder
-	fn := utils.ExpandPath("config.yaml")
+	fn := utils.ResolvePath("config.yaml")
 	if coreFile.FileExists(fn) {
 		return fn
 	}
 
 	// expanded default config folder
-	fn = utils.ExpandPath(filepath.Join(mustGetConfigPath(), "config.yaml"))
+	fn = utils.ResolvePath(filepath.Join(mustGetConfigPath(), "config.yaml"))
 	if coreFile.FileExists(fn) {
 		return fn
 	}
@@ -71,7 +72,7 @@ func GetConfigFn() string {
 
 func mustGetConfigPath() string {
 	var err error
-	cfgDir := utils.ExpandPath("~/.khedra")
+	cfgDir := utils.ResolvePath("~/.khedra")
 
 	if !coreFile.FolderExists(cfgDir) {
 		if err = coreFile.EstablishFolder(cfgDir); err != nil {

@@ -12,6 +12,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Testing status: not_reviewed
+
 func TestChainEnvOverrides(t *testing.T) {
 	defer types.SetupTest([]string{
 		"TB_KHEDRA_CHAINS_MAINNET_RPCS=http://rpc1.mainnet,http://rpc2.mainnet",

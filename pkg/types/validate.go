@@ -48,7 +48,7 @@ func init() {
 	// validateIsWritable validates that a path exists and is writable
 	validateIsWritable := func(fl validator.FieldLevel) bool {
 		path := fl.Field().String()
-		path = utils.ExpandPath(path)
+		path = utils.ResolvePath(path)
 
 		testFile := filepath.Join(path, ".writable_check")
 		file, err := os.Create(testFile)
@@ -71,7 +71,7 @@ func init() {
 		if path == "" {
 			return false
 		}
-		path = utils.ExpandPath(path)
+		path = utils.ResolvePath(path)
 		_, err := os.Stat(path)
 		return err == nil
 	}
@@ -86,7 +86,7 @@ func init() {
 		if path == "" {
 			return false
 		}
-		path = utils.ExpandPath(path)
+		path = utils.ResolvePath(path)
 		info, err := os.Stat(path)
 		return err == nil && info.IsDir()
 	}

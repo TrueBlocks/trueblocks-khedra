@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/go-playground/validator"
 	"github.com/stretchr/testify/assert"
 )
+
+// Testing status: not_reviewed
 
 func TestNewService(t *testing.T) {
 	tests := []struct {
@@ -370,5 +373,28 @@ func TestServiceListValidation(t *testing.T) {
 				t.Errorf("Validation failed for service %d: %v", i+1, err)
 			}
 		})
+	}
+}
+
+func checkValidationErrors(t *testing.T, name string, err error, wantErr bool) {
+	t.Helper()
+	if (err != nil) != wantErr {
+		if err != nil {
+			if validationErrors, ok := err.(validator.ValidationErrors); ok {
+				for _, fieldErr := range validationErrors {
+					t.Errorf("Validation error in test '%s' on field '%s': value='%v', param='%s', tag='%s'",
+						name,
+						fieldErr.Field(),
+						fieldErr.Value(),
+						fieldErr.Param(),
+						fieldErr.Tag(),
+					)
+				}
+			} else {
+				t.Errorf("Unexpected error in test '%s': expected error = %v, got error = %v", name, wantErr, err != nil)
+			}
+		} else {
+			t.Errorf("Test '%s': expected error = %v, got error = %v", name, wantErr, err != nil)
+		}
 	}
 }

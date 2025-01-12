@@ -9,15 +9,18 @@ import (
 	"strings"
 	"testing"
 
+	_ "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/env"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli/v2"
 )
 
+// Testing status: not_reviewed
+
 func TestInitializeCliCommands(t *testing.T) {
-	types.SetupTest([]string{})
+	defer types.SetupTest([]string{})()
 	k := &KhedraApp{}
-	cmdLine := initializeCli(k)
+	cmdLine := initCli(k)
 	assert.NotNil(t, cmdLine)
 	assert.Equal(t, "khedra", cmdLine.Name)
 	assert.Equal(t, "A tool to index, monitor, serve, and share blockchain data", cmdLine.Usage)
@@ -34,13 +37,11 @@ func TestInitializeCliCommands(t *testing.T) {
 }
 
 func TestConfigShowCommand(t *testing.T) {
-	types.SetupTest([]string{
-		"EDITOR=testing",
-	})
+	defer types.SetupTest([]string{})()
 	os.Args = []string{"khedra", "config", "show"}
 
 	k := &KhedraApp{}
-	cmdLine := initializeCli(k)
+	cmdLine := initCli(k)
 
 	command := getCommandByName(t, cmdLine, "config")
 	assert.NotNil(t, command)
@@ -58,11 +59,13 @@ func TestConfigShowCommand(t *testing.T) {
 }
 
 func TestConfigEditCommand(t *testing.T) {
-	types.SetupTest([]string{})
+	defer types.SetupTest([]string{
+		"EDITOR=testing",
+	})()
 	os.Args = []string{"khedra", "config", "edit"}
 
 	k := &KhedraApp{}
-	cmdLine := initializeCli(k)
+	cmdLine := initCli(k)
 
 	command := getCommandByName(t, cmdLine, "config")
 	assert.NotNil(t, command)
@@ -86,6 +89,7 @@ func TestConfigEditCommand(t *testing.T) {
 }
 
 func TestCommandLineActions(t *testing.T) {
+	defer types.SetupTest([]string{})()
 	var testCases = []struct {
 		expectError bool
 		command     string
@@ -473,12 +477,10 @@ func TestCommandLineActions(t *testing.T) {
 		}
 
 		t.Run(tc.command, func(t *testing.T) {
-			types.SetupTest([]string{})
-
-			args := strings.Split(tc.command, " ")
-			os.Args = cleanArgs(args)
+			os.Args = strings.Split(tc.command, " ")
+			os.Args = cleanArgs()
 			k := &KhedraApp{}
-			cmdLine := initializeCli(k)
+			cmdLine := initCli(k)
 			if len(os.Args) > 0 {
 				commandName := os.Args[1]
 				command := getCommandByName(t, cmdLine, commandName)

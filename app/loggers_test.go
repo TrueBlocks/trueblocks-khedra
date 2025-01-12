@@ -2,9 +2,15 @@ package app
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"log/slog"
+	"os"
+	"os/exec"
 	"testing"
 )
+
+// Testing status: reviewed
 
 func TestLoggingMethods(t *testing.T) {
 	var bufferFile bytes.Buffer
@@ -33,6 +39,8 @@ func TestLoggingMethods(t *testing.T) {
 		{"Warn", k.Warn, "warn message", &bufferProg, true},
 		{"Error", k.Error, "error message", &bufferProg, true},
 		{"ProgNoNewline", func(msg string, v ...any) { k.Prog(msg) }, "prog message", &bufferProg, false},
+		// {"ProgWithNewline", func(msg string, v ...any) { k.Prog(msg + "\n") }, "prog message\n", &bufferProg, true},
+		{"ProgWithArgs", func(msg string, v ...any) { k.Prog(msg, "arg1", 42) }, "prog message", &bufferProg, false},
 	}
 
 	for _, tt := range tests {
@@ -44,11 +52,37 @@ func TestLoggingMethods(t *testing.T) {
 
 			if tt.expectInLog {
 				logOutput := tt.buffer.String()
-				expected := `"msg":"` + tt.message + `"`
-				if !bytes.Contains([]byte(logOutput), []byte(expected)) {
-					t.Fatalf("expected log message not found in: %s", logOutput)
+				fmt.Printf("DEBUG: Log Output: %s\n", logOutput)
+				var logEntry map[string]any
+				err := json.Unmarshal([]byte(logOutput), &logEntry)
+				if err != nil {
+					t.Fatalf("failed to parse log output: %v", err)
+				}
+				if logEntry["msg"] != tt.message {
+					t.Errorf("expected message %q, got %q", tt.message, logEntry["msg"])
+				}
+
+				// Check for arguments in log output (if any)
+				if tt.name == "ProgWithArgs" {
+					if !bytes.Contains([]byte(logOutput), []byte("arg1")) || !bytes.Contains([]byte(logOutput), []byte("42")) {
+						t.Fatalf("expected arguments not found in log: %s", logOutput)
+					}
 				}
 			}
 		})
+	}
+}
+
+func TestFatal(t *testing.T) {
+	if os.Getenv("TEST_FATAL") == "1" {
+		k := &KhedraApp{}
+		k.Fatal("fatal message")
+		return
+	}
+	cmd := exec.Command(os.Args[0], "-test.run=TestFatal")
+	cmd.Env = append(os.Environ(), "TEST_FATAL=1")
+	err := cmd.Run()
+	if err == nil || err.Error() != "exit status 1" {
+		t.Fatalf("expected Fatal to exit with status 1, got %v", err)
 	}
 }

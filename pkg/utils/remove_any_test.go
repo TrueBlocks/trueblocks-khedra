@@ -6,6 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// Testing status: reviewed
+
 func TestRemoveAny(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -18,6 +20,9 @@ func TestRemoveAny(t *testing.T) {
 		{"Empty A", "", "xyz", ""},
 		{"Remove all", "abc", "abc", ""},
 		{"No matching characters", "hello", "xyz", "hello"},
+		{"Unicode characters", "你好世界", "界", "你好世"},
+		{"Duplicate characters in B", "banana", "na", "b"},
+		{"Case sensitivity", "Hello", "h", "Hello"},
 	}
 
 	for _, tt := range tests {

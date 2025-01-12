@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
-	"os"
 	"testing"
 )
+
+// Testing status: reviewed
 
 func TestMain(t *testing.T) {
 	// os.Args = append(os.Args[:1], []string{"version"}...)

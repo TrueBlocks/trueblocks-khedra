@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-// expandPath returns an absolute path expanded for ~, $HOME or other env variables
-func ExpandPath(path string) string {
+// ResolvePath returns an absolute path expanded for ~, $HOME or other env variables
+func ResolvePath(path string) string {
 	if strings.HasPrefix(path, "~/") || path == "~" {
 		home, err := os.UserHomeDir()
 		if err != nil {

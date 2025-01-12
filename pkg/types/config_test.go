@@ -9,6 +9,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Testing status: not_reviewed
+
 func TestConfigNew(t *testing.T) {
 	cfg := NewConfig()
 

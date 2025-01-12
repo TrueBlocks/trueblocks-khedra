@@ -9,6 +9,8 @@ import (
 	"github.com/alecthomas/assert/v2"
 )
 
+// Testing status: reviewed
+
 func TestLoggingNew(t *testing.T) {
 	logging := NewLogging()
 	assert.Equal(t, "~/.khedra/logs", logging.Folder)

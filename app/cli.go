@@ -4,17 +4,17 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
+	_ "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/env"
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v4"
 	"github.com/urfave/cli/v2"
 )
 
 var execCommand = exec.Command
 
-func initializeCli(k *KhedraApp) *cli.App {
-	os.Args = cleanArgs(os.Args)
+func initCli(k *KhedraApp) *cli.App {
+	os.Args = cleanArgs()
 
 	showError := func(c *cli.Context, showHelp bool, err error) {
 		_, _ = c.App.Writer.Write([]byte("\n" + colors.Red + "Error: " + err.Error() + colors.Off + "\n\n"))
@@ -38,7 +38,7 @@ func initializeCli(k *KhedraApp) *cli.App {
 				Usage:        "Initializes Khedra",
 				OnUsageError: onUsageError,
 				Action: func(c *cli.Context) error {
-					if err := validateArgs(os.Args[1:], 1, 1); err != nil {
+					if err := validateArgs(1, 1); err != nil {
 						return err
 					}
 					return k.initAction(c)
@@ -49,7 +49,7 @@ func initializeCli(k *KhedraApp) *cli.App {
 				Usage:        "Runs Khedra's services",
 				OnUsageError: onUsageError,
 				Action: func(c *cli.Context) error {
-					if err := validateArgs(os.Args[1:], 1, 1); err != nil {
+					if err := validateArgs(1, 1); err != nil {
 						return err
 					}
 					return k.daemonAction(c)
@@ -61,7 +61,7 @@ func initializeCli(k *KhedraApp) *cli.App {
 				Hidden:       true,
 				OnUsageError: onUsageError,
 				Action: func(c *cli.Context) error {
-					if err := validateArgs(os.Args[1:], 0, 0); err != nil {
+					if err := validateArgs(0, 0); err != nil {
 						return err
 					}
 					return k.versionAction(c)
@@ -76,7 +76,7 @@ func initializeCli(k *KhedraApp) *cli.App {
 						Usage:        "Opens the configuration file for editing",
 						OnUsageError: onUsageError,
 						Action: func(c *cli.Context) error {
-							if err := validateArgs(os.Args[1:], 2, 2); err != nil {
+							if err := validateArgs(2, 2); err != nil {
 								return err
 							}
 							return k.configEditAction(c)
@@ -87,7 +87,7 @@ func initializeCli(k *KhedraApp) *cli.App {
 						Usage:        "Displays the current configuration",
 						OnUsageError: onUsageError,
 						Action: func(c *cli.Context) error {
-							if err := validateArgs(os.Args[1:], 2, 2); err != nil {
+							if err := validateArgs(2, 2); err != nil {
 								return err
 							}
 							return k.configShowAction(c)
@@ -100,7 +100,7 @@ func initializeCli(k *KhedraApp) *cli.App {
 		OnUsageError: onUsageError,
 		CommandNotFound: func(c *cli.Context, command string) {
 			var err error
-			if unknown := getUnknownCmd(os.Args[1:]); len(unknown) > 0 {
+			if unknown := getUnknownCmd(); len(unknown) > 0 {
 				err = fmt.Errorf("command '%s' not found", unknown)
 			} else {
 				err = fmt.Errorf("use only one command at a time")
@@ -304,13 +304,3 @@ You MAY also export these environment variables:
 
 You may put these values in a .env file in the current folder. See env.example.`
 */
-
-func getUnknownCmd(args []string) string {
-	okay := map[string]bool{"init": true, "daemon": true, "config": true, "version": true, "help": true, "edit": true, "show": true}
-	for _, arg := range args {
-		if !okay[arg] && !strings.HasPrefix(arg, "-") {
-			return arg
-		}
-	}
-	return ""
-}

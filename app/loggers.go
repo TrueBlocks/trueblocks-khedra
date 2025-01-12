@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -27,7 +28,7 @@ func (k *KhedraApp) Error(msg string, v ...any) {
 }
 
 func (k *KhedraApp) Prog(msg string, v ...any) {
-	if len(v) > 0 && fmt.Sprint(v[len(v)-1]) == "\n" {
+	if len(v) > 0 && strings.HasSuffix(fmt.Sprint(v[len(v)-1]), "\n") {
 		k.progLogger.Info(msg, v...)
 	} else {
 		timestamp := time.Now().Format("2006-01-02 15:04:05")
@@ -39,6 +40,4 @@ func (k *KhedraApp) Prog(msg string, v ...any) {
 
 func (k *KhedraApp) Fatal(msg string) {
 	log.Fatal(msg)
-	// k.progLogger.Fatal(msg, v...)
-	os.Exit(1)
 }

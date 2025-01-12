@@ -4,15 +4,16 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v2"
 )
+
+// Testing status: reviewed
 
 // TestGeneralNew tests the initialization of the General type to ensure it is
 // created correctly with valid default or input values.
-func TestGeneralNew(t *testing.T) {
-	defer SetTestEnv([]string{"TEST_MODE=true"})()
+func TestNewGeneral(t *testing.T) {
 	g := NewGeneral()
-	expected := "~/.khedra/data"
-	assert.Equal(t, expected, g.DataFolder, "Expected DataFolder to be '%s', got '%s'", expected, g.DataFolder)
+	assert.Equal(t, "~/.khedra/data", g.DataFolder)
 }
 
 // TestGeneralValidation validates the functionality of the General type to ensure
@@ -64,29 +65,20 @@ func TestGeneralValidation(t *testing.T) {
 			}
 		})
 	}
-
-	invalidGeneral := General{}
-	err := Validate.Struct(invalidGeneral)
-	assert.Error(t, err, "Expected validation error for missing DataFolder, got nil")
-
-	validGeneral := General{
-		DataFolder: "/valid/path",
-	}
-	err = Validate.Struct(validGeneral)
-	assert.NoError(t, err, "Expected no validation error, but got: %s", err)
 }
 
 // TestGeneralReadAndWrite tests the reading and writing operations of the General type
 // to confirm accurate data handling and storage.
-func TestGeneralReadAndWrite(t *testing.T) {
-	tempFilePath := "temp_config.yaml"
+func TestGeneralSerialization(t *testing.T) {
 	content := `
 dataFolder: "expected/folder/name"
 `
+	var g General
+	err := yaml.Unmarshal([]byte(content), &g)
+	assert.NoError(t, err)
+	assert.Equal(t, "expected/folder/name", g.DataFolder)
 
-	assertions := func(t *testing.T, general *General) {
-		assert.Equal(t, "expected/folder/name", general.DataFolder, "Expected dataFolder to be 'expected/folder/name', got '%s'", general.DataFolder)
-	}
-
-	ReadAndWriteWithAssertions[General](t, tempFilePath, content, assertions)
+	out, err := yaml.Marshal(&g)
+	assert.NoError(t, err)
+	assert.Contains(t, string(out), "dataFolder: expected/folder/name")
 }

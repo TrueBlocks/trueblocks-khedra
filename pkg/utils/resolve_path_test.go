@@ -8,7 +8,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestExpandPath(t *testing.T) {
+// Testing status: not_reviewed
+
+func TestResolvePath(t *testing.T) {
 	homeDir, _ := os.UserHomeDir()
 	currentDir, _ := os.Getwd()
 
@@ -25,7 +27,7 @@ func TestExpandPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := ExpandPath(tt.input)
+			result := ResolvePath(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
