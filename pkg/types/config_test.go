@@ -1,6 +1,7 @@
 package types
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -9,7 +10,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// Testing status: not_reviewed
+// Testing status: reviewed
 
 func TestConfigNew(t *testing.T) {
 	cfg := NewConfig()
@@ -81,4 +82,5 @@ func TestConfigEstablish(t *testing.T) {
 	coreFile.StringToAsciiFile(configFile, string(bytes))
 
 	assert.FileExists(t, configFile)
+	os.Remove(configFile)
 }

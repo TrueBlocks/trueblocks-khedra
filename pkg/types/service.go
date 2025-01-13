@@ -36,12 +36,7 @@ func NewService(serviceType string) Service {
 			Enabled: false,
 			Port:    5001,
 		}
-	}
-
-	if true {
-		// The `true` above avoids a linter warning...
+	default:
 		panic("Unknown service type: " + serviceType)
 	}
-
-	return Service{}
 }

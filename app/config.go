@@ -2,38 +2,25 @@ package app
 
 import (
 	"fmt"
-	"strings"
 
-	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
-	"github.com/knadh/koanf/parsers/yaml"
-	"github.com/knadh/koanf/providers/env"
-	"github.com/knadh/koanf/providers/file"
-	"github.com/knadh/koanf/v2"
 )
 
 func LoadConfig() (types.Config, error) {
-	fileCfg, err := loadFileConfig()
+	cfg, err := loadFileConfig()
 	if err != nil {
 		return types.Config{}, fmt.Errorf("failed to load file configuration: %w", err)
 	}
-
-	envCfg, err := loadEnvConfig()
-	if err != nil {
-		return types.Config{}, fmt.Errorf("failed to load environment configuration: %w", err)
+	keys := types.GetEnvironmentKeys(cfg, types.InEnv)
+	if err := types.ApplyEnv(keys, &cfg); err != nil {
+		return types.Config{}, fmt.Errorf("failed to apply environment configuration: %w", err)
 	}
 
-	mergedCfg, err := mergeConfigs(fileCfg, envCfg)
-	if err != nil {
-		return types.Config{}, fmt.Errorf("failed to merge configurations: %w", err)
-	}
-
-	if err := validateConfig(mergedCfg); err != nil {
+	if err := validateConfig(cfg); err != nil {
 		return types.Config{}, fmt.Errorf("configuration validation failed: %w", err)
 	}
 
-	if err := initializeFolders(mergedCfg); err != nil {
+	if err := initializeFolders(cfg); err != nil {
 		return types.Config{}, fmt.Errorf("failed to initialize folders: %w", err)
 	}
 
@@ -41,7 +28,7 @@ func LoadConfig() (types.Config, error) {
 	// 	return types.Config{}, fmt.Errorf("validation error: %v", err)
 	// }
 
-	return mergedCfg, nil
+	return cfg, nil
 }
 
 // func LoadConfig() (types.Config, bool, error) {
@@ -333,168 +320,3 @@ var configTmpl string = `[version]
 [chains]{{.ChainDescriptors}}
 `
 */
-
-func loadFileConfig() (types.Config, error) {
-	fileK := koanf.New(".")
-	fn := types.GetConfigFn()
-
-	if err := fileK.Load(file.Provider(fn), yaml.Parser()); err != nil {
-		return types.Config{}, fmt.Errorf("failed to load file config %s: %v", fn, err)
-	}
-
-	fileCfg := types.NewConfig()
-	if err := fileK.Unmarshal("", &fileCfg); err != nil {
-		return types.Config{}, fmt.Errorf("failed to unmarshal file config: %v", err)
-	}
-
-	for key, chain := range fileCfg.Chains {
-		chain.Name = key
-		fileCfg.Chains[key] = chain
-	}
-
-	for key, service := range fileCfg.Services {
-		service.Name = key
-		fileCfg.Services[key] = service
-	}
-
-	return fileCfg, nil
-}
-
-func loadEnvConfig() (types.Config, error) {
-	envK := koanf.New(".")
-	prefix := "TB_KHEDRA_"
-
-	err := envK.Load(env.ProviderWithValue(prefix, ".", func(key, value string) (string, interface{}) {
-		transformedKey := strings.ToLower(strings.TrimPrefix(key, prefix))
-		transformedKey = strings.ReplaceAll(transformedKey, "_", ".")
-		if strings.HasSuffix(transformedKey, ".rpcs") {
-			return transformedKey, strings.Split(value, ",")
-		}
-
-		return transformedKey, value
-	}), nil)
-
-	if err != nil {
-		return types.Config{}, fmt.Errorf("failed to load environment variables: %v", err)
-	}
-
-	envCfg := types.Config{}
-	if err := envK.Unmarshal("", &envCfg); err != nil {
-		return types.Config{}, fmt.Errorf("failed to unmarshal environment config: %v", err)
-	}
-
-	return envCfg, nil
-}
-
-func mergeConfigs(fileCfg, envCfg types.Config) (types.Config, error) {
-	for key, chain := range envCfg.Chains {
-		if existingChain, exists := fileCfg.Chains[key]; exists {
-			existingChain.RPCs = mergeStringSlice(existingChain.RPCs, chain.RPCs)
-			existingChain.Enabled = mergeBool(existingChain.Enabled, chain.Enabled)
-			fileCfg.Chains[key] = existingChain
-		} else {
-			return types.Config{}, fmt.Errorf("chain %s found in environment but not in file config", key)
-		}
-	}
-
-	for key, service := range envCfg.Services {
-		if existingService, exists := fileCfg.Services[key]; exists {
-			existingService.BatchSize = mergeInt(existingService.BatchSize, service.BatchSize)
-			existingService.Port = mergeInt(existingService.Port, service.Port)
-			existingService.Enabled = mergeBool(existingService.Enabled, service.Enabled)
-			fileCfg.Services[key] = existingService
-		} else {
-			fileCfg.Services[key] = service
-		}
-	}
-
-	fileCfg.Logging = mergeLogging(fileCfg.Logging, envCfg.Logging)
-	fileCfg.General = mergeGeneral(fileCfg.General, envCfg.General)
-
-	return fileCfg, nil
-}
-
-func mergeStringSlice(fileValue, envValue []string) []string {
-	if len(envValue) > 0 {
-		return envValue
-	}
-	return fileValue
-}
-
-func mergeInt(fileValue, envValue int) int {
-	if envValue > 0 {
-		return envValue
-	}
-	return fileValue
-}
-
-func mergeBool(fileValue, envValue bool) bool {
-	if envValue {
-		return envValue
-	}
-	return fileValue
-}
-
-func mergeLogging(fileLogging, envLogging types.Logging) types.Logging {
-	if envLogging.Folder != "" {
-		fileLogging.Folder = envLogging.Folder
-	}
-	if envLogging.Filename != "" {
-		fileLogging.Filename = envLogging.Filename
-	}
-	if envLogging.MaxSize > 0 {
-		fileLogging.MaxSize = envLogging.MaxSize
-	}
-	if envLogging.MaxBackups > 0 {
-		fileLogging.MaxBackups = envLogging.MaxBackups
-	}
-	if envLogging.MaxAge > 0 {
-		fileLogging.MaxAge = envLogging.MaxAge
-	}
-	if envLogging.Compress {
-		fileLogging.Compress = envLogging.Compress
-	}
-	return fileLogging
-}
-
-func mergeGeneral(fileGeneral, envGeneral types.General) types.General {
-	if envGeneral.DataFolder != "" {
-		fileGeneral.DataFolder = envGeneral.DataFolder
-	}
-	return fileGeneral
-}
-
-func validateConfig(cfg types.Config) error {
-	for key, chain := range cfg.Chains {
-		if len(chain.RPCs) == 0 {
-			return fmt.Errorf("chain %s has no RPCs defined", key)
-		}
-	}
-
-	if cfg.Logging.Folder == "" {
-		return fmt.Errorf("logging folder is not defined")
-	}
-	if cfg.Logging.Filename == "" {
-		return fmt.Errorf("logging filename is not defined")
-	}
-	if cfg.General.DataFolder == "" {
-		return fmt.Errorf("general data directory is not defined")
-	}
-
-	return nil
-}
-
-func initializeFolders(cfg types.Config) error {
-	folders := []string{
-		utils.ResolvePath(cfg.Logging.Folder),
-		utils.ResolvePath(cfg.General.DataFolder),
-	}
-
-	for _, folder := range folders {
-		if err := coreFile.EstablishFolder(folder); err != nil {
-			return fmt.Errorf("failed to create folder %s: %v", folder, err)
-		}
-	}
-
-	return nil
-}

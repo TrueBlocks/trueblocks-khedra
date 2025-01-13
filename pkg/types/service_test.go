@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Testing status: not_reviewed
+// Testing status: reviewed
 
 func TestNewService(t *testing.T) {
 	tests := []struct {
@@ -71,28 +71,85 @@ func TestNewService(t *testing.T) {
 			} else {
 				service := NewService(tt.serviceType)
 				assert.Equal(t, tt.expected, service)
+
+				// Validate the returned service
+				err := Validate.Struct(service)
+				assert.NoError(t, err, "Validation failed for service: %v", service)
 			}
 		})
 	}
 }
 
-func TestServiceValidation(t *testing.T) {
+func TestServiceValidationUnified(t *testing.T) {
 	tests := []struct {
 		name    string
 		service Service
 		wantErr bool
 	}{
 		{
-			name: "Valid Service with Sleep positive",
+			name: "Valid API service with Port",
 			service: Service{
-				Name:  "api",
-				Port:  8080,
-				Sleep: 5, // Valid Sleep
+				Name:    "api",
+				Enabled: true,
+				Port:    8080,
 			},
 			wantErr: false,
 		},
 		{
-			name: "Valid Service with BatchSize at min",
+			name: "Invalid API service without Port",
+			service: Service{
+				Name:    "api",
+				Enabled: true,
+			},
+			wantErr: true,
+		},
+		{
+			name: "Valid Scraper service with required fields",
+			service: Service{
+				Name:      "scraper",
+				Enabled:   true,
+				Sleep:     60,
+				BatchSize: 500,
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid Scraper service without Sleep",
+			service: Service{
+				Name:      "scraper",
+				Enabled:   true,
+				BatchSize: 500,
+			},
+			wantErr: true,
+		},
+		{
+			name: "Invalid Monitor service without BatchSize",
+			service: Service{
+				Name:    "monitor",
+				Enabled: true,
+				Sleep:   60,
+			},
+			wantErr: true,
+		},
+		{
+			name: "Valid IPFS service with Port",
+			service: Service{
+				Name:    "ipfs",
+				Enabled: true,
+				Port:    5001,
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid IPFS service without Port",
+			service: Service{
+				Name:    "ipfs",
+				Enabled: true,
+			},
+			wantErr: true,
+		},
+		{
+			name: "Valid Scraper with BatchSize at min",
 			service: Service{
 				Name:      "scraper",
 				BatchSize: 50, // Minimum valid BatchSize
@@ -101,11 +158,36 @@ func TestServiceValidation(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Valid Service with BatchSize at max",
+			name: "Invalid Scraper with BatchSize below min",
+			service: Service{
+				Name:      "scraper",
+				BatchSize: 40, // Invalid BatchSize
+			},
+			wantErr: true,
+		},
+		{
+			name: "Valid Scraper with BatchSize at max",
 			service: Service{
 				Name:      "scraper",
 				BatchSize: 10000, // Maximum valid BatchSize
 				Sleep:     1,
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid API service with Port above 65535",
+			service: Service{
+				Name: "api",
+				Port: 70000, // Invalid Port
+			},
+			wantErr: true,
+		},
+		{
+			name: "Valid Service with Sleep positive",
+			service: Service{
+				Name:  "api",
+				Port:  8080,
+				Sleep: 5, // Valid Sleep
 			},
 			wantErr: false,
 		},
@@ -142,22 +224,6 @@ func TestServiceValidation(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "Invalid Service with Port above 65535",
-			service: Service{
-				Name: "api",
-				Port: 70000, // Invalid Port
-			},
-			wantErr: true,
-		},
-		{
-			name: "Invalid Service with BatchSize below min",
-			service: Service{
-				Name:      "scraper",
-				BatchSize: 40, // Invalid BatchSize
-			},
-			wantErr: true,
-		},
-		{
 			name: "Invalid Service with BatchSize above max",
 			service: Service{
 				Name:      "scraper",
@@ -176,99 +242,6 @@ func TestServiceValidation(t *testing.T) {
 			},
 			wantErr: false,
 		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := Validate.Struct(tt.service)
-			checkValidationErrors(t, tt.name, err, tt.wantErr)
-		})
-	}
-}
-
-func TestServiceAPIValidation(t *testing.T) {
-	tests := []struct {
-		name    string
-		service Service
-		wantErr bool
-	}{
-		{
-			name: "Valid API service with Port",
-			service: Service{
-				Name:    "api",
-				Enabled: true,
-				Port:    8080,
-			},
-			wantErr: false,
-		},
-		{
-			name: "Invalid API service without Port",
-			service: Service{
-				Name:    "api",
-				Enabled: true,
-			},
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := Validate.Struct(tt.service)
-			checkValidationErrors(t, tt.name, err, tt.wantErr)
-		})
-	}
-}
-
-func TestServiceScraperValidation(t *testing.T) {
-	tests := []struct {
-		name    string
-		service Service
-		wantErr bool
-	}{
-		{
-			name: "Valid Scraper service with required fields",
-			service: Service{
-				Name:      "scraper",
-				Enabled:   true,
-				Sleep:     60,
-				BatchSize: 500,
-			},
-			wantErr: false,
-		},
-		{
-			name: "Invalid Scraper service without Sleep",
-			service: Service{
-				Name:      "scraper",
-				Enabled:   true,
-				BatchSize: 500,
-			},
-			wantErr: true,
-		},
-		{
-			name: "Invalid Scraper service without BatchSize",
-			service: Service{
-				Name:    "scraper",
-				Enabled: true,
-				Sleep:   60,
-			},
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := Validate.Struct(tt.service)
-			checkValidationErrors(t, tt.name, err, tt.wantErr)
-		})
-	}
-}
-
-func TestServiceMonitorValidation(t *testing.T) {
-	tests := []struct {
-		name    string
-		service Service
-		wantErr bool
-	}{
 		{
 			name: "Valid Monitor service with required fields",
 			service: Service{
@@ -289,44 +262,11 @@ func TestServiceMonitorValidation(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "Invalid Monitor service without BatchSize",
+			name: "Invalid Scraper service without BatchSize",
 			service: Service{
-				Name:    "monitor",
+				Name:    "scraper",
 				Enabled: true,
 				Sleep:   60,
-			},
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := Validate.Struct(tt.service)
-			checkValidationErrors(t, tt.name, err, tt.wantErr)
-		})
-	}
-}
-
-func TestServiceIPFSValidation(t *testing.T) {
-	tests := []struct {
-		name    string
-		service Service
-		wantErr bool
-	}{
-		{
-			name: "Valid IPFS service with Port",
-			service: Service{
-				Name:    "ipfs",
-				Enabled: true,
-				Port:    5001,
-			},
-			wantErr: false,
-		},
-		{
-			name: "Invalid IPFS service without Port",
-			service: Service{
-				Name:    "ipfs",
-				Enabled: true,
 			},
 			wantErr: true,
 		},
@@ -369,32 +309,32 @@ func TestServiceListValidation(t *testing.T) {
 	for i, service := range services {
 		t.Run(fmt.Sprintf("Service %d Validation", i+1), func(t *testing.T) {
 			err := Validate.Struct(service)
-			if err != nil {
-				t.Errorf("Validation failed for service %d: %v", i+1, err)
-			}
+			assert.NoError(t, err, "Validation failed for service %d: %v", i+1, err)
 		})
 	}
 }
 
 func checkValidationErrors(t *testing.T, name string, err error, wantErr bool) {
 	t.Helper()
-	if (err != nil) != wantErr {
-		if err != nil {
-			if validationErrors, ok := err.(validator.ValidationErrors); ok {
-				for _, fieldErr := range validationErrors {
-					t.Errorf("Validation error in test '%s' on field '%s': value='%v', param='%s', tag='%s'",
-						name,
-						fieldErr.Field(),
-						fieldErr.Value(),
-						fieldErr.Param(),
-						fieldErr.Tag(),
-					)
-				}
-			} else {
-				t.Errorf("Unexpected error in test '%s': expected error = %v, got error = %v", name, wantErr, err != nil)
+
+	if wantErr {
+		assert.Error(t, err, "Expected an error in test '%s', but got none", name)
+	} else {
+		assert.NoError(t, err, "Unexpected error in test '%s': %v", name, err)
+	}
+
+	if err != nil {
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			for _, fieldErr := range validationErrors {
+				t.Logf(
+					"Validation error in test '%s': field='%s', value='%v', param='%s', tag='%s'",
+					name,
+					fieldErr.Field(),
+					fieldErr.Value(),
+					fieldErr.Param(),
+					fieldErr.Tag(),
+				)
 			}
-		} else {
-			t.Errorf("Test '%s': expected error = %v, got error = %v", name, wantErr, err != nil)
 		}
 	}
 }

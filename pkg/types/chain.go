@@ -2,7 +2,7 @@ package types
 
 type Chain struct {
 	Name    string   `koanf:"name" validate:"required"`                                // Must be non-empty
-	RPCs    []string `koanf:"rpcs" validate:"required,min=1,dive,strict_url,ping_one"` // Must have at least one reachable RPC URL
+	RPCs    []string `koanf:"rpcs" validate:"req_if_enabled,dive,strict_url,ping_one"` // Must have at least one reachable RPC URL
 	Enabled bool     `koanf:"enabled"`                                                 // Defaults to false if not specified
 }
 
