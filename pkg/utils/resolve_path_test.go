@@ -21,7 +21,6 @@ func TestResolvePath_Fatals(t *testing.T) {
 	tests := []struct {
 		input string
 	}{
-		{""},
 		{"~username"},
 		{"$UNSET_ENV_VAR/test"},
 	}
@@ -51,6 +50,7 @@ func TestResolvePath_NonFatals(t *testing.T) {
 		{"$HOME/test", filepath.Join(homeDir, "test")},
 		{"./test", filepath.Join(currentDir, "test")},
 		{"/usr/local/test", "/usr/local/test"},
+		{"", ""},
 	}
 
 	for _, tt := range tests {

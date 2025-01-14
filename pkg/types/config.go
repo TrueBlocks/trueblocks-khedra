@@ -13,10 +13,10 @@ import (
 )
 
 type Config struct {
-	General  General            `koanf:"general" validate:"required"`
-	Chains   map[string]Chain   `koanf:"chains" validate:"required,min=1,dive"`
-	Services map[string]Service `koanf:"services" validate:"required,min=1,dive"`
-	Logging  Logging            `koanf:"logging" validate:"required"`
+	General  General            `koanf:"general" validate:"dive"`
+	Chains   map[string]Chain   `koanf:"chains" validate:"dive"`
+	Services map[string]Service `koanf:"services" validate:"dive"`
+	Logging  Logging            `koanf:"logging" validate:"dive"`
 }
 
 func NewConfig() Config {

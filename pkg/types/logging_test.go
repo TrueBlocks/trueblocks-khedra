@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/validate"
 	"github.com/alecthomas/assert/v2"
 )
 
@@ -162,7 +163,7 @@ func TestLoggingValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := Validate.Struct(tt.logging)
+			err := validate.Validate4(&tt.logging)
 			if tt.wantErr {
 				assert.Error(t, err, "Expected error for test case '%s'", tt.name)
 			} else {

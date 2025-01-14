@@ -27,16 +27,12 @@ func TestLoadConfig_ValidConfig(t *testing.T) {
 			"mainnet": {Name: "mainnet", RPCs: []string{"http://rpc1.mainnet"}, Enabled: true},
 		},
 		Services: map[string]types.Service{
-			"scraper": {Name: "scraper", Port: 8080, BatchSize: 100, Enabled: true},
-			"monitor": {Name: "monitor", Port: 8080, BatchSize: 100, Enabled: true},
-			"api":     {Name: "api", Port: 8080, Enabled: false},
-			"ipfs":    {Name: "ipfs", Port: 5001, Enabled: false},
+			"scraper": types.NewService("scraper"),
+			"monitor": types.NewService("monitor"),
+			"api":     types.NewService("api"),
+			"ipfs":    types.NewService("ipfs"),
 		},
-		Logging: types.Logging{
-			Folder:   "/tmp/test-logging-folder",
-			Filename: "test.log",
-			MaxSize:  50,
-		},
+		Logging: types.NewLogging(),
 		General: types.General{
 			DataFolder: "/tmp/test-data-folder",
 		},
@@ -87,9 +83,12 @@ func TestLoadConfig_EnvOverrides(t *testing.T) {
 			},
 		},
 		Logging: types.Logging{
-			Folder:   "/tmp/test-logging-folder",
-			Filename: "test.log",
-			MaxSize:  50,
+			Folder:     "/tmp/test-logging-folder",
+			Filename:   "test.log",
+			MaxSize:    50,
+			MaxBackups: 1,
+			MaxAge:     1,
+			Level:      "info",
 		},
 		General: types.General{
 			DataFolder: "/tmp/test-data-folder",
@@ -142,7 +141,7 @@ func TestLoadConfig_ValidationFailure(t *testing.T) {
 
 	_, err := LoadConfig()
 	assert.Error(t, err, t.Name())
-	assert.Contains(t, err.Error(), "configuration validation failed: chain mainnet has no RPCs defined")
+	assert.Contains(t, err.Error(), "is required")
 
 	os.Remove(types.GetConfigFn())
 }

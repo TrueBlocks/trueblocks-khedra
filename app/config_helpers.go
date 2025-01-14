@@ -6,6 +6,7 @@ import (
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
+	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/validate"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
@@ -45,22 +46,9 @@ func loadFileConfig() (types.Config, error) {
 }
 
 func validateConfig(cfg types.Config) error {
-	for key, chain := range cfg.Chains {
-		if len(chain.RPCs) == 0 {
-			return fmt.Errorf("chain %s has no RPCs defined", key)
-		}
+	if err := validate.Validate2(&cfg); err != nil {
+		return err[0]
 	}
-
-	if cfg.Logging.Folder == "" {
-		return fmt.Errorf("logging folder is not defined")
-	}
-	if cfg.Logging.Filename == "" {
-		return fmt.Errorf("logging filename is not defined")
-	}
-	if cfg.General.DataFolder == "" {
-		return fmt.Errorf("general data directory is not defined")
-	}
-
 	return nil
 }
 

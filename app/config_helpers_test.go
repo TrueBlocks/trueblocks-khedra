@@ -64,75 +64,52 @@ func TestLoadFileConfig(t *testing.T) {
 // ---------------------------------------------------------
 func TestValidateConfig(t *testing.T) {
 	validConfig := func() {
-		cfg := types.Config{
-			Chains: map[string]types.Chain{
-				"mainnet": {RPCs: []string{"http://rpc1.mainnet"}, Enabled: true},
-			},
-			Services: map[string]types.Service{
-				"api": {Port: 8080, BatchSize: 100, Enabled: true},
-			},
-			Logging: types.Logging{
-				Folder:   "~/.khedra",
-				Filename: "khedra.log",
-				MaxSize:  50,
-			},
-			General: types.General{
-				DataFolder: "~/.khedra/data",
-			},
-		}
-
+		cfg := types.NewConfig()
 		err := validateConfig(cfg)
 		assert.NoError(t, err)
 	}
 	t.Run("Valid Config", func(t *testing.T) { validConfig() })
 
 	missingRPCs := func() {
-		cfg := types.Config{
-			Chains: map[string]types.Chain{
-				"mainnet": {RPCs: []string{}, Enabled: true},
-			},
+		cfg := types.NewConfig()
+		cfg.Chains = map[string]types.Chain{
+			"mainnet": {Name: "mainnet", RPCs: []string{}, Enabled: true},
 		}
-
 		err := validateConfig(cfg)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "chain mainnet has no RPCs defined")
+		assert.Contains(t, err.Error(), "cannot be empty")
 	}
 	t.Run("Missing RPCs", func(t *testing.T) { missingRPCs() })
 
 	invalidLoggingFolder := func() {
 		cfg := types.NewConfig()
 		cfg.Logging.Folder = ""
-
 		err := validateConfig(cfg)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "logging folder is not defined")
+		assert.Contains(t, err.Error(), "is required")
 	}
 	t.Run("Invalid Logging Folder", func(t *testing.T) { invalidLoggingFolder() })
 
 	missingLoggingConfig := func() {
-		cfg := types.Config{
-			Logging: types.Logging{
-				Folder:   "",
-				Filename: "",
-			},
+		cfg := types.NewConfig()
+		cfg.Logging = types.Logging{
+			Folder:   "",
+			Filename: "",
 		}
-
 		err := validateConfig(cfg)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "logging folder is not defined")
+		assert.Contains(t, err.Error(), "is required")
 	}
 	t.Run("Missing Logging Config", func(t *testing.T) { missingLoggingConfig() })
 
 	missingGeneralConfig := func() {
-		cfg := types.Config{
-			General: types.General{
-				DataFolder: "",
-			},
+		cfg := types.NewConfig()
+		cfg.General = types.General{
+			DataFolder: "",
 		}
-
 		err := validateConfig(cfg)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "logging folder is not defined")
+		assert.Contains(t, err.Error(), "is required")
 	}
 	t.Run("Missing General Config", func(t *testing.T) { missingGeneralConfig() })
 }

@@ -3,6 +3,7 @@ package types
 import (
 	"testing"
 
+	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/validate"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 )
@@ -19,7 +20,7 @@ func TestNewGeneral(t *testing.T) {
 // TestGeneralValidation validates the functionality of the General type to ensure
 // that invalid data is caught and proper validation rules are applied.
 func TestGeneralValidation(t *testing.T) {
-	defer SetTestEnv([]string{"TEST_MODE=true"})()
+	defer SetTestEnv([]string{})()
 	tests := []struct {
 		name    string
 		general General
@@ -57,7 +58,7 @@ func TestGeneralValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := Validate.Struct(tt.general)
+			err := validate.Validate4(&tt.general)
 			if tt.wantErr {
 				assert.Error(t, err, "Expected error for test case '%s'", tt.name)
 			} else {

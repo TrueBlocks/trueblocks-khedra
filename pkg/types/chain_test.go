@@ -3,6 +3,7 @@ package types
 import (
 	"testing"
 
+	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/validate"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -80,7 +81,7 @@ func TestChainValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := Validate.Struct(tt.chain)
+			err := validate.Validate4(&tt.chain)
 			if tt.wantErr {
 				assert.Error(t, err, "Expected error for test case '%s'", tt.name)
 			} else {

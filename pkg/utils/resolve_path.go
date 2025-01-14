@@ -10,7 +10,7 @@ import (
 // ResolvePath returns an absolute path expanded for ~, $HOME or other env variables
 func ResolvePath(path string) string {
 	if path == "" {
-		log.Fatalf("path cannot be empty")
+		return ""
 	}
 
 	if strings.HasPrefix(path, "~") {

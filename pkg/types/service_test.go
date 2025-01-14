@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/validate"
 	"github.com/go-playground/validator"
 	"github.com/stretchr/testify/assert"
 )
@@ -73,7 +74,7 @@ func TestNewService(t *testing.T) {
 				assert.Equal(t, tt.expected, service)
 
 				// Validate the returned service
-				err := Validate.Struct(service)
+				err := validate.Validate4(&service)
 				assert.NoError(t, err, "Validation failed for service: %v", service)
 			}
 		})
@@ -90,8 +91,8 @@ func TestServiceValidationUnified(t *testing.T) {
 			name: "Valid API service with Port",
 			service: Service{
 				Name:    "api",
-				Enabled: true,
 				Port:    8080,
+				Enabled: true,
 			},
 			wantErr: false,
 		},
@@ -154,6 +155,7 @@ func TestServiceValidationUnified(t *testing.T) {
 				Name:      "scraper",
 				BatchSize: 50, // Minimum valid BatchSize
 				Sleep:     1,
+				Enabled:   true,
 			},
 			wantErr: false,
 		},
@@ -162,8 +164,18 @@ func TestServiceValidationUnified(t *testing.T) {
 			service: Service{
 				Name:      "scraper",
 				BatchSize: 40, // Invalid BatchSize
+				Enabled:   true,
 			},
 			wantErr: true,
+		},
+		{
+			name: "Invalid Scraper with BatchSize below min (disabled)",
+			service: Service{
+				Name:      "scraper",
+				BatchSize: 40, // Invalid BatchSize
+				Enabled:   false,
+			},
+			wantErr: false,
 		},
 		{
 			name: "Valid Scraper with BatchSize at max",
@@ -171,55 +183,71 @@ func TestServiceValidationUnified(t *testing.T) {
 				Name:      "scraper",
 				BatchSize: 10000, // Maximum valid BatchSize
 				Sleep:     1,
+				Enabled:   true,
 			},
 			wantErr: false,
 		},
 		{
 			name: "Invalid API service with Port above 65535",
 			service: Service{
-				Name: "api",
-				Port: 70000, // Invalid Port
+				Name:    "api",
+				Port:    70000, // Invalid Port
+				Enabled: true,
 			},
 			wantErr: true,
 		},
 		{
+			name: "Invalid API service with Port above 65535 (disabled)",
+			service: Service{
+				Name:    "api",
+				Port:    70000, // Invalid Port
+				Enabled: false,
+			},
+			wantErr: false,
+		},
+		{
 			name: "Valid Service with Sleep positive",
 			service: Service{
-				Name:  "api",
-				Port:  8080,
-				Sleep: 5, // Valid Sleep
+				Name:    "api",
+				Port:    8080,
+				Sleep:   5, // Valid Sleep
+				Enabled: true,
 			},
 			wantErr: false,
 		},
 		{
 			name: "Valid Service with Sleep unset (0)",
 			service: Service{
-				Name:  "api",
-				Port:  8080,
-				Sleep: 0, // Optional, no validation
+				Name:    "api",
+				Port:    8080,
+				Sleep:   0, // Optional, no validation
+				Enabled: true,
 			},
 			wantErr: false,
 		},
 		{
 			name: "Valid Service with all optional values unset (zero)",
 			service: Service{
-				Name: "api",
+				Name:    "api",
+				Enabled: true,
 			},
 			wantErr: true,
 		},
 		{
 			name: "Valid Service with Port within range",
 			service: Service{
-				Name: "api",
-				Port: 8080, // Valid Port
+				Name:    "api",
+				Port:    8080, // Valid Port
+				Enabled: true,
 			},
 			wantErr: false,
 		},
 		{
 			name: "Invalid Service with Port below 1024",
 			service: Service{
-				Name: "api",
-				Port: 100, // Invalid Port
+				Name:    "api",
+				Port:    100, // Invalid Port
+				Enabled: true,
 			},
 			wantErr: true,
 		},
@@ -228,6 +256,7 @@ func TestServiceValidationUnified(t *testing.T) {
 			service: Service{
 				Name:      "scraper",
 				BatchSize: 20000, // Invalid BatchSize
+				Enabled:   true,
 			},
 			wantErr: true,
 		},
@@ -274,7 +303,7 @@ func TestServiceValidationUnified(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := Validate.Struct(tt.service)
+			err := validate.Validate4(&tt.service)
 			checkValidationErrors(t, tt.name, err, tt.wantErr)
 		})
 	}
@@ -308,7 +337,7 @@ func TestServiceListValidation(t *testing.T) {
 
 	for i, service := range services {
 		t.Run(fmt.Sprintf("Service %d Validation", i+1), func(t *testing.T) {
-			err := Validate.Struct(service)
+			err := validate.Validate4(&service)
 			assert.NoError(t, err, "Validation failed for service %d: %v", i+1, err)
 		})
 	}

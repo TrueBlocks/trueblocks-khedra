@@ -17,16 +17,12 @@ func LoadConfig() (types.Config, error) {
 	}
 
 	if err := validateConfig(cfg); err != nil {
-		return types.Config{}, fmt.Errorf("configuration validation failed: %w", err)
+		return types.Config{}, fmt.Errorf("validation error: %w", err)
 	}
 
 	if err := initializeFolders(cfg); err != nil {
 		return types.Config{}, fmt.Errorf("failed to initialize folders: %w", err)
 	}
-
-	// if err := types.Validate.Struct(mergedCfg); err != nil {
-	// 	return types.Config{}, fmt.Errorf("validation error: %v", err)
-	// }
 
 	return cfg, nil
 }
@@ -117,7 +113,7 @@ func LoadConfig() (types.Config, error) {
 // 	finalCfg.Logging.Folder = utils.ExpandPath(finalCfg.Logging.Folder)
 // 	coreFile.EstablishFolder(finalCfg.Logging.Folder)
 
-// 	if err := types.Validate.Struct(finalCfg); err != nil {
+// 	if err := validate.Validate4(finalCfg); err != nil {
 // 		return types.Config{}, true, err
 // 	}
 
