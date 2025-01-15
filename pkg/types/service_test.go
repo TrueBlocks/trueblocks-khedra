@@ -74,7 +74,7 @@ func TestNewService(t *testing.T) {
 				assert.Equal(t, tt.expected, service)
 
 				// Validate the returned service
-				err := validate.Validate4(&service)
+				err := validate.Validate(&service)
 				assert.NoError(t, err, "Validation failed for service: %v", service)
 			}
 		})
@@ -303,7 +303,7 @@ func TestServiceValidationUnified(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validate.Validate4(&tt.service)
+			err := validate.Validate(&tt.service)
 			checkValidationErrors(t, tt.name, err, tt.wantErr)
 		})
 	}
@@ -337,7 +337,7 @@ func TestServiceListValidation(t *testing.T) {
 
 	for i, service := range services {
 		t.Run(fmt.Sprintf("Service %d Validation", i+1), func(t *testing.T) {
-			err := validate.Validate4(&service)
+			err := validate.Validate(&service)
 			assert.NoError(t, err, "Validation failed for service %d: %v", i+1, err)
 		})
 	}

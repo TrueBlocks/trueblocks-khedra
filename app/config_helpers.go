@@ -46,8 +46,8 @@ func loadFileConfig() (types.Config, error) {
 }
 
 func validateConfig(cfg types.Config) error {
-	if err := validate.Validate2(&cfg); err != nil {
-		return err[0]
+	if err := validate.Validate(&cfg); err != nil {
+		return err
 	}
 	return nil
 }

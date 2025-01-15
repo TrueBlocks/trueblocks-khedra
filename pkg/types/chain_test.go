@@ -81,7 +81,7 @@ func TestChainValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validate.Validate4(&tt.chain)
+			err := validate.Validate(&tt.chain)
 			if tt.wantErr {
 				assert.Error(t, err, "Expected error for test case '%s'", tt.name)
 			} else {

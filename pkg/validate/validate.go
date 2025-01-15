@@ -51,7 +51,7 @@ func init() {
 	validatorRegistry["ping_one"] = pingOneValidator
 	validatorRegistry["required"] = requiredValidator
 	validatorRegistry["req_if_enabled"] = reqIfEnabledValidator
-	validatorRegistry["dive"] = diveValidator
+	validatorRegistry["dive"] = func(fv FieldValidator) error { return nil }
 }
 
 // RegisterValidator registers a new validator function if it does not
@@ -199,35 +199,37 @@ func splitDirective(directive string) (string, string) {
 	return directive, ""
 }
 
-func Validate4(input interface{}) error {
-	errs := Validate2(input)
-	if len(errs) > 0 {
-		return errs[0]
-	}
-	return nil
+type ValidationError struct {
+	errors []error
 }
 
-func Validate2(input interface{}) []error {
+func (ve *ValidationError) Error() string {
+	var result string
+	for i, err := range ve.errors {
+		result += fmt.Sprintf("Error %d: %s\n", i+1, err.Error())
+	}
+	return result
+}
+
+func NewValidationError(errors []error) *ValidationError {
+	return &ValidationError{errors: errors}
+}
+
+func Validate(input interface{}) error {
 	if input == nil {
-		return []error{fmt.Errorf("input is nil")}
+		return fmt.Errorf("input is nil")
 	}
 
 	val := reflect.ValueOf(input)
-
-	// Ensure we have a pointer
 	if val.Kind() != reflect.Ptr {
-		return []error{fmt.Errorf("Validate2 requires a pointer, got %T", input)}
+		return fmt.Errorf("Validate requires a pointer, got %T", input)
 	}
 
-	// Dereference the pointer
 	val = val.Elem()
-
-	// Check that the dereferenced pointer is a struct
 	if val.Kind() != reflect.Struct {
-		return []error{fmt.Errorf("Validate2 requires a pointer to a struct, got pointer to %T", val.Interface())}
+		return fmt.Errorf("Validate requires a pointer to a struct, got pointer to %T", val.Interface())
 	}
 
-	// Now proceed with collecting validators using 'val' and passing 'input' as the root.
 	var fieldValidators []FieldValidator
 	collectFieldValidators(val, "", &fieldValidators, input)
 
@@ -246,7 +248,10 @@ func Validate2(input interface{}) []error {
 		}
 	}
 
-	return errs
+	if len(errs) > 0 {
+		return NewValidationError(errs)
+	}
+	return nil
 }
 
 // Validator implementations
@@ -254,146 +259,150 @@ func Validate2(input interface{}) []error {
 func oneofValidator(fv FieldValidator) error {
 	value, err := getStringValue(fv.fieldValue)
 	if err != nil {
-		return failed(fv, "oneof", "is not a string", fv.fieldValue.Kind().String())
+		return Failed(fv, "oneof", "is not a string", fv.fieldValue.Kind().String())
 	}
 
-	tests := strings.Fields(fv.tagArg)
-	for _, test := range tests {
+	validValues := strings.Fields(fv.tagArg)
+	for _, test := range validValues {
 		if value == test {
-			return passed(fv, "oneof", value, fv.tagArg)
+			return Passed(fv, "oneof", value, fv.tagArg)
 		}
 	}
 
-	return failed(fv, "oneof", fmt.Sprintf("must be one of %v", tests), fmt.Sprintf("%q", value))
+	return Failed(fv, "oneof", fmt.Sprintf("must be one of %v", validValues), fmt.Sprintf("%q", value))
 }
 
 func minValidator(fv FieldValidator) error {
 	value, err := getIntValue(fv.fieldValue)
 	if err != nil {
-		return failed(fv, "min", "is not an integer", fv.fieldValue.Kind().String())
+		return Failed(fv, "min", "is not an integer", fv.fieldValue.Kind().String())
 	}
 
 	test, err := strconv.Atoi(fv.tagArg)
 	if err != nil {
-		return failed(fv, "min", "invalid tag argument", fv.tagArg)
+		return Failed(fv, "min", "invalid tag argument", fv.tagArg)
 	}
 	if value < int64(test) {
-		return failed(fv, "min", fmt.Sprintf("must be >= %d", test), fmt.Sprintf("%d", value))
+		return Failed(fv, "min", fmt.Sprintf("must be >= %d", test), fmt.Sprintf("%d", value))
 	}
 
-	return passed(fv, "min", fmt.Sprintf("%d", value), fmt.Sprintf("%d", test))
+	return Passed(fv, "min", fmt.Sprintf("%d", value), fmt.Sprintf("%d", test))
 }
 
 func maxValidator(fv FieldValidator) error {
 	value, err := getIntValue(fv.fieldValue)
 	if err != nil {
-		return failed(fv, "max", "is not an integer", fv.fieldValue.Kind().String())
+		return Failed(fv, "max", "is not an integer", fv.fieldValue.Kind().String())
 	}
 
 	maxValue, err := strconv.Atoi(fv.tagArg)
 	if err != nil {
-		return failed(fv, "max", "tag argument is not an integer", fv.tagArg)
+		return Failed(fv, "max", "tag argument is not an integer", fv.tagArg)
 	}
 	if value > int64(maxValue) {
-		return failed(fv, "max", fmt.Sprintf("must be <= %d", maxValue), fmt.Sprintf("%q", value))
+		return Failed(fv, "max", fmt.Sprintf("must be <= %d", maxValue), fmt.Sprintf("%q", value))
 	}
 
-	return passed(fv, "max", fmt.Sprintf("%d", value), fmt.Sprintf("%d", maxValue))
+	return Passed(fv, "max", fmt.Sprintf("%d", value), fmt.Sprintf("%d", maxValue))
 }
 
 func endswithValidator(fv FieldValidator) error {
 	value, err := getStringValue(fv.fieldValue)
 	if err != nil {
-		return failed(fv, "endswith", "is not a string", fv.fieldValue.Kind().String())
+		return Failed(fv, "endswith", "is not a string", fv.fieldValue.Kind().String())
 	}
 
 	if !strings.HasSuffix(value, fv.tagArg) {
-		return failed(fv, "endswith", fmt.Sprintf("must end with %q", fv.tagArg), fmt.Sprintf("%q", value))
+		return Failed(fv, "endswith", fmt.Sprintf("must end with %q", fv.tagArg), fmt.Sprintf("%q", value))
 	}
 
-	return passed(fv, "endswith", value, fv.tagArg)
+	return Passed(fv, "endswith", value, fv.tagArg)
 }
 
 func folderExistsValidator(fv FieldValidator) error {
 	isTesting := os.Getenv("TEST_MODE") == "true"
 	if isTesting {
-		return passed(fv, "ping_one", "skipped", "")
+		return Passed(fv, "folder_exists", "skipped", "")
 	}
 
 	value, err := getStringValue(fv.fieldValue)
 	if err != nil {
-		return failed(fv, "folder_exists", "is not a string", fv.fieldValue.Kind().String())
+		return Failed(fv, "folder_exists", "is not a string", fv.fieldValue.Kind().String())
 	}
 
 	value = utils.ResolvePath(value)
-	if _, err := os.Stat(value); os.IsNotExist(err) {
-		return failed(fv, "folder_exists", "folder does not exist", fmt.Sprintf("%q", value))
+	info, err := os.Stat(value)
+	if os.IsNotExist(err) {
+		return Failed(fv, "folder_exists", "folder does not exist", fmt.Sprintf("%q", value))
+	}
+	if err != nil {
+		return Failed(fv, "folder_exists", "error accessing path", fmt.Sprintf("%q: %v", value, err))
 	}
 
-	return passed(fv, "folder_exists", value, "")
+	if !info.IsDir() {
+		return Failed(fv, "folder_exists", "path exists but is not a folder", fmt.Sprintf("%q", value))
+	}
+
+	return Passed(fv, "folder_exists", value, "")
 }
 
 func requiredValidator(fv FieldValidator) error {
-	// Check if the field value is invalid
 	if !fv.fieldValue.IsValid() {
-		return failed(fv, "required", "is required", "")
+		return Failed(fv, "required", "is required", "")
 	}
 
-	// Handle specific kinds like slices, arrays
 	switch fv.fieldValue.Kind() {
 	case reflect.Slice, reflect.Array:
 		if fv.fieldValue.Len() == 0 {
-			return failed(fv, "required", "cannot be empty", "")
+			return Failed(fv, "required", "cannot be empty", "")
 		}
 	}
 
-	// General zero-value check for other kinds
 	if fv.fieldValue.IsZero() {
-		return failed(fv, "required", "is required", "")
+		return Failed(fv, "required", "is required", "")
 	}
 
-	// fmt.Println(colors.Blue, fv.fieldName, fv.fieldValue, colors.Off)
-	return passed(fv, "required", "", "")
+	return Passed(fv, "required", "", "")
 }
 
 func fileExistsValidator(fv FieldValidator) error {
 	isTesting := os.Getenv("TEST_MODE") == "true"
 	if isTesting {
-		return passed(fv, "ping_one", "skipped", "")
+		return Passed(fv, "file_exists", "skipped", "")
 	}
 
 	value, err := getStringValue(fv.fieldValue)
 	if err != nil {
-		return failed(fv, "file_exists", "is not a string", fv.fieldValue.Kind().String())
+		return Failed(fv, "file_exists", "is not a string", fv.fieldValue.Kind().String())
 	}
 
 	value = utils.ResolvePath(value)
 	info, err := os.Stat(value)
 	if err != nil || info.IsDir() {
-		return failed(fv, "file_exists", "file does not exist", value)
+		return Failed(fv, "file_exists", "file does not exist", value)
 	}
 
-	return passed(fv, "file_exists", value, "")
+	return Passed(fv, "file_exists", value, "")
 }
 
 func isWritableValidator(fv FieldValidator) error {
 	value, err := getStringValue(fv.fieldValue)
 	if err != nil {
-		return failed(fv, "is_writable", "is not a string", fv.fieldValue.Kind().String())
+		return Failed(fv, "is_writable", "is not a string", fv.fieldValue.Kind().String())
 	}
 
 	file, err := os.OpenFile(value, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
-		return failed(fv, "is_writable", "path is not writable", value)
+		return Failed(fv, "is_writable", "path is not writable", value)
 	}
 	file.Close()
 
-	return passed(fv, "is_writable", value, "")
+	return Passed(fv, "is_writable", value, "")
 }
 
 func optMaxValidator(fv FieldValidator) error {
 	if !fv.fieldValue.IsValid() || fv.fieldValue.IsZero() {
-		return passed(fv, "opt_max", "unset-ok", "")
+		return Passed(fv, "opt_max", "unset-ok", "")
 	}
 
 	return maxValidator(fv)
@@ -401,7 +410,7 @@ func optMaxValidator(fv FieldValidator) error {
 
 func optMinValidator(fv FieldValidator) error {
 	if !fv.fieldValue.IsValid() || fv.fieldValue.IsZero() {
-		return passed(fv, "opt_min", "unset-ok", "")
+		return Passed(fv, "opt_min", "unset-ok", "")
 	}
 
 	return minValidator(fv)
@@ -416,7 +425,7 @@ func reqIfEnabledValidator(fv FieldValidator) error {
 	if !ok {
 		// If the structure is not an Enabler (for example, General), assume it's enabled
 	} else if !en.IsEnabled() {
-		return passed(fv, "req_if_enabled", "not-enabled", "")
+		return Passed(fv, "req_if_enabled", "not-enabled", "")
 	}
 
 	return requiredValidator(fv)
@@ -425,14 +434,14 @@ func reqIfEnabledValidator(fv FieldValidator) error {
 func strictURLValidator(fv FieldValidator) error {
 	value, err := getStringValue(fv.fieldValue)
 	if err != nil {
-		return failed(fv, "strict_url", "is not a string", fv.fieldValue.Kind().String())
+		return Failed(fv, "strict_url", "is not a string", fv.fieldValue.Kind().String())
 	}
 
 	if _, err := url.ParseRequestURI(value); err != nil {
-		return failed(fv, "strict_url", "is not a valid URL", value)
+		return Failed(fv, "strict_url", "is not a valid URL", value)
 	}
 
-	return passed(fv, "strict_url", value, "")
+	return Passed(fv, "strict_url", value, "")
 }
 
 // Not implemented
@@ -440,18 +449,14 @@ func strictURLValidator(fv FieldValidator) error {
 func pingOneValidator(fv FieldValidator) error {
 	isTesting := os.Getenv("TEST_MODE") == "true"
 	if isTesting {
-		return passed(fv, "ping_one", "skipped", "")
+		return Passed(fv, "ping_one", "skipped", "")
 	}
 
 	value, err := getStringValue(fv.fieldValue)
 	if err != nil {
-		return failed(fv, "ping_one", "is not a string", fv.fieldValue.Kind().String())
+		return Failed(fv, "ping_one", "is not a string", fv.fieldValue.Kind().String())
 	}
-	return passed(fv, "ping_one", value, "")
-}
-
-func diveValidator(fv FieldValidator) error {
-	return nil
+	return Passed(fv, "ping_one", value, "")
 }
 
 // Helpers
@@ -471,10 +476,6 @@ func getIntValue(fieldVal reflect.Value) (int64, error) {
 }
 
 func Passed(fv FieldValidator, validatorName, value, test string) error {
-	return passed(fv, validatorName, value, test)
-}
-
-func passed(fv FieldValidator, validatorName, value, test string) error {
 	// c := fmt.Sprintf(" context=%q", fv.context)
 	// if fv.context == "" {
 	// 	c = ""
@@ -483,11 +484,7 @@ func passed(fv FieldValidator, validatorName, value, test string) error {
 	return nil
 }
 
-func Failed(fv FieldValidator, validatorName, value, test string) error {
-	return failed(fv, validatorName, value, test)
-}
-
-func failed(fv FieldValidator, validatorName, errStr, got string) error {
+func Failed(fv FieldValidator, validatorName, errStr, got string) error {
 	c := fmt.Sprintf(" (context=%q)", fv.context)
 	if fv.context == "" {
 		c = ""

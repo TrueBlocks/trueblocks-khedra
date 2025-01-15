@@ -58,7 +58,7 @@ func TestGeneralValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validate.Validate4(&tt.general)
+			err := validate.Validate(&tt.general)
 			if tt.wantErr {
 				assert.Error(t, err, "Expected error for test case '%s'", tt.name)
 			} else {
