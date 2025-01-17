@@ -18,7 +18,7 @@ func TestNewChain(t *testing.T) {
 }
 
 func TestChainValidation(t *testing.T) {
-	SetupTest([]string{})
+	defer SetupTest([]string{})
 	tests := []struct {
 		name    string
 		chain   Chain

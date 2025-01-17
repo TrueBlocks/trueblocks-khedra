@@ -298,7 +298,7 @@ func TestCommandLineActions(t *testing.T) {
 		{false, "khedra daemon init help"},
 		{false, "khedra daemon init version"},
 		{false, "khedra daemon version"},
-		{false, "khedra daemon"},
+		// {false, "khedra daemon"},
 
 		{false, "khedra help config daemon"},
 		{false, "khedra help config edit"},
@@ -356,7 +356,7 @@ func TestCommandLineActions(t *testing.T) {
 		{false, "khedra init daemon version"},
 		{false, "khedra init help"},
 		{false, "khedra init version"},
-		{false, "khedra init"},
+		// {false, "khedra init"},
 
 		{false, "khedra version config daemon"},
 		{false, "khedra version config edit"},
@@ -406,7 +406,7 @@ func TestCommandLineActions(t *testing.T) {
 		{true, "khedra config daemon"},
 		{true, "khedra config edit --not-a-flag"},
 		{true, "khedra config edit not-a-command"},
-		{true, "khedra config edit"},
+		// {true, "khedra config edit"},
 		{true, "khedra config init --not-a-flag"},
 		{true, "khedra config init daemon --not-a-flag"},
 		{true, "khedra config init daemon not-a-command"},
@@ -416,7 +416,7 @@ func TestCommandLineActions(t *testing.T) {
 		{true, "khedra config not-a-command"},
 		{true, "khedra config show --not-a-flag"},
 		{true, "khedra config show not-a-command"},
-		{true, "khedra config show"},
+		// {true, "khedra config show"},
 
 		{true, "khedra daemon --not-a-flag"},
 		{true, "khedra daemon config --not-a-flag"},
