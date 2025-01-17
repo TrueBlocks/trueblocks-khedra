@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"strings"
 	"testing"
 
@@ -72,17 +71,6 @@ func TestConfigEditCommand(t *testing.T) {
 
 	editCommand := getSubCommandByName(t, command, "edit")
 	assert.NotNil(t, editCommand)
-
-	// Mock exec.Command to prevent actual editor launch during test
-	oldCommand := execCommand
-	defer func() { execCommand = oldCommand }()
-	execCommand = func(name string, arg ...string) *exec.Cmd {
-		cmd := exec.Command("echo", "mock")
-		cmd.Stdin = nil
-		cmd.Stdout = nil
-		cmd.Stderr = nil
-		return cmd
-	}
 
 	err := editCommand.Action(cli.NewContext(cmdLine, nil, nil))
 	assert.NoError(t, err)

@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/validate"
-	"github.com/go-playground/validator"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -304,7 +303,11 @@ func TestServiceValidationUnified(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validate.Validate(&tt.service)
-			checkValidationErrors(t, tt.name, err, tt.wantErr)
+			if tt.wantErr {
+				assert.Error(t, err, "Expected an error in test '%s', but got none", tt.name)
+			} else {
+				assert.NoError(t, err, "Unexpected error in test '%s': %v", tt.name, err)
+			}
 		})
 	}
 }
@@ -340,30 +343,5 @@ func TestServiceListValidation(t *testing.T) {
 			err := validate.Validate(&service)
 			assert.NoError(t, err, "Validation failed for service %d: %v", i+1, err)
 		})
-	}
-}
-
-func checkValidationErrors(t *testing.T, name string, err error, wantErr bool) {
-	t.Helper()
-
-	if wantErr {
-		assert.Error(t, err, "Expected an error in test '%s', but got none", name)
-	} else {
-		assert.NoError(t, err, "Unexpected error in test '%s': %v", name, err)
-	}
-
-	if err != nil {
-		if validationErrors, ok := err.(validator.ValidationErrors); ok {
-			for _, fieldErr := range validationErrors {
-				t.Logf(
-					"Validation error in test '%s': field='%s', value='%v', param='%s', tag='%s'",
-					name,
-					fieldErr.Field(),
-					fieldErr.Value(),
-					fieldErr.Param(),
-					fieldErr.Tag(),
-				)
-			}
-		}
 	}
 }

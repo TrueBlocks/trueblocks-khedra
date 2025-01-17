@@ -3,14 +3,20 @@ package app
 import (
 	"fmt"
 
+	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	_ "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/env"
+	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v2"
 )
 
 func (k *KhedraApp) configShowAction(c *cli.Context) error {
-	_ = c // liinter
-	k.ConfigMaker()
+	_ = c // linter
+	fn := types.GetConfigFnNoCreate()
+	if !coreFile.FileExists(fn) {
+		return fmt.Errorf("not initialized you must run `khedra init` first")
+	}
+
 	cfg, err := LoadConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)

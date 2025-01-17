@@ -1,7 +1,6 @@
 package app
 
 import (
-	"log"
 	"log/slog"
 	"os"
 
@@ -21,11 +20,12 @@ func (k *KhedraApp) Run() {
 	k.cli.Run(os.Args)
 }
 
-func (k *KhedraApp) ConfigMaker() {
+func (k *KhedraApp) ConfigMaker() (types.Config, error) {
 	cfg, err := LoadConfig()
 	if err != nil {
-		log.Fatalf("failed to load config: %v", err)
+		return types.Config{}, err
 	}
 	k.config = &cfg
 	k.fileLogger, k.progLogger = types.NewLoggers(cfg.Logging)
+	return cfg, nil
 }

@@ -38,17 +38,7 @@ func NewConfig() Config {
 	}
 }
 
-func EstablishConfig(fn string) bool {
-	cfg := NewConfig()
-	bytes, _ := yaml.Marshal(cfg)
-	coreFile.StringToAsciiFile(fn, string(bytes))
-	return true
-}
-
-// getConfigFn returns the path to the config file which must
-// be either in the current folder or in the default location. If
-// there is no such file, establish it
-func GetConfigFn() string {
+func GetConfigFnNoCreate() string {
 	if os.Getenv("TEST_MODE") == "true" {
 		tmpDir := os.TempDir()
 		return filepath.Join(tmpDir, "config.yaml")
@@ -61,12 +51,27 @@ func GetConfigFn() string {
 	}
 
 	// expanded default config folder
-	fn = utils.ResolvePath(filepath.Join(mustGetConfigPath(), "config.yaml"))
+	return utils.ResolvePath(filepath.Join(mustGetConfigPath(), "config.yaml"))
+}
+
+// GetConfigFn returns the path to the config file which must
+// be either in the current folder or in the default location. If
+// there is no such file, establish it
+func GetConfigFn() string {
+	if os.Getenv("TEST_MODE") == "true" {
+		tmpDir := os.TempDir()
+		return filepath.Join(tmpDir, "config.yaml")
+	}
+
+	fn := GetConfigFnNoCreate()
 	if coreFile.FileExists(fn) {
 		return fn
 	}
 
-	_ = EstablishConfig(fn)
+	cfg := NewConfig()
+	bytes, _ := yaml.Marshal(cfg)
+	coreFile.StringToAsciiFile(fn, string(bytes))
+
 	return fn
 }
 

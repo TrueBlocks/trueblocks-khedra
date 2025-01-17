@@ -43,7 +43,9 @@ func SetupTest(env []string) func() {
 	originalArgs := os.Args
 	envCleanup := SetTestEnv(env)
 	tempConfigFile := GetConfigFn()
-	EstablishConfig(tempConfigFile)
+	cfg := NewConfig()
+	bytes, _ := yamlv2.Marshal(cfg)
+	coreFile.StringToAsciiFile(tempConfigFile, string(bytes))
 	return func() {
 		envCleanup()
 		os.Remove(tempConfigFile)

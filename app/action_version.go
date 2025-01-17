@@ -8,7 +8,7 @@ import (
 )
 
 func (k *KhedraApp) versionAction(c *cli.Context) error {
-	_ = c // liinter
+	_ = c // linter
 	fmt.Println("khedra version " + sdk.Version())
 	return nil
 }

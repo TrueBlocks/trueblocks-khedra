@@ -78,12 +78,12 @@ USED TO CHECK THAT IF THE USER SPECIFIED A CHAIN IN THE ENV, THEN IT HAD TO EXIS
 		return nil
 	}
 USED TO ESTABLISH FOLDERS
-	if err := file.EstablishFolder(a.Config.ConfigPath); err != nil {
+	if err := file.Establish Folder(a.Config.ConfigPath); err != nil {
 		return err
 	}
 	for _, chain := range chains {
 		chainConfig := filepath.Join(a.Config.ConfigPath, "config", chain)
-		if err := file.EstablishFolder(chainConfig); err != nil {
+		if err := file.Establish Folder(chainConfig); err != nil {
 			return err
 		}
 	}
