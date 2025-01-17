@@ -1,29 +1,110 @@
 package wizard
 
 import (
-	"bufio"
-	"errors"
 	"fmt"
-	"os"
+	"log"
 	"strings"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/base"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 )
 
+type Justification int
+
+const (
+	Left Justification = iota
+	Right
+	Center
+)
+
+type StepType int
+
+const (
+	None StepType = iota
+	Question
+	YesNo
+	Screen
+)
+
+type Replacement struct {
+	Color  string
+	Values []string
+}
+
+type Option struct {
+	Type         StepType
+	Default      string
+	TitleJustify Justification
+	BodyJustify  Justification
+	Replacements []Replacement
+}
+
 type Step struct {
-	Name     string
-	Type     string
-	Prompt   string
+	Title    string
+	Subtitle string
+	Body     string
 	Response string
-	Metadata map[string]interface{}
+	Opts     Option
+}
+
+func (s *Step) applyOpts(opts ...Option) {
+	if len(opts) == 0 {
+		return
+	}
+
+	if opts[0].Default != "" {
+		s.Opts.Default = opts[0].Default
+	}
+	if opts[0].Type != None {
+		s.Opts.Type = opts[0].Type
+	}
+	if opts[0].TitleJustify != Left {
+		s.Opts.TitleJustify = opts[0].TitleJustify
+	}
+	if opts[0].BodyJustify != Left {
+		s.Opts.BodyJustify = opts[0].BodyJustify
+	}
+	if len(opts[0].Replacements) > 0 {
+		s.Opts.Replacements = opts[0].Replacements
+		for _, rep := range opts[0].Replacements {
+			for _, val := range rep.Values {
+				s.Title = strings.ReplaceAll(s.Title, val, rep.Color+val+colors.Off)
+				s.Subtitle = strings.ReplaceAll(s.Subtitle, val, rep.Color+val+colors.Off)
+				s.Body = strings.ReplaceAll(s.Body, val, rep.Color+val+colors.Off)
+			}
+		}
+	}
+}
+
+func NewStep(title, subtitle, body string, opts ...Option) Step {
+	step := Step{
+		Title:    strings.Trim(title, "\n"),
+		Subtitle: strings.Trim(subtitle, "\n"),
+		Body:     strings.Trim(body, "\n"),
+		Opts:     Option{Type: Question},
+	}
+	step.applyOpts(opts...)
+	return step
+}
+
+func NewScreen(title, subtitle, body string, opts ...Option) Step {
+	step := Step{
+		Title:    strings.Trim(title, "\n"),
+		Subtitle: strings.Trim(subtitle, "\n"),
+		Body:     strings.Trim(body, "\n"),
+		Opts:     Option{Type: Screen},
+	}
+	step.applyOpts(opts...)
+	return step
 }
 
 type Wizard struct {
-	step      int
-	steps     []Step
-	caret     string
-	completed bool
+	step        int
+	steps       []Step
+	caret       string
+	completed   bool
+	outerBorder BorderStyle
+	innerBorder BorderStyle
 }
 
 func NewWizard(steps []Step, caret string) *Wizard {
@@ -31,11 +112,13 @@ func NewWizard(steps []Step, caret string) *Wizard {
 		panic("steps cannot be empty")
 	}
 	if caret == "" {
-		caret = ">"
+		caret = "--> "
 	}
 	return &Wizard{
-		steps: steps,
-		caret: caret,
+		steps:       steps,
+		caret:       caret,
+		outerBorder: Single,
+		innerBorder: Double,
 	}
 }
 
@@ -85,60 +168,54 @@ func (w *Wizard) GetResponses() []Step {
 }
 
 func (w *Wizard) Run() error {
-	reader := bufio.NewReader(os.Stdin)
+	// reader := bufio.NewReader(os.Stdin)
 
 	for !w.IsComplete() {
 		current := w.Current()
+		// body := color(strings.ReplaceAll("{B}"+current.Body, "+", "."))
+		// title := color("{W}" + current.Title + "{B}")
 
-		switch current.Type {
-		case "welcome":
-			fmt.Println(colors.Blue + current.Prompt + colors.Off)
-			fmt.Print("Press Enter to continue...")
-			_, _ = reader.ReadString('\n')
-			w.Next("")
-		case "yes/no":
-			for {
-				fmt.Printf("%s (y/n) %s ", colors.Blue+current.Prompt, w.caret+colors.Off)
-				input, _ := reader.ReadString('\n')
-				input = strings.TrimSpace(strings.ToLower(input))
-
-				if input == "y" || input == "yes" || input == "n" || input == "no" {
-					w.Next(input)
-					break
-				}
-				fmt.Println(colors.Red + "Invalid input. Please enter 'y' or 'n'." + colors.Off)
+		switch current.Opts.Type {
+		case Question:
+			fallthrough
+		case Screen:
+			if input, err := w.showScreen(80); err == ErrUserQuit {
+				return nil
+			} else {
+				w.Next(input)
 			}
+		// case YesNo:
+		// 	for {
+		// 		fmt.Printf("%s (y/n) %s ", body, w.caret+colors.Off)
+		// 		input, _ := reader.ReadString('\n')
+		// 		input = strings.TrimSpace(strings.ToLower(input))
+		// 		if input == "y" || input == "yes" || input == "n" || input == "no" {
+		// 			w.Next(input)
+		// 			break
+		// 		}
+		// 		fmt.Println(colors.Red + "Invalid input. Please enter 'y' or 'n'." + colors.Off)
+		// 	}
 		default:
-			defaultAnswer := ""
-			if val, ok := current.Metadata["default"]; ok {
-				defaultAnswer, _ = val.(string)
-			}
-
-			fmt.Printf("%s (%s) %s ", colors.Blue+current.Prompt, defaultAnswer, w.caret+colors.Off)
-			input, _ := reader.ReadString('\n')
-			input = strings.TrimSpace(input)
-
-			if input == "quit" {
-				return errors.New("wizard aborted by user")
-			}
-
-			if input == "" {
-				input = defaultAnswer
-			}
-
-			w.Next(input)
+			log.Fatalf("unknown step type: %d", current.Opts.Type)
 		}
 	}
 
 	fmt.Println("\nYour answers:")
 	width := 0
 	for _, step := range w.GetResponses() {
-		width = base.Max(width, len(step.Name)+4)
+		width = base.Max(width, len(step.Title)+4)
 	}
 	format := fmt.Sprintf("%s%%-%d.%ds%s%%s\n", colors.Green, width, width, colors.Off)
 	for _, step := range w.GetResponses() {
-		fmt.Printf(format, step.Name+":", step.Response)
+		fmt.Printf(format, step.Title+":", step.Response)
 	}
 
 	return nil
+}
+
+func color(in string) string {
+	ret := strings.ReplaceAll(in, "{Y}", colors.Yellow)
+	ret = strings.ReplaceAll(ret, "{B}", colors.Blue)
+	ret = strings.ReplaceAll(ret, "{W}", colors.White)
+	return ret
 }

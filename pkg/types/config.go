@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	_ "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/env"
@@ -108,4 +109,20 @@ func isWritable(path string) bool {
 	}
 
 	return true
+}
+
+func (c *Config) ChainList() string {
+	var ret []string
+	for key := range c.Chains {
+		ret = append(ret, key)
+	}
+	return strings.Join(ret, ",")
+}
+
+func (c *Config) ServiceList() string {
+	var ret []string
+	for key := range c.Services {
+		ret = append(ret, key)
+	}
+	return strings.Join(ret, ",")
 }

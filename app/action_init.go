@@ -14,14 +14,14 @@ func (k *KhedraApp) initAction(c *cli.Context) error {
 	}
 
 	steps := []wizard.Step{
-		{Name: "Welcome", Prompt: "Welcome to Khedra. We're going to walk you through.", Metadata: map[string]interface{}{"default": "yes"}},
-		{Name: "General", Prompt: "Where do you want to store your data?", Metadata: map[string]interface{}{"default": "25"}},
-		{Name: "Services", Prompt: "There are four services. Which do you want to enable?", Metadata: map[string]interface{}{"default": "25"}},
-		{Name: "Chains", Prompt: "Which chains do you want to support?", Metadata: map[string]interface{}{"default": "New York"}},
-		{Name: "Logging", Prompt: "What logging options do you want to enable?", Metadata: map[string]interface{}{"default": "New York"}},
+		wizard.NewScreen(welcomeTitle, welcomeSubtitle, welcomeBody, welcomeOptions),
+		wizard.NewScreen(generalTitle, generalSubtitle, generalBody, generalOptions),
+		wizard.NewScreen(servicesTitle, servicesSubtitle, servicesBody, servicesOptions),
+		wizard.NewScreen(chainsTitle, chainsSubtitle, chainsBody, chainsOptions),
+		wizard.NewScreen(loggingTitle, loggingSubtitle, loggingBody, loggingOptions),
 	}
 
-	w := wizard.NewWizard(steps, ">")
+	w := wizard.NewWizard(steps, "")
 
 	if err := w.Run(); err != nil {
 		return err
@@ -29,6 +29,14 @@ func (k *KhedraApp) initAction(c *cli.Context) error {
 
 	return nil
 }
+
+var generalScreen = `Where should Khedra store its data?`
+
+var servicesScreen = `There are four services. Which do you want to enable?`
+
+var chainsScreen = `Which chains do you want to support?`
+
+var loggingScreen = `Where should we store log files?`
 
 // func (k *KhedraApp) Initialize() error {
 // 	k.Info("Test log: Scraper initialization started")
