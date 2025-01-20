@@ -6,6 +6,7 @@ require (
 	github.com/TrueBlocks/trueblocks-core/src/apps/chifra v0.0.0-20241220161941-2de43c56d0ad
 	github.com/TrueBlocks/trueblocks-sdk/v4 v4.0.2
 	github.com/alecthomas/assert/v2 v2.11.0
+	github.com/goccy/go-yaml v1.15.15
 	github.com/joho/godotenv v1.5.1
 	github.com/knadh/koanf/parsers/yaml v0.1.0
 	github.com/knadh/koanf/providers/file v1.1.2

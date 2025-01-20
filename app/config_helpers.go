@@ -7,7 +7,7 @@ import (
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/validate"
-	"github.com/knadh/koanf/parsers/yaml"
+	"github.com/goccy/go-yaml"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
 )
@@ -19,11 +19,11 @@ import (
 func loadFileConfig() (types.Config, error) {
 	fileK := koanf.New(".")
 	fn := types.GetConfigFn()
-	if coreFile.FileSize(fn) == 0 {
+	if coreFile.FileSize(fn) == 0 || len(coreFile.AsciiFileToString(fn)) == 0 {
 		return types.Config{}, fmt.Errorf("config file is empty: %s", fn)
 	}
 
-	if err := fileK.Load(file.Provider(fn), yaml.Parser()); err != nil {
+	if err := fileK.Load(file.Provider(fn), MyParser()); err != nil {
 		return types.Config{}, fmt.Errorf("failed to load file config %s: %w", fn, err)
 	}
 
@@ -68,4 +68,34 @@ func initializeFolders(cfg types.Config) error {
 	}
 
 	return nil
+}
+
+type YamlComments struct{}
+
+func MyParser() *YamlComments {
+	return &YamlComments{}
+}
+
+func (p *YamlComments) Unmarshal(b []byte) (map[string]interface{}, error) {
+	var out map[string]interface{}
+	if err := yaml.Unmarshal(b, &out); err != nil {
+		return nil, err
+	}
+	if out["general"] == nil {
+		return out, fmt.Errorf("invalid config file: general key not found")
+	}
+
+	return out, nil
+}
+
+func (p *YamlComments) Marshal(o map[string]interface{}) ([]byte, error) {
+	comments := []*yaml.Comment{{Texts: []string{"This is a file-level comment"}}}
+	cm := yaml.CommentMap{
+		"x": comments,
+	}
+	data, err := yaml.MarshalWithOptions(o, yaml.WithComment(cm))
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal with comment: %w", err)
+	}
+	return data, nil
 }
