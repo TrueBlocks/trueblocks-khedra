@@ -1,11 +1,21 @@
 package utils
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 )
+
+// ResolveValidPath returns an absolute path expanded for ~, $HOME or other env variables
+func ResolveValidPath(path string) (string, error) {
+	resolved := ResolvePath(path)
+	if resolved != ToValidPath(path) {
+		return resolved, fmt.Errorf("invalid folder: %s", path)
+	}
+	return resolved, nil
+}
 
 // ResolvePath returns an absolute path expanded for ~, $HOME or other env variables
 func ResolvePath(path string) string {
