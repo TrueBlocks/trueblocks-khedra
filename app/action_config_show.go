@@ -7,7 +7,7 @@ import (
 	_ "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/env"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 	"github.com/urfave/cli/v2"
-	"gopkg.in/yaml.v2"
+	yamlv2 "gopkg.in/yaml.v2"
 )
 
 func (k *KhedraApp) configShowAction(c *cli.Context) error {
@@ -21,7 +21,7 @@ func (k *KhedraApp) configShowAction(c *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
-	bytes, err := yaml.Marshal(&cfg)
+	bytes, err := yamlv2.Marshal(&cfg)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal config: %w", err)
 	}

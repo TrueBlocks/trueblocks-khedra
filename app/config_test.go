@@ -9,7 +9,7 @@ import (
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/yaml.v2"
+	yamlv2 "gopkg.in/yaml.v2"
 )
 
 // Testing status: not_reviewed
@@ -38,7 +38,7 @@ func TestLoadConfig_ValidConfig(t *testing.T) {
 		},
 	}
 
-	bytes, _ := yaml.Marshal(cfg)
+	bytes, _ := yamlv2.Marshal(cfg)
 	coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
 
 	result, err := LoadConfig()
@@ -95,7 +95,7 @@ func TestLoadConfig_EnvOverrides(t *testing.T) {
 		},
 	}
 
-	bytes, _ := yaml.Marshal(cfg)
+	bytes, _ := yamlv2.Marshal(cfg)
 	coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
 
 	result, err := LoadConfig()
@@ -136,7 +136,7 @@ func TestLoadConfig_ValidationFailure(t *testing.T) {
 		},
 	}
 
-	bytes, _ := yaml.Marshal(cfg)
+	bytes, _ := yamlv2.Marshal(cfg)
 	coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
 
 	_, err := LoadConfig()
@@ -249,7 +249,7 @@ func TestChainLargeNumberOfChains(t *testing.T) {
 		}
 	}
 
-	bytes, _ := yaml.Marshal(cfg)
+	bytes, _ := yamlv2.Marshal(cfg)
 	coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
 
 	var err error

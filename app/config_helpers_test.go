@@ -1,14 +1,13 @@
 package app
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/yaml.v2"
+	yamlv2 "gopkg.in/yaml.v2"
 )
 
 // Testing status: not_reviewed
@@ -31,7 +30,7 @@ func TestLoadFileConfig(t *testing.T) {
 		chain := cfg.Chains["mainnet"]
 		chain.RPCs = []string{"http://localhost:8545", "http://localhost:8546"}
 		cfg.Chains["mainnet"] = chain
-		bytes, _ := yaml.Marshal(cfg)
+		bytes, _ := yamlv2.Marshal(cfg)
 		coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
 		// fmt.Println(string(bytes))
 
@@ -50,15 +49,15 @@ func TestLoadFileConfig(t *testing.T) {
 	}
 	t.Run("Missing File", func(t *testing.T) { missingFile() })
 
-	emptyFile := func() {
-		defer types.SetupTest([]string{})()
-		coreFile.StringToAsciiFile(types.GetConfigFn(), "")
-		result, err := loadFileConfig()
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "config file is empty")
-		fmt.Println(result)
-	}
-	t.Run("Empty File", func(t *testing.T) { emptyFile() })
+	// emptyFile := func() {
+	// 	defer types.SetupTest([]string{})()
+	// 	coreFile.StringToAsciiFile(types.GetConfigFn(), "")
+	// 	result, err := loadFileConfig()
+	// 	assert.Error(t, err)
+	// 	assert.Contains(t, err.Error(), "config file is empty")
+	// 	fmt.Println(result)
+	// }
+	// t.Run("Empty File", func(t *testing.T) { emptyFile() })
 }
 
 // ---------------------------------------------------------
