@@ -5,7 +5,7 @@ import (
 
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/validate"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/yaml.v2"
+	yamlv2 "gopkg.in/yaml.v2"
 )
 
 // Testing status: reviewed
@@ -75,11 +75,11 @@ func TestGeneralSerialization(t *testing.T) {
 dataFolder: "expected/folder/name"
 `
 	var g General
-	err := yaml.Unmarshal([]byte(content), &g)
+	err := yamlv2.Unmarshal([]byte(content), &g)
 	assert.NoError(t, err)
 	assert.Equal(t, "expected/folder/name", g.DataFolder)
 
-	out, err := yaml.Marshal(&g)
+	out, err := yamlv2.Marshal(&g)
 	assert.NoError(t, err)
 	assert.Contains(t, string(out), "dataFolder: expected/folder/name")
 }

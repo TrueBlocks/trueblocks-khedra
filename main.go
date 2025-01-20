@@ -5,6 +5,6 @@ import (
 )
 
 func main() {
-	k := &app.KhedraApp{}
+	k := app.NewKhedraApp()
 	k.Run()
 }

@@ -7,7 +7,7 @@ import (
 
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/yaml.v2"
+	yamlv2 "gopkg.in/yaml.v2"
 )
 
 // Testing status: reviewed
@@ -78,7 +78,7 @@ func TestConfigEstablish(t *testing.T) {
 	configFile := filepath.Join(tmpDir, "config.yaml")
 
 	cfg := NewConfig()
-	bytes, _ := yaml.Marshal(cfg)
+	bytes, _ := yamlv2.Marshal(cfg)
 	coreFile.StringToAsciiFile(configFile, string(bytes))
 
 	assert.FileExists(t, configFile)

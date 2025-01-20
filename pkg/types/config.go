@@ -10,7 +10,7 @@ import (
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	_ "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/env"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
-	"gopkg.in/yaml.v2"
+	yamlv2 "gopkg.in/yaml.v2"
 )
 
 type Config struct {
@@ -70,7 +70,7 @@ func GetConfigFn() string {
 	}
 
 	cfg := NewConfig()
-	bytes, _ := yaml.Marshal(cfg)
+	bytes, _ := yamlv2.Marshal(cfg)
 	coreFile.StringToAsciiFile(fn, string(bytes))
 
 	return fn

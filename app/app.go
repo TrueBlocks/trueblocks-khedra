@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -13,10 +14,20 @@ type KhedraApp struct {
 	config     *types.Config
 	fileLogger *slog.Logger
 	progLogger *slog.Logger
+	chainList  *types.ChainList
+}
+
+func NewKhedraApp() *KhedraApp {
+	var err error
+	k := KhedraApp{}
+	if k.chainList, err = types.UpdateChainList(); err != nil {
+		fmt.Println(err.Error())
+	}
+	k.cli = initCli(&k)
+	return &k
 }
 
 func (k *KhedraApp) Run() {
-	k.cli = initCli(k)
 	k.cli.Run(os.Args)
 }
 
