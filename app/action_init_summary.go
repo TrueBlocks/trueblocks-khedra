@@ -6,10 +6,10 @@ import (
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 )
 
-func getServicesScreen(cfg *types.Config) wizard.Screen {
+func getSummaryScreen(cfg *types.Config) wizard.Screen {
 	_ = cfg // linter
-	var servicesScreen = wizard.Screen{
-		Title:    `Services Settings`,
+	var summaryScreen = wizard.Screen{
+		Title:    `Summary`,
 		Subtitle: ``,
 		Body: `
 This wizard helps you configure Khedra. It will walk you through four
@@ -19,12 +19,18 @@ You may quit the wizard at any time by typing "q" or "quit". The next
 time you run it, it will continue where you left off. Type "help" at any
 point to get more information.
 `,
-		Instructions: `Type your answers and press enter. ("b"=back, "q"=quit)`,
+		Instructions: `Select an option or hit enter. ("h"=help, "e"=edit, "q"=quit)`,
 		Replacements: []wizard.Replacement{
-			{Color: colors.Yellow, Values: []string{"Services Settings"}},
+			{Color: colors.Yellow, Values: []string{"Summary"}},
+		},
+		Questions: []wizard.Question{
+			{
+				Text:  "Would you like to edit the config by hand?",
+				Value: "no",
+			},
 		},
 		Style: wizard.NewStyle(),
 	}
 
-	return servicesScreen
+	return summaryScreen
 }

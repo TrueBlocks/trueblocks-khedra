@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/TrueBlocks/trueblocks-khedra/v2/app/wizard"
 	"github.com/urfave/cli/v2"
@@ -13,16 +14,15 @@ func (k *KhedraApp) initAction(c *cli.Context) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	steps := []wizard.Step{
-		wizard.NewScreen(welcomeTitle, welcomeSubtitle, welcomeBody, welcomeOptions),
-		wizard.NewScreen(generalTitle, generalSubtitle, generalBody, generalOptions),
-		wizard.NewScreen(servicesTitle, servicesSubtitle, servicesBody, servicesOptions),
-		wizard.NewScreen(chainsTitle, chainsSubtitle, chainsBody, chainsOptions),
-		wizard.NewScreen(loggingTitle, loggingSubtitle, loggingBody, loggingOptions),
+	steps := []wizard.Screen{
+		wizard.AddScreen(getWelcomeScreen(k.config)),
+		wizard.AddScreen(getGeneralScreen(k.config)),
+		wizard.AddScreen(getServicesScreen(k.config)),
+		wizard.AddScreen(getChainsScreen(k.config)),
+		wizard.AddScreen(getSummaryScreen(k.config)),
 	}
 
 	w := wizard.NewWizard(steps, "")
-
 	if err := w.Run(); err != nil {
 		return err
 	}
@@ -30,13 +30,26 @@ func (k *KhedraApp) initAction(c *cli.Context) error {
 	return nil
 }
 
-var generalScreen = `Where should Khedra store its data?`
+func validWarn(msg, value string) error {
+	if strings.Contains(msg, "%s") {
+		return fmt.Errorf(msg+"%w", value, wizard.ErrValidateWarn)
+	}
+	return fmt.Errorf(msg+"%w", wizard.ErrValidateWarn)
+}
 
-var servicesScreen = `There are four services. Which do you want to enable?`
+func validOk(msg, value string) error {
+	if strings.Contains(msg, "%s") {
+		return fmt.Errorf(msg+"%w", value, wizard.ErrValidateMsg)
+	}
+	return fmt.Errorf(msg+"%w", wizard.ErrValidateMsg)
+}
 
-var chainsScreen = `Which chains do you want to support?`
-
-var loggingScreen = `Where should we store log files?`
+func validSkipNext(msg, value string) error {
+	if strings.Contains(msg, "%s") {
+		return fmt.Errorf(msg+"%w", value, wizard.ErrSkipQuestion)
+	}
+	return fmt.Errorf(msg+"%w", wizard.ErrSkipQuestion)
+}
 
 // func (k *KhedraApp) Initialize() error {
 // 	k.Info("Test log: Scraper initialization started")
