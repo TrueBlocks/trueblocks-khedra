@@ -73,7 +73,7 @@ func (w *Wizard) Run() error {
 		}
 	}
 
-	fmt.Println("")
+	fmt.Printf("%s\n", clearScreen)
 	fmt.Println("Your answers:")
 	width := 0
 	for _, screen := range w.screens {

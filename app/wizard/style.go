@@ -39,6 +39,11 @@ const (
 	BottomRight
 	Horizontal
 	Vertical
+	TopT
+	LeftT
+	BottomT
+	RightT
+	MiddleT
 )
 
 var boxTokens = map[Border]map[BorderPos]rune{
@@ -49,6 +54,11 @@ var boxTokens = map[Border]map[BorderPos]rune{
 		BottomRight: '┘',
 		Horizontal:  '─',
 		Vertical:    '│',
+		TopT:        '┬',
+		LeftT:       '├',
+		BottomT:     '┴',
+		RightT:      '┤',
+		MiddleT:     '┼',
 	},
 	Double: {
 		TopLeft:     '╔',
@@ -57,5 +67,10 @@ var boxTokens = map[Border]map[BorderPos]rune{
 		BottomRight: '╝',
 		Horizontal:  '═',
 		Vertical:    '║',
+		TopT:        '╦',
+		LeftT:       '╠',
+		BottomT:     '╩',
+		RightT:      '╣',
+		MiddleT:     '╬',
 	},
 }

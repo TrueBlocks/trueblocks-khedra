@@ -66,16 +66,31 @@ func (s *Screen) OpenHelp() {
 
 func (s *Screen) Display() {
 	topBorder := func(width int, bs Border) []string {
+		left := string(boxTokens[bs][TopLeft])
+		middle := strings.Repeat(string(boxTokens[bs][Horizontal]), width-2)
+		right := string(boxTokens[bs][TopRight])
 		return []string{
-			string(boxTokens[bs][TopLeft]) + strings.Repeat(string(boxTokens[bs][Horizontal]), width-2) + string(boxTokens[bs][TopRight]),
+			left + middle + right,
 		}
 	}
 
 	bottomBorder := func(width int, bs Border) []string {
+		left := string(boxTokens[bs][BottomLeft])
+		middle := strings.Repeat(string(boxTokens[bs][Horizontal]), width-2)
+		right := string(boxTokens[bs][BottomRight])
 		return []string{
-			string(boxTokens[bs][BottomLeft]) + strings.Repeat(string(boxTokens[bs][Horizontal]), width-2) + string(boxTokens[bs][BottomRight]),
+			left + middle + right,
 		}
 	}
+
+	// innerBorder := func(width int, bs Border) []string {
+	// 	left := string(boxTokens[bs][BottomLeft])
+	// 	middle := strings.Repeat(string(boxTokens[bs][Horizontal]), width-2)
+	// 	right := string(boxTokens[bs][RightT])
+	// 	return []string{
+	// 		left + middle + right,
+	// 	}
+	// }
 
 	padRow := func(line string, width int, bs Border, just Justification) string {
 		_ = just // linter
@@ -92,13 +107,30 @@ func (s *Screen) Display() {
 			log.Printf("line too long in padRow: %s%s%s [%d,%d,%d,%d]\n", colors.Red, line, colors.Off, width, lineLen, padLeft, padRight)
 			padRight = 0
 		}
+
+		// switch just {
+		// case Right:
+		// 	padLeft += padRight
+		// 	padRight = 0
+		// case Center:
+		// 	extraLeft := padRight / 2
+		// 	extraRight := padRight - extraLeft
+		// 	padLeft += extraLeft
+		// 	padRight = extraRight
+		// case Left:
+		// 	fallthrough
+		// default:
+		// 	// do nothing
+		// }
+
 		return strings.Repeat(" ", padLeft) + line + strings.Repeat(" ", padRight)
 	}
 
-	boxRow := func(s string, width int, bs Border, just Justification) string {
+	boxRow := func(str string, width int, bs Border, just Justification) string {
 		body := []string{}
-		lines := strings.Split(s, "\n")
+		lines := strings.Split(str, "\n")
 		for _, line := range lines {
+			// padded := padRow(line, width, s.Style.Inner, just)
 			padded := padRow(line, width, bs, just)
 			l := string(boxTokens[bs][Vertical]) + padded + string(boxTokens[bs][Vertical])
 			body = append(body, l)
@@ -119,6 +151,7 @@ func (s *Screen) Display() {
 			for _, s := range strs {
 				ret = append(ret, boxRow(s, width, bs, just))
 			}
+			// ret = append(ret, innerBorder(width, bs)...)
 		}
 
 		return strings.Join(ret, "\n")
@@ -149,17 +182,13 @@ func (s *Screen) Display() {
 		}
 		return []string{}
 	}
-	
+
 	lines := []string{}
 	lines = append(lines, titleRows(s.Title, s.Subtitle, &s.Style)...)
 	lines = append(lines, s.Body)
 	lines = append(lines, bodyPad(strings.Join(lines, "\n"), 13)...)
 	lines = append(lines, s.Instructions)
 	screen := box(lines, screenWidth, s.Style.Outer, Left)
-	clearScreen := "\033[2J\033[H"
-	if os.Getenv("NO_CLEAR") == "true" {
-		clearScreen = ""
-	}
 	fmt.Printf("%s%s\n", clearScreen, screen)
 }
 
@@ -169,4 +198,12 @@ func (s *Screen) GetCaret(caret string, i, skipped int) string {
 	}
 	return caret
 
+}
+
+var clearScreen = "\033[2J\033[H"
+
+func init() {
+	if os.Getenv("NO_CLEAR") == "true" {
+		clearScreen = ""
+	}
 }

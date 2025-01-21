@@ -44,7 +44,7 @@ You may use $HOME or ~/ in your paths to refer to your home directory.`
 		}
 	}
 
-	var generalScreen = wizard.Screen{
+	return wizard.Screen{
 		Title:        generalTitle,
 		Subtitle:     generalSubtitle,
 		Instructions: generalInstructions,
@@ -53,8 +53,6 @@ You may use $HOME or ~/ in your paths to refer to your home directory.`
 		Questions:    generalQuestions,
 		Style:        wizard.NewStyle(),
 	}
-
-	return generalScreen
 }
 
 // --------------------------------------------------------

@@ -49,14 +49,14 @@ func displayScreen(w *Wizard, screenIndex int) error {
 					} else if errors.Is(err, ErrSkipQuestion) {
 						i++
 					} else if errors.Is(err, ErrValidateWarn) {
-						msg := question.Prompt("Response") + err.Error()
-						fmt.Println(colors.Yellow + msg + colors.Off)
+						msg := question.Prompt("Response") + colors.BrightBlue + err.Error() + colors.Off
+						fmt.Println(msg)
 						if os.Getenv("NO_CLEAR") != "true" {
 							time.Sleep(3000 * time.Millisecond)
 						}
 					} else if errors.Is(err, ErrValidateMsg) {
-						msg := question.Prompt("Response") + err.Error()
-						fmt.Println(colors.Yellow + msg + colors.Off)
+						msg := question.Prompt("Response") + colors.BrightBlue + err.Error() + colors.Off
+						fmt.Println(msg)
 						if os.Getenv("NO_CLEAR") != "true" {
 							time.Sleep(1250 * time.Millisecond)
 						}
@@ -66,7 +66,16 @@ func displayScreen(w *Wizard, screenIndex int) error {
 					} else if !errors.Is(err, ErrUserBack) || i == 0 {
 						return err
 					} else {
-						i -= 2
+						prev := &curScreen.Questions[i-1]
+						skip := prev.Prepare(curScreen)
+						if skip {
+							curScreen.Questions[i-1].ErrorMsg = ""
+							curScreen.Questions[i-2].ErrorMsg = ""
+							i -= 3
+						} else {
+							curScreen.Questions[i-1].ErrorMsg = ""
+							i -= 2
+						}
 					}
 				}
 			}
@@ -74,6 +83,7 @@ func displayScreen(w *Wizard, screenIndex int) error {
 			nSkipped++
 		}
 	}
+
 	w.Next()
 	return nil
 }
