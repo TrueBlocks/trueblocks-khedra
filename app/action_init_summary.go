@@ -6,31 +6,38 @@ import (
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 )
 
+// screen|---------|---------|---------|---------|---------|---------|---|74
 func getSummaryScreen(cfg *types.Config) wizard.Screen {
 	_ = cfg // linter
-	var summaryScreen = wizard.Screen{
-		Title:    `Summary`,
-		Subtitle: ``,
-		Body: `
-This wizard helps you configure Khedra. It will walk you through four
-sections General, Services, Chains, and Logging.
+	var summaryTitle = `Summary`
+	var summarySubtitle = ``
+	var summaryInstructions = `
+Press enter to finish the wizard. ("b"=back, "h"=help)`
+	var summaryBody = `
+You've completed the wizard and your settings have been saved to the
+configuation file at {cfg.General.DataFolder}.
 
-You may quit the wizard at any time by typing "q" or "quit". The next
-time you run it, it will continue where you left off. Type "help" at any
-point to get more information.
-`,
-		Instructions: `Select an option or hit enter. ("h"=help, "e"=edit, "q"=quit)`,
-		Replacements: []wizard.Replacement{
-			{Color: colors.Yellow, Values: []string{"Summary"}},
-		},
-		Questions: []wizard.Question{
-			{
-				Text:  "Would you like to edit the config by hand?",
-				Value: "no",
-			},
-		},
-		Style: wizard.NewStyle(),
+You may re-run this wizard at any time to edit or modify the config, however
+not all options are configurable. You may run khedra config edit or type
+edit here to open the the actual file in your editor.
+`
+	var summaryReplacements = []wizard.Replacement{
+		{Color: colors.Yellow, Values: []string{summaryTitle}},
 	}
+	var summaryQuestions = []wizard.Question{summaryQ1}
 
-	return summaryScreen
+	return wizard.Screen{
+		Title:        summaryTitle,
+		Subtitle:     summarySubtitle,
+		Instructions: summaryInstructions,
+		Body:         summaryBody,
+		Replacements: summaryReplacements,
+		Questions:    summaryQuestions,
+		Style:        wizard.NewStyle(),
+	}
+}
+
+var summaryQ1 = wizard.Question{
+	Text:  "Would you like to edit the config by hand?",
+	Value: "no",
 }

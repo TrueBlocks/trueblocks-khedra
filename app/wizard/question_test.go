@@ -23,7 +23,7 @@ func TestQuestion(t *testing.T) {
 
 		assert.Equal(t, "What is your name?", question.Text)
 		assert.Equal(t, "", question.Value)
-		assert.Equal(t, "", question.ErrorMsg) // Not initialized until processResponse
+		assert.Equal(t, "", question.ErrorStr) // Not initialized until processResponse
 		assert.NotNil(t, question.PrepareFn)
 		assert.NotNil(t, question.Validate)
 	}
@@ -44,20 +44,20 @@ func TestQuestion(t *testing.T) {
 		err := question.processResponse("download")
 		assert.NoError(t, err)
 		assert.Equal(t, "download", question.Value)
-		assert.Equal(t, "", question.ErrorMsg)
+		assert.Equal(t, "", question.ErrorStr)
 
 		// Invalid input
 		err = question.processResponse("invalid")
 		assert.Error(t, err)
 		assert.Equal(t, "invalid", question.Value)
-		assert.Contains(t, question.ErrorMsg, "value must be either \"download\" or \"scratch\"")
+		assert.Contains(t, question.ErrorStr, "value must be either \"download\" or \"scratch\"")
 
 		// Empty input (uses current Value)
 		question.Value = "scratch"
 		err = question.processResponse("")
 		assert.NoError(t, err)
 		assert.Equal(t, "scratch", question.Value)
-		assert.Equal(t, "", question.ErrorMsg)
+		assert.Equal(t, "", question.ErrorStr)
 	}
 	t.Run("Process Response Test", func(t *testing.T) { processResponseTest() })
 
@@ -65,14 +65,14 @@ func TestQuestion(t *testing.T) {
 		emptyQuestion := &Question{
 			Text:      "",
 			Value:     "",
-			ErrorMsg:  "",
+			ErrorStr:  "",
 			PrepareFn: nil,
 			Validate:  nil,
 		}
 
 		assert.Equal(t, "", emptyQuestion.Text)
 		assert.Equal(t, "", emptyQuestion.Value)
-		assert.Equal(t, "", emptyQuestion.ErrorMsg)
+		assert.Equal(t, "", emptyQuestion.ErrorStr)
 		assert.Nil(t, emptyQuestion.PrepareFn)
 		assert.Nil(t, emptyQuestion.Validate)
 	}

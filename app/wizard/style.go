@@ -1,76 +1,17 @@
 package wizard
 
+import "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/boxes"
+
 type Style struct {
-	Outer   Border
-	Inner   Border
-	Justify Justification
+	Outer   boxes.Border
+	Inner   boxes.Border
+	Justify boxes.Justification
 }
 
 func NewStyle() Style {
 	return Style{
-		Outer:   Single,
-		Inner:   Double,
-		Justify: Left,
+		Outer:   boxes.Single | boxes.All,
+		Inner:   boxes.Double,
+		Justify: boxes.Left,
 	}
-}
-
-type Border int
-
-const (
-	NoBorder Border = iota
-	Single
-	Double
-)
-
-type Justification int
-
-const (
-	Left Justification = iota
-	Right
-	Center
-)
-
-type BorderPos int
-
-const (
-	TopLeft BorderPos = iota
-	TopRight
-	BottomLeft
-	BottomRight
-	Horizontal
-	Vertical
-	TopT
-	LeftT
-	BottomT
-	RightT
-	MiddleT
-)
-
-var boxTokens = map[Border]map[BorderPos]rune{
-	Single: {
-		TopLeft:     '┌',
-		TopRight:    '┐',
-		BottomLeft:  '└',
-		BottomRight: '┘',
-		Horizontal:  '─',
-		Vertical:    '│',
-		TopT:        '┬',
-		LeftT:       '├',
-		BottomT:     '┴',
-		RightT:      '┤',
-		MiddleT:     '┼',
-	},
-	Double: {
-		TopLeft:     '╔',
-		TopRight:    '╗',
-		BottomLeft:  '╚',
-		BottomRight: '╝',
-		Horizontal:  '═',
-		Vertical:    '║',
-		TopT:        '╦',
-		LeftT:       '╠',
-		BottomT:     '╩',
-		RightT:      '╣',
-		MiddleT:     '╬',
-	},
 }

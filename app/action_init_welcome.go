@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/app/wizard"
+	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/boxes"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 )
 
@@ -25,9 +26,9 @@ or "help" to get more information.
 			{Color: colors.Green, Values: []string{"\"q\"", "\"quit\"", "\"b\"", "\"back\"", "\"help\""}},
 		},
 		Style: wizard.Style{
-			Outer:   wizard.Single,
-			Inner:   wizard.Double,
-			Justify: wizard.Center,
+			Outer:   boxes.Single | boxes.All,
+			Inner:   boxes.Double | boxes.All,
+			Justify: boxes.Center,
 		},
 	}
 

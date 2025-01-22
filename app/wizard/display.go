@@ -5,14 +5,19 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
+	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 )
 
 var ErrUserQuit = errors.New("user quit")
 var ErrUserBack = errors.New("user back")
 var ErrUserHelp = errors.New("user help")
+var ErrUserEdit = errors.New("user edit")
+var ErrUserChains = errors.New("user chains")
 
 // the following are wrapped, so we can check with errors.Is
 var ErrValidate = errors.New("")
@@ -34,8 +39,8 @@ func displayScreen(w *Wizard, screenIndex int) error {
 		nSkipped := 0
 		question := &curScreen.Questions[i]
 		if skip := question.Prepare(curScreen); !skip {
-			curScreen.Display()
-			question.Display(curScreen.GetCaret(w.caret, i, nSkipped))
+			caret := curScreen.GetCaret(w.caret, i, nSkipped)
+			curScreen.Display(question, caret)
 
 			reader := bufio.NewReader(os.Stdin)
 			if input, err := reader.ReadString('\n'); err != nil {
@@ -44,24 +49,30 @@ func displayScreen(w *Wizard, screenIndex int) error {
 				err := question.processResponse(input)
 				if err != nil {
 					if errors.Is(err, ErrValidate) {
-						fmt.Println(colors.Red + input + " " + question.ErrorMsg + colors.Off)
+						fmt.Println(colors.Red + input + " " + question.ErrorStr + colors.Off)
 						i--
 					} else if errors.Is(err, ErrSkipQuestion) {
 						i++
 					} else if errors.Is(err, ErrValidateWarn) {
-						msg := question.Prompt("Response") + colors.BrightBlue + err.Error() + colors.Off
-						fmt.Println(msg)
+						curScreen.Display(question, caret)
 						if os.Getenv("NO_CLEAR") != "true" {
-							time.Sleep(3000 * time.Millisecond)
+							time.Sleep(2000 * time.Millisecond)
 						}
 					} else if errors.Is(err, ErrValidateMsg) {
-						msg := question.Prompt("Response") + colors.BrightBlue + err.Error() + colors.Off
-						fmt.Println(msg)
+						curScreen.Display(question, caret)
 						if os.Getenv("NO_CLEAR") != "true" {
-							time.Sleep(1250 * time.Millisecond)
+							time.Sleep(750 * time.Millisecond)
 						}
 					} else if errors.Is(err, ErrUserHelp) {
 						curScreen.OpenHelp()
+						i--
+					} else if errors.Is(err, ErrUserEdit) {
+						configPath := types.GetConfigFn()
+						curScreen.EditFile(configPath)
+						i--
+					} else if errors.Is(err, ErrUserChains) {
+						chainsPath := strings.ReplaceAll(types.GetConfigFn(), "config.yaml", "chains.json")
+						curScreen.EditFile(chainsPath)
 						i--
 					} else if !errors.Is(err, ErrUserBack) || i == 0 {
 						return err
@@ -69,11 +80,14 @@ func displayScreen(w *Wizard, screenIndex int) error {
 						prev := &curScreen.Questions[i-1]
 						skip := prev.Prepare(curScreen)
 						if skip {
-							curScreen.Questions[i-1].ErrorMsg = ""
-							curScreen.Questions[i-2].ErrorMsg = ""
+							curScreen.Questions[i-1].ErrorStr = ""
+							curScreen.Questions[i-2].ErrorStr = ""
+							curScreen.Questions[i-1].Response = ""
+							curScreen.Questions[i-2].Response = ""
 							i -= 3
 						} else {
-							curScreen.Questions[i-1].ErrorMsg = ""
+							curScreen.Questions[i-1].ErrorStr = ""
+							curScreen.Questions[i-1].Response = ""
 							i -= 2
 						}
 					}
@@ -85,5 +99,23 @@ func displayScreen(w *Wizard, screenIndex int) error {
 	}
 
 	w.Next()
+	return nil
+}
+
+func (s *Screen) EditFile(fn string) error {
+	editor := os.Getenv("EDITOR")
+	if editor == "" {
+		editor = "nano"
+	} else if editor == "testing" {
+		fmt.Println("Would have edited:")
+		return nil
+	}
+	cmd := exec.Command(editor, fn)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to open config for editing: %w", err)
+	}
 	return nil
 }

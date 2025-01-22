@@ -2,14 +2,12 @@ package wizard
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	coreUtils "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
+	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/boxes"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
-	"github.com/mattn/go-runewidth"
 )
 
 type Screen struct {
@@ -19,8 +17,8 @@ type Screen struct {
 	Instructions string
 	Replacements []Replacement
 	Questions    []Question
-	Current      int
 	Style        Style
+	Current      int
 	wiz          *Wizard
 }
 
@@ -40,8 +38,8 @@ func AddScreen(screen Screen) Screen {
 		screen.Instructions = rep.Replace(screen.Instructions)
 		for i := range screen.Questions {
 			question := &screen.Questions[i]
-			question.Text = strings.ReplaceAll(question.Text, "\n\t\t", "\n            ")
-			question.Hint = strings.ReplaceAll(question.Hint, "\n\t\t", "\n            ")
+			question.Text = strings.ReplaceAll(question.Text, "\n\t\t", "\n          ")
+			question.Hint = strings.ReplaceAll(question.Hint, "\n\t\t", "\n          ")
 			question.Text = rep.Replace(question.Text)
 			for _, rrep := range question.Replacements {
 				question.Text = rrep.Replace(question.Text)
@@ -64,110 +62,18 @@ func (s *Screen) OpenHelp() {
 	coreUtils.System("open " + url)
 }
 
-func (s *Screen) Display() {
-	topBorder := func(width int, bs Border) []string {
-		left := string(boxTokens[bs][TopLeft])
-		middle := strings.Repeat(string(boxTokens[bs][Horizontal]), width-2)
-		right := string(boxTokens[bs][TopRight])
-		return []string{
-			left + middle + right,
-		}
-	}
-
-	bottomBorder := func(width int, bs Border) []string {
-		left := string(boxTokens[bs][BottomLeft])
-		middle := strings.Repeat(string(boxTokens[bs][Horizontal]), width-2)
-		right := string(boxTokens[bs][BottomRight])
-		return []string{
-			left + middle + right,
-		}
-	}
-
-	// innerBorder := func(width int, bs Border) []string {
-	// 	left := string(boxTokens[bs][BottomLeft])
-	// 	middle := strings.Repeat(string(boxTokens[bs][Horizontal]), width-2)
-	// 	right := string(boxTokens[bs][RightT])
-	// 	return []string{
-	// 		left + middle + right,
-	// 	}
-	// }
-
-	padRow := func(line string, width int, bs Border, just Justification) string {
-		_ = just // linter
-		bw := 2
-		padLeft := 3
-		if bs == NoBorder {
-			bw = 0
-			padLeft = 0
-			width -= 6
-		}
-		lineLen := runewidth.StringWidth(utils.StripColors(line))
-		padRight := width - bw - lineLen - padLeft
-		if padRight < 0 {
-			log.Printf("line too long in padRow: %s%s%s [%d,%d,%d,%d]\n", colors.Red, line, colors.Off, width, lineLen, padLeft, padRight)
-			padRight = 0
-		}
-
-		// switch just {
-		// case Right:
-		// 	padLeft += padRight
-		// 	padRight = 0
-		// case Center:
-		// 	extraLeft := padRight / 2
-		// 	extraRight := padRight - extraLeft
-		// 	padLeft += extraLeft
-		// 	padRight = extraRight
-		// case Left:
-		// 	fallthrough
-		// default:
-		// 	// do nothing
-		// }
-
-		return strings.Repeat(" ", padLeft) + line + strings.Repeat(" ", padRight)
-	}
-
-	boxRow := func(str string, width int, bs Border, just Justification) string {
-		body := []string{}
-		lines := strings.Split(str, "\n")
-		for _, line := range lines {
-			// padded := padRow(line, width, s.Style.Inner, just)
-			padded := padRow(line, width, bs, just)
-			l := string(boxTokens[bs][Vertical]) + padded + string(boxTokens[bs][Vertical])
-			body = append(body, l)
-		}
-		return strings.Join(body, "\n")
-	}
-
-	box := func(strs []string, width int, bs Border, just Justification) string {
-		ret := []string{}
-
-		if bs != NoBorder {
-			ret = append(ret, topBorder(width, bs)...)
-			for _, s := range strs {
-				ret = append(ret, boxRow(s, width, bs, just))
-			}
-			ret = append(ret, bottomBorder(width, bs)...)
-		} else {
-			for _, s := range strs {
-				ret = append(ret, boxRow(s, width, bs, just))
-			}
-			// ret = append(ret, innerBorder(width, bs)...)
-		}
-
-		return strings.Join(ret, "\n")
-	}
-
+func (s *Screen) Display(question *Question, caret string) {
 	titleRows := func(t, s string, style *Style) []string {
 		var ret []string
-		if style.Justify == Center {
+		if style.Justify == boxes.Center {
 			lines := []string{t, "", s}
-			ret = []string{box(lines, 57, style.Inner, style.Justify)}
+			ret = []string{boxes.Box(lines, 57, style.Inner, style.Justify)}
 		} else {
 			lines := []string{t + " (" + s + ")"}
 			if len(s) == 0 {
 				lines = []string{t}
 			}
-			b := box(lines, screenWidth, NoBorder, style.Justify)
+			b := boxes.Box(lines, screenWidth, boxes.Single|boxes.BottomBorder|boxes.LeftBorder|boxes.RightBorder|boxes.TCorners, style.Justify)
 			b = strings.TrimSpace(b)
 			ret = []string{b}
 		}
@@ -175,7 +81,7 @@ func (s *Screen) Display() {
 		return ret
 	}
 
-	bodyPad := func(body string, want int) []string {
+	heightPad := func(body string, want int) []string {
 		have := len(strings.Split(body, "\n"))
 		if have < want {
 			return []string{strings.Repeat("\n", want-have-1)}
@@ -185,11 +91,15 @@ func (s *Screen) Display() {
 
 	lines := []string{}
 	lines = append(lines, titleRows(s.Title, s.Subtitle, &s.Style)...)
-	lines = append(lines, s.Body)
-	lines = append(lines, bodyPad(strings.Join(lines, "\n"), 13)...)
+	if len(question.Text) > 0 {
+		lines = append(lines, question.getLines()...)
+	} else {
+		lines = append(lines, s.Body)
+	}
+	lines = append(lines, heightPad(strings.Join(lines, "\n"), 13)...)
 	lines = append(lines, s.Instructions)
-	screen := box(lines, screenWidth, s.Style.Outer, Left)
-	fmt.Printf("%s%s\n", clearScreen, screen)
+	screen := boxes.Box(lines, screenWidth, s.Style.Outer, boxes.Left)
+	fmt.Printf("%s%s\n%s", clearScreen, screen, question.Prompt(caret, "  ", false))
 }
 
 func (s *Screen) GetCaret(caret string, i, skipped int) string {

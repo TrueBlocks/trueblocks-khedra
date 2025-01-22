@@ -12,10 +12,8 @@ import (
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
 )
 
-// --------------------------------------------------------
+// screen|---------|---------|---------|---------|---------|---------|---|74
 func getGeneralScreen(cfg *types.Config) wizard.Screen {
-	_ = cfg // linter
-
 	var generalTitle = `General Settings`
 	var generalSubtitle = ``
 	var generalInstructions = `
@@ -34,7 +32,7 @@ You may use $HOME or ~/ in your paths to refer to your home directory.`
 		{Color: colors.Yellow, Values: []string{generalTitle}},
 		{Color: colors.Green, Values: []string{"Unchained\nIndex", "$HOME", "~/"}},
 	}
-	var generalQuestions = []wizard.Question{generalQ0, generalQ1, generalQ2, generalQ3, generalQ4}
+	var generalQuestions = []wizard.Question{generalQ0, generalQ1, generalQ2, generalQ3, generalQ4, generalQ5}
 
 	for i := 0; i < len(generalQuestions); i++ {
 		q := &generalQuestions[i]
@@ -57,6 +55,11 @@ You may use $HOME or ~/ in your paths to refer to your home directory.`
 
 // --------------------------------------------------------
 var generalQ0 = wizard.Question{
+	//.....question-|---------|---------|---------|---------|---------|----|65
+}
+
+// --------------------------------------------------------
+var generalQ1 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
 	Text: `Should we create the Unchained Index from scratch (starting at
 		block zero) or download from IPFS?`,
@@ -84,7 +87,7 @@ var generalQ0 = wizard.Question{
 }
 
 // --------------------------------------------------------
-var generalQ1 = wizard.Question{
+var generalQ2 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
 	Text: `Do you want to download only bloom filters or the entire index?`,
 	Hint: `Downloading blooms takes less time and is smaller (4gb), but is
@@ -118,7 +121,7 @@ var generalQ1 = wizard.Question{
 }
 
 // --------------------------------------------------------
-var generalQ2 = wizard.Question{
+var generalQ3 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
 	Text:  `Where do you want to store the Unchained Index?`,
 	Value: `{cfg.General.DataFolder}`,
@@ -143,7 +146,7 @@ var generalQ2 = wizard.Question{
 }
 
 // --------------------------------------------------------
-var generalQ3 = wizard.Question{
+var generalQ4 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
 	Text:  "Do you want to enable file-based logging?",
 	Value: "no",
@@ -173,7 +176,7 @@ var generalQ3 = wizard.Question{
 }
 
 // --------------------------------------------------------
-var generalQ4 = wizard.Question{
+var generalQ5 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
 	Text:  "What log level do you want to enable (debug, info, warn, error)?",
 	Value: "info",

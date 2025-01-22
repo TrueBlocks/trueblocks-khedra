@@ -13,14 +13,16 @@ import (
 // Fields:
 // - Text: The question displayed to the user.
 // - Value: A processed or validated version of the response.
-// - ErrorMsg: An error message displayed in case of invalid input.
+// - Response: An error message displayed in case of invalid input.
+// - ErrorStr: An error message displayed in case of invalid input.
 // - Prepare: A function for pre-question processing.
 // - Validate: A function to validate user input, returning the processed value or an error.
 type Question struct {
 	Text         string
 	Hint         string
 	Value        string
-	ErrorMsg     string
+	Response     string
+	ErrorStr     string
 	PrepareFn    func(string, *Question) (string, error)
 	Validate     func(string, *Question) (string, error)
 	Replacements []Replacement
@@ -29,7 +31,8 @@ type Question struct {
 }
 
 func (q *Question) processResponse(input string) error {
-	q.ErrorMsg = ""
+	q.Response = ""
+	q.ErrorStr = ""
 	input = strings.TrimSpace(input)
 	if input == "" {
 		input = utils.StripColors(q.Value)
@@ -39,13 +42,23 @@ func (q *Question) processResponse(input string) error {
 		return ErrUserHelp
 	case "q", "quit":
 		return ErrUserQuit
+	case "e", "edit":
+		return ErrUserEdit
+	case "c", "chains":
+		return ErrUserChains
 	case "b", "back":
 		return ErrUserBack
 	default:
 		if q.Validate != nil {
 			var err error
 			if q.Value, err = q.Validate(input, q); err != nil {
-				q.ErrorMsg = err.Error()
+				q.ErrorStr = ""
+				q.Response = ""
+				if errors.Is(err, ErrValidateWarn) || errors.Is(err, ErrValidateMsg) {
+					q.Response = err.Error()
+				} else {
+					q.ErrorStr = err.Error()
+				}
 			}
 			return err
 		} else {
@@ -55,8 +68,7 @@ func (q *Question) processResponse(input string) error {
 	return nil
 }
 
-func (q *Question) Prompt(str string, pad ...bool) string {
-	var spacer = "  "
+func (q *Question) Prompt(str, spacer string, pad ...bool) string {
 	if len(pad) > 0 && !pad[0] {
 		str = spacer + str
 	} else {
@@ -67,10 +79,13 @@ func (q *Question) Prompt(str string, pad ...bool) string {
 	return reps.Replace(str)
 }
 
-func (q *Question) Display(caret string) {
+func (q *Question) getLines() []string {
 	var lines []string
 	if q.Text != "" {
-		lines = append(lines, q.Prompt("Question")+q.Text)
+		lines = append(lines, q.Prompt("Question", "")+q.Text)
+		if q.Hint != "" {
+			lines = append(lines, q.Prompt("Hint", "")+q.Hint)
+		}
 		if q.Value != "" {
 			value := q.Value
 			if len(q.Replacements) > 0 {
@@ -78,21 +93,20 @@ func (q *Question) Display(caret string) {
 					value = rep.Replace(value)
 				}
 			}
-			lines = append(lines, q.Prompt("Current")+value)
+			lines = append(lines, q.Prompt("Current", "")+value)
 		}
-		if q.Hint != "" {
-			lines = append(lines, q.Prompt("Hint")+q.Hint)
+		if len(q.ErrorStr) > 0 {
+			msg := colors.Red + q.ErrorStr + colors.Off
+			lines = append(lines, q.Prompt("Error", "")+msg)
+			q.ErrorStr = ""
+		}
+		if len(q.Response) > 0 {
+			msg := colors.BrightBlue + q.Response + colors.Off
+			lines = append(lines, q.Prompt("Response", "")+msg)
+			q.Response = ""
 		}
 	}
-
-	if len(q.ErrorMsg) > 0 {
-		msg := colors.Red + q.ErrorMsg + colors.Off
-		lines = append(lines, q.Prompt("Error")+msg)
-		q.ErrorMsg = ""
-	}
-
-	lines = append(lines, "")
-	fmt.Printf("%s%s", strings.Join(lines, "\n"), q.Prompt(caret, false))
+	return append(lines, "")
 }
 
 func (q *Question) Prepare(s *Screen) bool {
