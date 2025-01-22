@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"os"
@@ -30,16 +31,32 @@ func DownloadAndStore(url, filename string, dur time.Duration) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 
-	data, err := io.ReadAll(resp.Body)
+	rawData, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	err = os.WriteFile(filename, data, 0644)
+	var prettyData []byte
+	if json.Valid(rawData) {
+		var jsonData interface{}
+		err := json.Unmarshal(rawData, &jsonData)
+		if err != nil {
+			return nil, err
+		}
+		prettyData, err = json.MarshalIndent(jsonData, "", "  ")
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// If the data is not valid JSON, write it as-is
+		prettyData = rawData
+	}
+
+	err = os.WriteFile(filename, prettyData, 0644)
 	if err != nil {
 		return nil, err
 	}
 
 	_ = file.Touch(filename)
-	return data, nil
+	return prettyData, nil
 }
