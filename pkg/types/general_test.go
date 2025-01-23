@@ -162,3 +162,17 @@ detail: "entireIndex"
 	assert.Contains(t, errStr, "invalid characters", "Expected dataFolder validation to fail due to invalid characters")
 	assert.Contains(t, errStr, "invalid_strategy", "Expected strategy validation to fail")
 }
+
+func TestNewGeneralValidation(t *testing.T) {
+	// Create a new instance of General using NewGeneral
+	g := NewGeneral()
+
+	// Validate the defaults
+	err := validate.Validate(&g)
+	assert.NoError(t, err, "Expected NewGeneral defaults to pass validation")
+
+	// Assert specific defaults
+	assert.NotEmpty(t, g.DataFolder, "DataFolder should not be empty")
+	assert.Equal(t, "download", g.Strategy, "Default Strategy should be 'download'")
+	assert.Equal(t, "entireIndex", g.Detail, "Default Detail should be 'entireIndex'")
+}
