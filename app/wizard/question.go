@@ -87,13 +87,7 @@ func (q *Question) getLines() []string {
 			lines = append(lines, q.Prompt("Hint", "")+q.Hint)
 		}
 		if q.Value != "" {
-			value := q.Value
-			if len(q.Replacements) > 0 {
-				for _, rep := range q.Replacements {
-					value = rep.Replace(value)
-				}
-			}
-			lines = append(lines, q.Prompt("Current", "")+value)
+			lines = append(lines, q.Prompt("Current", "")+colors.BrightBlue+q.Value+colors.Off)
 		}
 		if len(q.ErrorStr) > 0 {
 			msg := colors.Red + q.ErrorStr + colors.Off
