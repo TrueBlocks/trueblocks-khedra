@@ -133,3 +133,27 @@ dataFolder: "expected/folder/name"
 	assert.NoError(t, err)
 	assert.Contains(t, string(out), "dataFolder: expected/folder/name")
 }
+
+func TestInvalidYAMLInput(t *testing.T) {
+	content := `
+dataFolder: "expected/folder/name"
+strategy: download
+detail: [invalid_array]
+`
+	var g General
+	err := yamlv2.Unmarshal([]byte(content), &g)
+	assert.Error(t, err, "Expected error for invalid YAML input")
+}
+
+func TestUnsupportedCharactersInFields(t *testing.T) {
+	content := `
+dataFolder: "expected/folder/\x00name"
+strategy: "\tinvalid_strategy"
+detail: "entireIndex"
+`
+	var g General
+	err := yamlv2.Unmarshal([]byte(content), &g)
+	assert.NoError(t, err, "Unexpected error during YAML parsing")
+	err = validate.Validate(&g)
+	assert.Error(t, err, "Expected validation error for unsupported characters")
+}

@@ -39,27 +39,27 @@ func (fv FieldValidator) Context() string {
 type ValidatorFunc func(fv FieldValidator) error
 
 // Validator registry
-var validatorRegistry = make(map[string]ValidatorFunc)
+var ValidatorRegistry = make(map[string]ValidatorFunc)
 
 func init() {
-	validatorRegistry["oneof"] = oneofValidator
-	validatorRegistry["min"] = minValidator
-	validatorRegistry["max"] = maxValidator
-	validatorRegistry["endswith"] = endswithValidator
-	validatorRegistry["folder_exists"] = folderExistsValidator
-	validatorRegistry["strict_url"] = strictURLValidator
-	validatorRegistry["required"] = requiredValidator
-	validatorRegistry["req_if_enabled"] = reqIfEnabledValidator
-	validatorRegistry["dive"] = func(fv FieldValidator) error { return nil }
+	ValidatorRegistry["oneof"] = oneofValidator
+	ValidatorRegistry["min"] = minValidator
+	ValidatorRegistry["max"] = maxValidator
+	ValidatorRegistry["endswith"] = endswithValidator
+	ValidatorRegistry["folder_exists"] = folderExistsValidator
+	ValidatorRegistry["strict_url"] = strictURLValidator
+	ValidatorRegistry["required"] = requiredValidator
+	ValidatorRegistry["req_if_enabled"] = reqIfEnabledValidator
+	ValidatorRegistry["dive"] = func(fv FieldValidator) error { return nil }
 }
 
 // RegisterValidator registers a new validator function if it does not
 // already exist. If it does, it returns an error.
 func RegisterValidator(name string, fn ValidatorFunc) error {
-	if _, ok := validatorRegistry[name]; ok {
+	if _, ok := ValidatorRegistry[name]; ok {
 		return fmt.Errorf("validator %q already exists", name)
 	}
-	validatorRegistry[name] = fn
+	ValidatorRegistry[name] = fn
 	return nil
 }
 
