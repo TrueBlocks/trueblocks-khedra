@@ -18,6 +18,8 @@ func TestGetEnvironmentKeys(t *testing.T) {
 			"TB_KHEDRA_CHAINS_MAINNET_ENABLED",
 			"TB_KHEDRA_CHAINS_MAINNET_RPCS",
 			"TB_KHEDRA_GENERAL_DATAFOLDER",
+			"TB_KHEDRA_GENERAL_DOWNLOADSTRATEGY",
+			"TB_KHEDRA_GENERAL_DOWNLOADDETAIL",
 			"TB_KHEDRA_LOGGING_COMPRESS",
 			"TB_KHEDRA_LOGGING_FILENAME",
 			"TB_KHEDRA_LOGGING_FOLDER",
@@ -41,8 +43,9 @@ func TestGetEnvironmentKeys(t *testing.T) {
 
 	testGetEnvKeysInEnv := func(t *testing.T) {
 		defer setEnv(map[string]string{
-			"TB_KHEDRA_CHAINS_MAINNET_ENABLED": "false",
-			"TB_KHEDRA_LOGGING_FILENAME":       "\"A filename\"",
+			"TB_KHEDRA_CHAINS_MAINNET_ENABLED":   "false",
+			"TB_KHEDRA_LOGGING_FILENAME":         "\"A filename\"",
+			"TB_KHEDRA_GENERAL_DOWNLOADSTRATEGY": "scratch",
 		})()
 		cfg := NewConfig()
 		keys := getEnvironmentKeys(cfg, InEnv)
@@ -50,6 +53,7 @@ func TestGetEnvironmentKeys(t *testing.T) {
 		assert.ElementsMatch(t, []string{
 			"TB_KHEDRA_CHAINS_MAINNET_ENABLED",
 			"TB_KHEDRA_LOGGING_FILENAME",
+			"TB_KHEDRA_GENERAL_DOWNLOADSTRATEGY",
 		}, keys)
 	}
 	t.Run("Test getEnv", testGetEnvKeysInEnv)

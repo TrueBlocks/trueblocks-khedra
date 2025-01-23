@@ -18,7 +18,9 @@ const (
 	PrefixServices = "TB_KHEDRA_SERVICES_"
 
 	// General Keys
-	KeyDataFolder = "TB_KHEDRA_GENERAL_DATAFOLDER"
+	KeyDataFolder       = "TB_KHEDRA_GENERAL_DATAFOLDER"
+	KeyDownloadStrategy = "TB_KHEDRA_GENERAL_DOWNLOADSTRATEGY"
+	KeyDownloadDetail   = "TB_KHEDRA_GENERAL_DOWNLOADDETAIL"
 
 	// Logging Keys
 	KeyLoggingFolder     = "TB_KHEDRA_LOGGING_FOLDER"
@@ -144,6 +146,10 @@ func applyEnv(keys []string, receiver *Config) error {
 		// General settings
 		case key == KeyDataFolder:
 			receiver.General.DataFolder = envValue
+		case key == KeyDownloadStrategy:
+			receiver.General.DownloadStrategy = envValue
+		case key == KeyDownloadDetail:
+			receiver.General.DownloadDetail = envValue
 
 		// Logging settings
 		case key == KeyLoggingFolder:
