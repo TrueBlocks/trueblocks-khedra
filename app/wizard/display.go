@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -99,23 +98,5 @@ func displayScreen(w *Wizard, screenIndex int) error {
 	}
 
 	w.Next()
-	return nil
-}
-
-func (s *Screen) EditFile(fn string) error {
-	editor := os.Getenv("EDITOR")
-	if editor == "" {
-		editor = "nano"
-	} else if editor == "testing" {
-		fmt.Println("Would have edited:")
-		return nil
-	}
-	cmd := exec.Command(editor, fn)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to open config for editing: %w", err)
-	}
 	return nil
 }

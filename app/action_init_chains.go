@@ -52,6 +52,6 @@ var chainsQ0 = wizard.Question{}
 var chainsQ1 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
 	Question: `Which chains do you want to index? (Enter a chain's name
-	directly to add chains or "remove <chain>" to remove them.)`,
+|directly to add chains or "remove <chain>" to remove them.)`,
 	Value: "{cfg.ChainList}",
 }

@@ -3,6 +3,7 @@ package wizard
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 
 	coreUtils "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
@@ -38,11 +39,12 @@ func AddScreen(screen Screen) Screen {
 		screen.Instructions = rep.Replace(screen.Instructions)
 		for i := range screen.Questions {
 			question := &screen.Questions[i]
-			question.Question = strings.ReplaceAll(question.Question, "\n\t\t", "\n          ")
-			question.Hint = strings.ReplaceAll(question.Hint, "\n\t\t", "\n          ")
+			question.Question = strings.ReplaceAll(question.Question, "\n|", "\n          ")
+			question.Hint = strings.ReplaceAll(question.Hint, "\n|", "\n          ")
 			question.Question = rep.Replace(question.Question)
 			for _, rrep := range question.Replacements {
 				question.Question = rrep.Replace(question.Question)
+				question.Hint = rrep.Replace(question.Hint)
 			}
 		}
 	}
@@ -54,7 +56,7 @@ func (s *Screen) OpenHelp() {
 		"KHEDRA WIZARD":     "welcome",
 		"General Settings":  "general",
 		"Services Settings": "services",
-		"Chains Settings":   "chains",
+		"Chain Settings":    "chains",
 		"Summary":           "summary",
 	}
 	title := utils.StripColors(s.Title)
@@ -97,7 +99,11 @@ func (s *Screen) Display(question *Question, caret string) {
 		lines = append(lines, s.Body)
 	}
 	lines = append(lines, heightPad(strings.Join(lines, "\n"), 13)...)
-	lines = append(lines, s.Instructions)
+	if len(question.Question) > 0 {
+		lines = append(lines, s.Instructions)
+	} else {
+		lines = append(lines, "Press enter to continue.")
+	}
 	screen := boxes.Box(lines, screenWidth, s.Style.Outer, boxes.Left)
 	fmt.Printf("%s%s\n%s", clearScreen, screen, question.Prompt(caret, "  ", false))
 }
@@ -116,4 +122,37 @@ func init() {
 	if os.Getenv("NO_CLEAR") == "true" {
 		clearScreen = ""
 	}
+}
+
+func (s *Screen) EditFile(fn string) error {
+	isBlockingEditor := func(editor string) bool {
+		if editor == "" {
+			return false
+		}
+		blockingEditors := []string{"nano", "vim", "vi", "emacs -nw", "pico", "ed"}
+		for _, be := range blockingEditors {
+			if strings.HasPrefix(editor, be) {
+				return true
+			}
+		}
+		return false
+	}
+
+	editor := os.Getenv("EDITOR")
+	if editor == "testing" {
+		fmt.Println("Would have edited:")
+		return nil
+	} else if !isBlockingEditor(editor) {
+		editor = "nano"
+	}
+
+	args := strings.Split(editor, " ")
+	cmd := exec.Command(args[0], append(args[1:], fn)...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to open config for editing: %w", err)
+	}
+	return nil
 }

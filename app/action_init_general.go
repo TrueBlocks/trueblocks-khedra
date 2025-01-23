@@ -30,7 +30,7 @@ information.
 You may use $HOME or ~/ in your paths to refer to your home directory.`
 	var generalReplacements = []wizard.Replacement{
 		{Color: colors.Yellow, Values: []string{generalTitle}},
-		{Color: colors.Green, Values: []string{"Unchained\nIndex", "$HOME", "~/"}},
+		{Color: colors.Green, Values: []string{"Unchained\nIndex", "Unchained Index", "$HOME", "~/"}},
 	}
 	var generalQuestions = []wizard.Question{generalQ0, generalQ1, generalQ2, generalQ3, generalQ4, generalQ5}
 
@@ -61,9 +61,10 @@ var generalQ0 = wizard.Question{
 // --------------------------------------------------------
 var generalQ1 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
-	Question: `Should we create the Unchained Index from scratch (starting at
-		block zero) or download from IPFS?`,
-	Hint:  `Downloading is faster. Building from scratch is more secure.`,
+	Question: `Would you like to create the Unchained Index from scratch
+|(starting at block zero) or download from IPFS?`,
+	Hint: `Downloading is faster (a few hours). Building from scratch is
+|more secure (depending on the chain, perhaps a few days).`,
 	Value: "download",
 	Validate: func(input string, q *wizard.Question) (string, error) {
 		switch input {
@@ -74,7 +75,6 @@ var generalQ1 = wizard.Question{
 		default:
 			return input, fmt.Errorf(q.Messages[2]+"%w", wizard.ErrValidate)
 		}
-
 	},
 	Messages: []string{
 		`the index will be downloaded`,
@@ -91,8 +91,8 @@ var generalQ2 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
 	Question: `Do you want to download only bloom filters or the entire index?`,
 	Hint: `Downloading blooms takes less time and is smaller (4gb), but is
-		slower when searching. Downloading the entire index takes longer
-		and is larger (180gb), but is much faster during search.`,
+|slower when searching. Downloading the entire index takes longer
+|and is larger (180gb), but is much faster during search.`,
 	Value: "entire index",
 	Validate: func(input string, q *wizard.Question) (string, error) {
 		switch input {
@@ -123,8 +123,9 @@ var generalQ2 = wizard.Question{
 // --------------------------------------------------------
 var generalQ3 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
-	Question: `Where do you want to store the Unchained Index?`,
-	Value:    `{cfg.General.DataFolder}`,
+	Question: `Where do you want to store the Unchained Index and the
+|binary caches?`,
+	Value: `{cfg.General.DataFolder}`,
 	Validate: func(input string, q *wizard.Question) (string, error) {
 		path, err := utils.ResolveValidPath(input)
 		if err != nil {
@@ -143,6 +144,20 @@ var generalQ3 = wizard.Question{
 		`the index will be stored at %s`,
 		"unable to create folder: %s",
 	},
+	PrepareFn: func(input string, q *wizard.Question) (string, error) {
+		if q.Screen.Questions[2].Value == "bloom filters" {
+			q.Hint = `The bloom filters take up about 5-10gb and the caches may get
+|quite large depending on your usage, so choose a folder where you
+|can store up to 100gb.`
+			q.Hint = strings.ReplaceAll(q.Hint, "\n|", "\n          ")
+			return input, validOk(`question proceeds`, input)
+		}
+		q.Hint = `The index takes up about 120-150gb and the caches may get quite
+|large depending on your usage, so choose a folder where you can
+|store up to 300gb.`
+		q.Hint = strings.ReplaceAll(q.Hint, "\n|", "\n          ")
+		return input, validOk(`question proceeds`, input)
+	},
 }
 
 // --------------------------------------------------------
@@ -151,7 +166,7 @@ var generalQ4 = wizard.Question{
 	Question: "Do you want to enable file-based logging?",
 	Value:    "no",
 	Hint: `Logging to the screen is always enabled. If you enable file-based
-		logging, Khedra will also write log files to disk.`,
+|logging, Khedra will also write log files to disk.`,
 	Validate: func(input string, q *wizard.Question) (string, error) {
 		prevScreen := 2
 		path := filepath.Join(q.Screen.Questions[prevScreen].Value, q.Messages[3])
@@ -163,9 +178,6 @@ var generalQ4 = wizard.Question{
 		default:
 			return input, fmt.Errorf(q.Messages[2]+"%w", wizard.ErrValidate)
 		}
-	},
-	Replacements: []wizard.Replacement{
-		{Color: colors.BrightBlue, Values: []string{"yes", "no"}},
 	},
 	Messages: []string{
 		`logs will be stored at %s`,
