@@ -13,10 +13,16 @@ import (
 // Testing status: reviewed
 
 func TestConfigNew(t *testing.T) {
+	homeDir, err := os.UserHomeDir()
+	assert.NoError(t, err)
+
+	expectedDataFolder := filepath.Join(homeDir, ".khedra", "data")
+	expectedLogsFolder := filepath.Join(homeDir, ".khedra", "logs")
+
 	cfg := NewConfig()
 
 	assert.NotNil(t, cfg.General)
-	assert.Equal(t, "~/.khedra/data", cfg.General.DataFolder)
+	assert.Equal(t, expectedDataFolder, cfg.General.DataFolder)
 
 	assert.NotNil(t, cfg.Chains)
 	assert.Equal(t, 1, len(cfg.Chains))
@@ -64,7 +70,7 @@ func TestConfigNew(t *testing.T) {
 	assert.Equal(t, 0, svc.BatchSize)
 
 	assert.NotNil(t, cfg.Logging)
-	assert.Equal(t, "~/.khedra/logs", cfg.Logging.Folder)
+	assert.Equal(t, expectedLogsFolder, cfg.Logging.Folder)
 	assert.Equal(t, "khedra.log", cfg.Logging.Filename)
 	assert.Equal(t, 10, cfg.Logging.MaxSize)
 	assert.Equal(t, 3, cfg.Logging.MaxBackups)

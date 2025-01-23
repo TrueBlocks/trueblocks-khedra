@@ -1,6 +1,8 @@
 package types
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/validate"
@@ -13,9 +15,13 @@ import (
 // TestGeneralNew tests the initialization of the General type to ensure it is
 // created correctly with valid default or input values.
 func TestNewGeneral(t *testing.T) {
+	homeDir, err := os.UserHomeDir()
+	assert.NoError(t, err)
+
+	expectedPath := filepath.Join(homeDir, ".khedra", "data")
 	g := NewGeneral()
-	assert.Equal(t, "~/.khedra/data", g.DataFolder)
-}
+	assert.Equal(t, expectedPath, g.DataFolder)
+	}
 
 // TestGeneralValidation validates the functionality of the General type to ensure
 // that invalid data is caught and proper validation rules are applied.

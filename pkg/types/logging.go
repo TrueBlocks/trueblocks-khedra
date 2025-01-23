@@ -23,8 +23,12 @@ type Logging struct {
 }
 
 func NewLogging() Logging {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		panic("could not determine user home directory")
+	}
 	return Logging{
-		Folder:     "~/.khedra/logs",
+		Folder:     filepath.Join(homeDir, ".khedra", "logs"),
 		Filename:   "khedra.log",
 		MaxSize:    10,
 		MaxBackups: 3,

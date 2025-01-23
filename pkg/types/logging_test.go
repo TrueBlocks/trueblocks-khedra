@@ -3,6 +3,8 @@ package types
 import (
 	"bytes"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"regexp"
 	"testing"
 
@@ -13,8 +15,13 @@ import (
 // Testing status: reviewed
 
 func TestLoggingNew(t *testing.T) {
+	homeDir, err := os.UserHomeDir()
+	assert.NoError(t, err)
+
+	expectedFolder := filepath.Join(homeDir, ".khedra", "logs")
+
 	logging := NewLogging()
-	assert.Equal(t, "~/.khedra/logs", logging.Folder)
+	assert.Equal(t, expectedFolder, logging.Folder)
 	assert.Equal(t, "khedra.log", logging.Filename)
 	assert.Equal(t, 10, logging.MaxSize)
 	assert.Equal(t, 3, logging.MaxBackups)
