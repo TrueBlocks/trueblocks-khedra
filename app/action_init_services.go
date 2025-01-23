@@ -61,7 +61,7 @@ func updatePrepare(key, input string, q *wizard.Question) (string, error) {
 	if cfg, ok := q.Screen.Wizard.Backing.(*types.Config); ok {
 		service := cfg.Services[key]
 		bytes, _ := json.Marshal(service)
-		// q.State = colors.Yellow + string(bytes) + colors.Off
+		q.State = colors.Yellow + string(bytes) + colors.Off
 		if service.Enabled {
 			return "yes", validOk(`question proceeds`, input)
 		}

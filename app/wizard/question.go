@@ -21,6 +21,7 @@ type Question struct {
 	Question     string
 	Hint         string
 	Value        string
+	State        string
 	Response     string
 	ErrorStr     string
 	PrepareFn    func(string, *Question) (string, error)
@@ -76,7 +77,7 @@ func (q *Question) Prompt(str, spacer string, pad ...bool) string {
 	}
 
 	var reps = Replacement{Color: colors.Green, Values: []string{
-		"Question:", "Current:", "Answer:", "Error:", "Hint", "Response",
+		"Question:", "Current:", "Answer:", "Error:", "Hint", "Response", "State",
 	}}
 	return reps.Replace(str)
 }
@@ -87,6 +88,9 @@ func (q *Question) getLines() []string {
 		lines = append(lines, q.Prompt("Question", "")+q.Question)
 		if q.Hint != "" {
 			lines = append(lines, q.Prompt("Hint", "")+q.Hint)
+		}
+		if q.State != "" {
+			lines = append(lines, q.Prompt("State", "")+q.State)
 		}
 		if q.Value != "" {
 			lines = append(lines, q.Prompt("Current", "")+colors.BrightBlue+q.Value+colors.Off)

@@ -60,6 +60,7 @@ func TestProcessResponse(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, "valid", question.Value)
+		assert.Equal(t, "", question.State)
 		assert.Equal(t, "", question.ErrorStr)
 	}
 	t.Run("Valid Input Test", func(t *testing.T) { validInputTest() })
@@ -79,6 +80,7 @@ func TestProcessResponse(t *testing.T) {
 		assert.Error(t, err)
 		assert.Equal(t, "invalid input", question.ErrorStr)
 		assert.Equal(t, "", question.Value)
+		assert.Equal(t, "", question.State)
 	}
 	t.Run("Invalid Input Test", func(t *testing.T) { invalidInputTest() })
 
