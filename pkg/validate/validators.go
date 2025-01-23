@@ -92,12 +92,16 @@ func folderExistsValidator(fv FieldValidator) error {
 		return Failed(fv, "is not a string", fv.fieldValue.Kind().String())
 	}
 
+	sanitizedValue := utils.ToValidPath(value)
+	if sanitizedValue != value {
+		return Failed(fv, "invalid characters in path", fmt.Sprintf("%q", value))
+	}
+
 	value = utils.ResolvePath(value)
 	if info, err := os.Stat(value); err == nil && !info.IsDir() {
-		// if it exists and isn't a folder, fail
 		return Failed(fv, "path exists but is not a folder", fmt.Sprintf("%q", value))
 	}
-	// make sure it exists
+
 	if !coreFile.FolderExists(value) {
 		err := coreFile.EstablishFolder(value)
 		if err != nil {

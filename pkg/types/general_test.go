@@ -148,12 +148,17 @@ detail: [invalid_array]
 func TestUnsupportedCharactersInFields(t *testing.T) {
 	content := `
 dataFolder: "expected/folder/\x00name"
-strategy: "\tinvalid_strategy"
+strategy: "invalid_strategy"
 detail: "entireIndex"
 `
 	var g General
 	err := yamlv2.Unmarshal([]byte(content), &g)
 	assert.NoError(t, err, "Unexpected error during YAML parsing")
+
+	// Validate the struct with unsupported characters
 	err = validate.Validate(&g)
 	assert.Error(t, err, "Expected validation error for unsupported characters")
+	errStr := err.Error()
+	assert.Contains(t, errStr, "invalid characters", "Expected dataFolder validation to fail due to invalid characters")
+	assert.Contains(t, errStr, "invalid_strategy", "Expected strategy validation to fail")
 }

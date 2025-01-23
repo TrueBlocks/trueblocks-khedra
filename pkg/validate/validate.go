@@ -29,7 +29,7 @@ func Validate(input interface{}) error {
 	for _, fv := range fieldValidators {
 		for _, directive := range fv.directives {
 			fv.validatorName, fv.tagArg = splitDirective(directive)
-			fn, ok := validatorRegistry[fv.validatorName]
+			fn, ok := ValidatorRegistry[fv.validatorName]
 			if !ok {
 				fmt.Println(colors.Red, "unknown validator", fv.validatorName, colors.Off)
 				continue
