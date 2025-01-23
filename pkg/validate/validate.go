@@ -3,6 +3,8 @@ package validate
 import (
 	"fmt"
 	"reflect"
+
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 )
 
 func Validate(input interface{}) error {
@@ -29,6 +31,7 @@ func Validate(input interface{}) error {
 			fv.validatorName, fv.tagArg = splitDirective(directive)
 			fn, ok := validatorRegistry[fv.validatorName]
 			if !ok {
+				fmt.Println(colors.Red, "unknown validator", fv.validatorName, colors.Off)
 				continue
 			}
 			if err := fn(fv); err != nil {

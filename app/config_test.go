@@ -35,6 +35,8 @@ func TestLoadConfig_ValidConfig(t *testing.T) {
 		Logging: types.NewLogging(),
 		General: types.General{
 			DataFolder: "/tmp/test-data-folder",
+			Strategy:   "scratch",
+			Detail:     "entireIndex",
 		},
 	}
 
@@ -67,6 +69,7 @@ func TestLoadConfig_EnvOverrides(t *testing.T) {
 		"TB_KHEDRA_CHAINS_MAINNET_RPCS=http://env.rpc1.mainnet,http://env.rpc2.mainnet",
 		"TB_KHEDRA_SERVICES_API_PORT=9090",
 		"TB_KHEDRA_GENERAL_DATAFOLDER=/tmp/env-data-folder",
+		"TB_KHEDRA_GENERAL_DETAIL=entireIndex",
 	})()
 
 	cfg := types.Config{
@@ -92,6 +95,8 @@ func TestLoadConfig_EnvOverrides(t *testing.T) {
 		},
 		General: types.General{
 			DataFolder: "/tmp/test-data-folder",
+			Strategy:   "download",
+			Detail:     "bloomFilters",
 		},
 	}
 
@@ -103,6 +108,7 @@ func TestLoadConfig_EnvOverrides(t *testing.T) {
 	assert.Equal(t, []string{"http://env.rpc1.mainnet", "http://env.rpc2.mainnet"}, result.Chains["mainnet"].RPCs)
 	assert.Equal(t, 9090, result.Services["api"].Port)
 	assert.Equal(t, "/tmp/env-data-folder", result.General.DataFolder)
+	assert.Equal(t, "entireIndex", result.General.Detail)
 
 	os.RemoveAll(cfg.Logging.Folder)
 	os.RemoveAll(result.General.DataFolder)
@@ -133,6 +139,8 @@ func TestLoadConfig_ValidationFailure(t *testing.T) {
 		},
 		General: types.General{
 			DataFolder: "",
+			Strategy:   "download",
+			Detail:     "entireIndex",
 		},
 	}
 

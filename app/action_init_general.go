@@ -90,16 +90,16 @@ var generalQ1 = wizard.Question{
 // --------------------------------------------------------
 var generalQ2 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
-	Question: `Do you want to download only bloom filters or the entire index?`,
+	Question: `Do you want to download only bloomFilters or the entireIndex?`,
 	Hint: `Downloading blooms takes less time and is smaller (4gb), but is
 |slower when searching. Downloading the entire index takes longer
 |and is larger (180gb), but is much faster during search.`,
-	Value: "entire index",
+	Value: "entireIndex",
 	Validate: func(input string, q *wizard.Question) (string, error) {
 		switch input {
-		case "bloom filters":
+		case "bloomFilters":
 			return input, validOk(q.Messages[0], input)
-		case "entire index":
+		case "entireIndex":
 			return input, validOk(q.Messages[1], input)
 		default:
 			return input, fmt.Errorf(q.Messages[2]+"%w", wizard.ErrValidate)
@@ -108,10 +108,10 @@ var generalQ2 = wizard.Question{
 	Messages: []string{
 		`only bloom filters will be downloaded`,
 		`both bloom filters and index chunks will be downloaded`,
-		`value must be either "bloom filters" or "entire index"`,
+		`value must be either "bloomFilters" or "entireIndex"`,
 	},
 	Replacements: []wizard.Replacement{
-		{Color: colors.BrightBlue, Values: []string{"bloom filters", "entire index"}},
+		{Color: colors.BrightBlue, Values: []string{"bloomFilters", "entireIndex"}},
 	},
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
 		if q.Screen.Questions[0].Value == "scratch" {
@@ -146,7 +146,7 @@ var generalQ3 = wizard.Question{
 		"unable to create folder: %s",
 	},
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
-		if q.Screen.Questions[2].Value == "bloom filters" {
+		if q.Screen.Questions[2].Value == "bloomFilters" {
 			q.Hint = `The bloom filters take up about 5-10gb and the caches may get
 |quite large depending on your usage, so choose a folder where you
 |can store up to 100gb.`

@@ -21,7 +21,7 @@ func TestNewGeneral(t *testing.T) {
 	expectedPath := filepath.Join(homeDir, ".khedra", "data")
 	g := NewGeneral()
 	assert.Equal(t, expectedPath, g.DataFolder)
-	}
+}
 
 // TestGeneralValidation validates the functionality of the General type to ensure
 // that invalid data is caught and proper validation rules are applied.
@@ -33,30 +33,74 @@ func TestGeneralValidation(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "Valid General struct",
+			name: "Valid General struct with all fields",
 			general: General{
 				DataFolder: createTempDir(t, true),
+				Strategy:   "scratch",
+				Detail:     "bloomFilters",
 			},
 			wantErr: false,
 		},
 		{
-			name: "Non-existent DataFolder",
+			name: "Non-existent DataFolder with valid strategy and detail",
 			general: General{
 				DataFolder: "/non/existent/path",
+				Strategy:   "download",
+				Detail:     "entireIndex",
 			},
 			wantErr: false,
 		},
 		{
-			name: "Non-writable DataFolder",
+			name: "Non-writable DataFolder with valid strategy and detail",
 			general: General{
 				DataFolder: createTempDir(t, false),
+				Strategy:   "scratch",
+				Detail:     "bloomFilters",
 			},
 			wantErr: false,
 		},
 		{
-			name: "Empty DataFolder",
+			name: "Empty DataFolder with valid strategy and detail",
 			general: General{
 				DataFolder: "",
+				Strategy:   "download",
+				Detail:     "entireIndex",
+			},
+			wantErr: true,
+		},
+		{
+			name: "Invalid Strategy",
+			general: General{
+				DataFolder: createTempDir(t, true),
+				Strategy:   "invalid_strategy",
+				Detail:     "bloomFilters",
+			},
+			wantErr: true,
+		},
+		{
+			name: "Invalid Detail",
+			general: General{
+				DataFolder: createTempDir(t, true),
+				Strategy:   "scratch",
+				Detail:     "invalid_detail",
+			},
+			wantErr: true,
+		},
+		{
+			name: "Empty Strategy",
+			general: General{
+				DataFolder: createTempDir(t, true),
+				Strategy:   "",
+				Detail:     "bloomFilters",
+			},
+			wantErr: true,
+		},
+		{
+			name: "Empty Detail",
+			general: General{
+				DataFolder: createTempDir(t, true),
+				Strategy:   "scratch",
+				Detail:     "",
 			},
 			wantErr: true,
 		},

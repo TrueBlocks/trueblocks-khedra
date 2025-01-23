@@ -8,16 +8,16 @@ import (
 // General represents configuration for data storage, ensuring the data folder is specified,
 // validated for existence, and serialized for YAML-based configuration management.
 type General struct {
-	DataFolder       string `koanf:"dataFolder" yaml:"dataFolder" validate:"required,folder_exists"`
-	DownloadStrategy string `koanf:"downloadStrategy" yaml:"downloadStrategy"`
-	DownloadDetail   string `koanf:"downloadDetail" yaml:"downloadDetail"`
+	DataFolder string `koanf:"dataFolder" yaml:"dataFolder" validate:"required,folder_exists"`
+	Strategy   string `koanf:"strategy" yaml:"strategy" validate:"oneof=download scratch"`
+	Detail     string `koanf:"detail" yaml:"detail" validate:"oneof=entireIndex bloomFilters"`
 }
 
 func NewGeneral() General {
 	return General{
-		DataFolder:       getDefaultDataFolder(),
-		DownloadStrategy: getDefaultDownloadStrategy(),
-		DownloadDetail:   getDefaultDownloadDetail(),
+		DataFolder: getDefaultDataFolder(),
+		Strategy:   getDefaultStrategy(),
+		Detail:     getDefaultDetail(),
 	}
 }
 
@@ -29,10 +29,10 @@ func getDefaultDataFolder() string {
 	return filepath.Join(homeDir, ".khedra", "data")
 }
 
-func getDefaultDownloadStrategy() string {
+func getDefaultStrategy() string {
 	return "download"
 }
 
-func getDefaultDownloadDetail() string {
-	return "entire index"
+func getDefaultDetail() string {
+	return "entireIndex"
 }

@@ -25,6 +25,8 @@ func TestApplyEnv(t *testing.T) {
 		cfg := Config{
 			General: General{
 				DataFolder: "/default/data",
+				Strategy:   "download",
+				Detail:     "entireIndex",
 			},
 			Chains: map[string]Chain{
 				"mainnet": {
@@ -42,6 +44,8 @@ func TestApplyEnv(t *testing.T) {
 		expected := Config{
 			General: General{
 				DataFolder: "/env/data",
+				Strategy:   "download",
+				Detail:     "entireIndex",
 			},
 			Chains: map[string]Chain{
 				"mainnet": {
@@ -179,6 +183,8 @@ func TestApplyEnv(t *testing.T) {
 				cfg := Config{
 					General: General{
 						DataFolder: "/default/data",
+						Strategy:   "download",
+						Detail:     "entireIndex",
 					},
 					Chains: map[string]Chain{
 						"mainnet": {

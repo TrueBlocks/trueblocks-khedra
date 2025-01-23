@@ -23,6 +23,8 @@ func TestConfigNew(t *testing.T) {
 
 	assert.NotNil(t, cfg.General)
 	assert.Equal(t, expectedDataFolder, cfg.General.DataFolder)
+	assert.Equal(t, "download", cfg.General.Strategy)
+	assert.Equal(t, "entireIndex", cfg.General.Detail)
 
 	assert.NotNil(t, cfg.Chains)
 	assert.Equal(t, 1, len(cfg.Chains))
