@@ -22,11 +22,19 @@ func (k *KhedraApp) initAction(c *cli.Context) error {
 		wizard.AddScreen(getSummaryScreen(k.config)),
 	}
 
-	w := wizard.NewWizard(steps, "")
+	reloadConfig := func(string) (any, error) {
+		if cfg, err := LoadConfig(); err != nil {
+			return k.config, err
+		} else {
+			k.config = &cfg
+			return k.config, err
+		}
+	}
+
+	w := wizard.NewWizard(steps, "", k.config, reloadConfig)
 	if err := w.Run(); err != nil {
 		return err
 	}
-
 	return nil
 }
 

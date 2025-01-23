@@ -12,7 +12,7 @@ func TestNewWizard(t *testing.T) {
 			{Title: "Screen 1"},
 			{Title: "Screen 2"},
 		}
-		wizard := NewWizard(screens, "--> ")
+		wizard := NewWizardTest(screens, "--> ")
 
 		assert.NotNil(t, wizard)
 		assert.Equal(t, 0, wizard.current)
@@ -23,7 +23,7 @@ func TestNewWizard(t *testing.T) {
 
 	panicOnEmptyScreens := func() {
 		assert.Panics(t, func() {
-			NewWizard([]Screen{}, "--> ")
+			NewWizardTest([]Screen{}, "--> ")
 		})
 	}
 	t.Run("Panic on Empty Screens", func(t *testing.T) { panicOnEmptyScreens() })
@@ -36,7 +36,7 @@ func TestWizardNavigation(t *testing.T) {
 			{Title: "Screen 2"},
 			{Title: "Screen 3"},
 		}
-		wizard := NewWizard(screens, "--> ")
+		wizard := NewWizardTest(screens, "--> ")
 
 		assert.True(t, wizard.Next())
 		assert.Equal(t, 1, wizard.current)
@@ -55,7 +55,7 @@ func TestWizardNavigation(t *testing.T) {
 			{Title: "Screen 2"},
 			{Title: "Screen 3"},
 		}
-		wizard := NewWizard(screens, "--> ")
+		wizard := NewWizardTest(screens, "--> ")
 		wizard.Next()
 		wizard.Next()
 
@@ -75,7 +75,7 @@ func TestWizardNavigation(t *testing.T) {
 			{Title: "Screen 1"},
 			{Title: "Screen 2"},
 		}
-		wizard := NewWizard(screens, "--> ")
+		wizard := NewWizardTest(screens, "--> ")
 
 		current := wizard.Current()
 		assert.Equal(t, "Screen 1", current.Title)
@@ -100,10 +100,17 @@ func TestWizardRun(t *testing.T) {
 		{Title: "Screen 2"},
 	}
 
-	wizard := NewWizard(mockScreens, "--> ")
+	wizard := NewWizardTest(mockScreens, "--> ")
 	wizard.displayFn = mockDisplayScreen
 
 	err := wizard.Run()
 	assert.NoError(t, err)
 	assert.False(t, wizard.completed)
+}
+
+func NewWizardTest(screens []Screen, caret string) *Wizard {
+	type Test struct{}
+	return NewWizard(screens, caret, Test{}, func(string) (any, error) {
+		return Test{}, nil
+	})
 }

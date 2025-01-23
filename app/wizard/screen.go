@@ -124,6 +124,10 @@ func init() {
 	}
 }
 
+func (s *Screen) Reload(fn string) error {
+	return s.Wizard.Reload(fn)
+}
+
 func (s *Screen) EditFile(fn string) error {
 	isBlockingEditor := func(editor string) bool {
 		if editor == "" {

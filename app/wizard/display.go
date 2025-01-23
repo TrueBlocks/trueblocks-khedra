@@ -60,7 +60,7 @@ func displayScreen(w *Wizard, screenIndex int) error {
 					} else if errors.Is(err, ErrValidateMsg) {
 						curScreen.Display(question, caret)
 						if os.Getenv("NO_CLEAR") != "true" {
-							time.Sleep(750 * time.Millisecond)
+							time.Sleep(500 * time.Millisecond)
 						}
 					} else if errors.Is(err, ErrUserHelp) {
 						curScreen.OpenHelp()
@@ -68,6 +68,9 @@ func displayScreen(w *Wizard, screenIndex int) error {
 					} else if errors.Is(err, ErrUserEdit) {
 						configPath := types.GetConfigFn()
 						curScreen.EditFile(configPath)
+						if err := curScreen.Reload(configPath); err != nil {
+							return err
+						}
 						i--
 					} else if errors.Is(err, ErrUserChains) {
 						chainsPath := strings.ReplaceAll(types.GetConfigFn(), "config.yaml", "chains.json")

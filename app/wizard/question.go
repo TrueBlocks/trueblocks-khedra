@@ -75,7 +75,9 @@ func (q *Question) Prompt(str, spacer string, pad ...bool) string {
 		str = spacer + fmt.Sprintf("%-*s", 10, str+":")
 	}
 
-	var reps = Replacement{Color: colors.Green, Values: []string{"Question:", "Current:", "Answer:", "Error:", "Hint", "Response"}}
+	var reps = Replacement{Color: colors.Green, Values: []string{
+		"Question:", "Current:", "Answer:", "Error:", "Hint", "Response",
+	}}
 	return reps.Replace(str)
 }
 

@@ -14,11 +14,16 @@ type Wizard struct {
 	current   int
 	completed bool
 	displayFn func(*Wizard, int) error
+	Backing   any
+	ReloadFn  func(string) (any, error)
 }
 
-func NewWizard(screens []Screen, caret string) *Wizard {
+func NewWizard(screens []Screen, caret string, backing any, reloadFn func(string) (any, error)) *Wizard {
 	if len(screens) == 0 {
 		panic("screens cannot be empty")
+	}
+	if backing == nil || reloadFn == nil {
+		panic("neither backing nor reloadFn may be nil")
 	}
 
 	if caret == "" {
@@ -29,7 +34,14 @@ func NewWizard(screens []Screen, caret string) *Wizard {
 		screens:   screens,
 		caret:     caret,
 		displayFn: displayScreen,
+		Backing:   backing,
+		ReloadFn:  reloadFn,
 	}
+}
+
+func (w *Wizard) Reload(fn string) (err error) {
+	w.Backing, err = w.ReloadFn(fn)
+	return
 }
 
 func (w *Wizard) Current() *Screen {
