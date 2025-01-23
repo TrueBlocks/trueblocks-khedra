@@ -2,7 +2,24 @@
 
 ## Function
 
-`getSummaryScreen(cfg *types.Config) wizard.Screen`
+```ascii
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ Summary                                                                      │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│ Question: Would you like to edit the config by hand?                         │
+│ Current:  no                                                                 │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│ Press enter to finish the wizard. ("b"=back, "h"=help)                       │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
 
 ## Purpose
 

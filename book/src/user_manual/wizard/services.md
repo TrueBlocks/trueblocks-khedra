@@ -2,7 +2,24 @@
 
 ## Function
 
-`getServicesScreen(cfg *types.Config) wizard.Screen`
+```ascii
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ Services Settings                                                            │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│ Khedra provides five services. The first, "control," exposes endpoints to    │
+│ control the other four: "scrape", "monitor", "api", and "ipfs".              │
+│                                                                              │
+│ You may disable/enable any combination of services, but at least one must    │
+│ be enabled.                                                                  │
+│                                                                              │
+│ The next few screens will allow you to configure each service.               │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│ Press enter to continue.                                                     │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
 
 ## Purpose
 
