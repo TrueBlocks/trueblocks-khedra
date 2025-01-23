@@ -41,6 +41,6 @@ func TestMain(t *testing.T) {
 	// os.Setenv("TB_KHEDRA_LOGGING_MAXBACKUPS", "100000")
 	// os.Setenv("TB_KHEDRA_LOGGING_MAXSIZE", "100000")
 
-	// os.Args = append(os.Args[:1], []string{"config", "show"}...)
+	// os.Args = append(os.Args[:1], []string{"daemon"}...)
 	// main()
 }

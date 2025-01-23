@@ -64,7 +64,8 @@ var generalQ1 = wizard.Question{
 	Question: `Would you like to create the Unchained Index from scratch
 |(starting at block zero) or download from IPFS?`,
 	Hint: `Downloading is faster (a few hours). Building from scratch is
-|more secure (depending on the chain, perhaps a few days).`,
+|more secure but much slower (depending on the chain, perhaps as
+|long as a few days).`,
 	Value: "download",
 	Validate: func(input string, q *wizard.Question) (string, error) {
 		switch input {

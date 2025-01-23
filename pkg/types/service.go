@@ -90,8 +90,7 @@ func init() {
 		case "scraper", "monitor":
 			if service.Sleep <= 0 {
 				return validate.Failed(fv, "Sleep must be a positive integer", fmt.Sprintf("Sleep=%d", service.Sleep))
-			}
-			if service.BatchSize < 50 || service.BatchSize > 10000 {
+			} else if service.BatchSize < 50 || service.BatchSize > 10000 {
 				return validate.Failed(fv, "BatchSize must be between 50 and 10000 (inclusive)", fmt.Sprintf("Port=%d", service.Port))
 			}
 		default:
