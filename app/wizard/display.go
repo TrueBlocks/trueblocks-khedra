@@ -33,7 +33,7 @@ func displayScreen(w *Wizard, screenIndex int) error {
 	}
 
 	curScreen := w.Current()
-	curScreen.wiz = w
+	curScreen.Wizard = w
 
 	for i := curScreen.Current; i < len(curScreen.Questions); i++ {
 		nSkipped := 0

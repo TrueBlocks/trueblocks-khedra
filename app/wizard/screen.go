@@ -19,7 +19,7 @@ type Screen struct {
 	Questions    []Question
 	Style        Style
 	Current      int
-	wiz          *Wizard
+	Wizard       *Wizard
 }
 
 func AddScreen(screen Screen) Screen {
