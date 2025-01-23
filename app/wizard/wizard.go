@@ -83,10 +83,10 @@ func (w *Wizard) Run() error {
 	for _, screen := range w.screens {
 		fmt.Printf(format, screen.Title)
 		for _, question := range screen.Questions {
-			if len(question.Text) == 0 {
+			if len(question.Question) == 0 {
 				continue
 			}
-			fmt.Printf("  - %s: %s\n", strings.TrimSpace(strings.ReplaceAll(question.Text, "            ", "      ")), colors.Magenta+question.Value+colors.Off)
+			fmt.Printf("  - %s: %s\n", strings.TrimSpace(strings.ReplaceAll(question.Question, "            ", "      ")), colors.Magenta+question.Value+colors.Off)
 		}
 	}
 

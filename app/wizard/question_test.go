@@ -11,7 +11,7 @@ import (
 func TestQuestion(t *testing.T) {
 	initializationTest := func() {
 		question := &Question{
-			Text:      "What is your name?",
+			Question:  "What is your name?",
 			PrepareFn: func(string, *Question) (string, error) { return "Prepared question", nil },
 			Validate: func(input string, q *Question) (string, error) {
 				if input == "" {
@@ -21,7 +21,7 @@ func TestQuestion(t *testing.T) {
 			},
 		}
 
-		assert.Equal(t, "What is your name?", question.Text)
+		assert.Equal(t, "What is your name?", question.Question)
 		assert.Equal(t, "", question.Value)
 		assert.Equal(t, "", question.ErrorStr) // Not initialized until processResponse
 		assert.NotNil(t, question.PrepareFn)
@@ -31,7 +31,7 @@ func TestQuestion(t *testing.T) {
 
 	processResponseTest := func() {
 		question := &Question{
-			Text: "Choose an option:",
+			Question: "Choose an option:",
 			Validate: func(input string, q *Question) (string, error) {
 				if input != "download" && input != "scratch" {
 					return input, fmt.Errorf(`value must be either "download" or "scratch"%w`, ErrValidate)
@@ -63,14 +63,14 @@ func TestQuestion(t *testing.T) {
 
 	edgeCasesTest := func() {
 		emptyQuestion := &Question{
-			Text:      "",
+			Question:  "",
 			Value:     "",
 			ErrorStr:  "",
 			PrepareFn: nil,
 			Validate:  nil,
 		}
 
-		assert.Equal(t, "", emptyQuestion.Text)
+		assert.Equal(t, "", emptyQuestion.Question)
 		assert.Equal(t, "", emptyQuestion.Value)
 		assert.Equal(t, "", emptyQuestion.ErrorStr)
 		assert.Nil(t, emptyQuestion.PrepareFn)

@@ -38,6 +38,6 @@ edit here to open the the actual file in your editor.
 }
 
 var summaryQ1 = wizard.Question{
-	Text:  "Would you like to edit the config by hand?",
-	Value: "no",
+	Question: "Would you like to edit the config by hand?",
+	Value:    "no",
 }

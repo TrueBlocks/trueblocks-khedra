@@ -38,11 +38,11 @@ func AddScreen(screen Screen) Screen {
 		screen.Instructions = rep.Replace(screen.Instructions)
 		for i := range screen.Questions {
 			question := &screen.Questions[i]
-			question.Text = strings.ReplaceAll(question.Text, "\n\t\t", "\n          ")
+			question.Question = strings.ReplaceAll(question.Question, "\n\t\t", "\n          ")
 			question.Hint = strings.ReplaceAll(question.Hint, "\n\t\t", "\n          ")
-			question.Text = rep.Replace(question.Text)
+			question.Question = rep.Replace(question.Question)
 			for _, rrep := range question.Replacements {
-				question.Text = rrep.Replace(question.Text)
+				question.Question = rrep.Replace(question.Question)
 			}
 		}
 	}
@@ -91,7 +91,7 @@ func (s *Screen) Display(question *Question, caret string) {
 
 	lines := []string{}
 	lines = append(lines, titleRows(s.Title, s.Subtitle, &s.Style)...)
-	if len(question.Text) > 0 {
+	if len(question.Question) > 0 {
 		lines = append(lines, question.getLines()...)
 	} else {
 		lines = append(lines, s.Body)

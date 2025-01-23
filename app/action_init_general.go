@@ -61,7 +61,7 @@ var generalQ0 = wizard.Question{
 // --------------------------------------------------------
 var generalQ1 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
-	Text: `Should we create the Unchained Index from scratch (starting at
+	Question: `Should we create the Unchained Index from scratch (starting at
 		block zero) or download from IPFS?`,
 	Hint:  `Downloading is faster. Building from scratch is more secure.`,
 	Value: "download",
@@ -89,7 +89,7 @@ var generalQ1 = wizard.Question{
 // --------------------------------------------------------
 var generalQ2 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
-	Text: `Do you want to download only bloom filters or the entire index?`,
+	Question: `Do you want to download only bloom filters or the entire index?`,
 	Hint: `Downloading blooms takes less time and is smaller (4gb), but is
 		slower when searching. Downloading the entire index takes longer
 		and is larger (180gb), but is much faster during search.`,
@@ -123,8 +123,8 @@ var generalQ2 = wizard.Question{
 // --------------------------------------------------------
 var generalQ3 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
-	Text:  `Where do you want to store the Unchained Index?`,
-	Value: `{cfg.General.DataFolder}`,
+	Question: `Where do you want to store the Unchained Index?`,
+	Value:    `{cfg.General.DataFolder}`,
 	Validate: func(input string, q *wizard.Question) (string, error) {
 		path, err := utils.ResolveValidPath(input)
 		if err != nil {
@@ -148,8 +148,8 @@ var generalQ3 = wizard.Question{
 // --------------------------------------------------------
 var generalQ4 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
-	Text:  "Do you want to enable file-based logging?",
-	Value: "no",
+	Question: "Do you want to enable file-based logging?",
+	Value:    "no",
 	Hint: `Logging to the screen is always enabled. If you enable file-based
 		logging, Khedra will also write log files to disk.`,
 	Validate: func(input string, q *wizard.Question) (string, error) {
@@ -178,8 +178,8 @@ var generalQ4 = wizard.Question{
 // --------------------------------------------------------
 var generalQ5 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
-	Text:  "What log level do you want to enable (debug, info, warn, error)?",
-	Value: "info",
+	Question: "What log level do you want to enable (debug, info, warn, error)?",
+	Value:    "info",
 	Validate: func(input string, q *wizard.Question) (string, error) {
 		if input != "debug" && input != "info" && input != "warn" && input != "error" {
 			err := fmt.Errorf(`value must be either "debug", "info", "warn", or "error"%w`, wizard.ErrValidate)

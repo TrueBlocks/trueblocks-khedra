@@ -11,14 +11,14 @@ import (
 
 // Question models an interactive user prompt.
 // Fields:
-// - Text: The question displayed to the user.
+// - Question: The question displayed to the user.
 // - Value: A processed or validated version of the response.
 // - Response: An error message displayed in case of invalid input.
 // - ErrorStr: An error message displayed in case of invalid input.
 // - Prepare: A function for pre-question processing.
 // - Validate: A function to validate user input, returning the processed value or an error.
 type Question struct {
-	Text         string
+	Question     string
 	Hint         string
 	Value        string
 	Response     string
@@ -81,8 +81,8 @@ func (q *Question) Prompt(str, spacer string, pad ...bool) string {
 
 func (q *Question) getLines() []string {
 	var lines []string
-	if q.Text != "" {
-		lines = append(lines, q.Prompt("Question", "")+q.Text)
+	if q.Question != "" {
+		lines = append(lines, q.Prompt("Question", "")+q.Question)
 		if q.Hint != "" {
 			lines = append(lines, q.Prompt("Hint", "")+q.Hint)
 		}
