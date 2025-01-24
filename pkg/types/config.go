@@ -1,7 +1,9 @@
 package types
 
 import (
+	"bufio"
 	"fmt"
+	"html/template"
 	"log"
 	"os"
 	"path/filepath"
@@ -10,7 +12,6 @@ import (
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	_ "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/env"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
-	yamlv2 "gopkg.in/yaml.v2"
 )
 
 type Config struct {
@@ -70,8 +71,7 @@ func GetConfigFn() string {
 	}
 
 	cfg := NewConfig()
-	bytes, _ := yamlv2.Marshal(cfg)
-	coreFile.StringToAsciiFile(fn, string(bytes))
+	cfg.WriteToFile(fn)
 
 	return fn
 }
@@ -126,3 +126,90 @@ func (c *Config) ServiceList() string {
 	}
 	return strings.Join(ret, ",")
 }
+
+// WriteToFile writes the Config struct to a file using a YAML template with comments.
+func (c *Config) WriteToFile(fn string) error {
+	t, err := template.New("config").Parse(strings.TrimSpace(tmpl) + "\n")
+	if err != nil {
+		return err
+	}
+
+	var builder strings.Builder
+	if err := t.Execute(&builder, c); err != nil {
+		return err
+	}
+	processed := RemoveZeroLines(builder.String())
+
+	f, err := os.Create(fn)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = f.WriteString(processed)
+	return err
+}
+
+func RemoveZeroLines(input string) string {
+	var builder strings.Builder
+	scanner := bufio.NewScanner(strings.NewReader(input))
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !strings.HasSuffix(line, ": 0") {
+			builder.WriteString(line + "\n")
+		}
+	}
+
+	return builder.String()
+}
+
+const tmpl = `
+# Khedra Configuration File
+#
+# For more information see the users manual at https://khedra.trueblocks.io
+#
+# This file is found either in the current folder or at ~/.khedra/config.yaml
+# (in the user's home folder). For multiple instantiations put the config
+# file in the local folder.
+#
+# You may easily edit this file with "khedra config edit" or by typing
+# "edit" on the "khedra init" command line.
+#
+# Note that any comments you write in this file will be overwritten.
+
+general:
+  dataFolder: "{{ .General.DataFolder }}"
+  strategy: "{{ .General.Strategy }}"
+  detail: "{{ .General.Detail }}"
+
+chains:
+{{- range $key, $value := .Chains }}
+  {{ $key }}:
+    name: "{{ $value.Name }}"
+    rpcs: 
+{{- range $rpc := $value.RPCs }}
+      - "{{ $rpc }}"
+{{- end }}
+    enabled: {{ $value.Enabled }}
+{{- end }}
+
+services:
+{{- range $key, $value := .Services }}
+  {{ $key }}:
+    name: "{{ $value.Name }}"
+    enabled: {{ $value.Enabled }}
+    port: {{ $value.Port }}
+    sleep: {{ $value.Sleep }}
+    batchSize: {{ $value.BatchSize }}
+{{- end }}
+
+logging:
+  folder: "{{ .Logging.Folder }}"
+  filename: "{{ .Logging.Filename }}"
+  maxSize: {{ .Logging.MaxSize }}
+  maxBackups: {{ .Logging.MaxBackups }}
+  maxAge: {{ .Logging.MaxAge }}
+  compress: {{ .Logging.Compress }}
+  level: "{{ .Logging.Level }}"
+`

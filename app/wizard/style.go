@@ -11,7 +11,7 @@ type Style struct {
 func NewStyle() Style {
 	return Style{
 		Outer:   boxes.Single | boxes.All,
-		Inner:   boxes.Double,
+		Inner:   boxes.Double | boxes.All,
 		Justify: boxes.Left,
 	}
 }

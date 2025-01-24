@@ -90,7 +90,7 @@ func (q *Question) getLines() []string {
 			lines = append(lines, q.Prompt("Hint", "")+q.Hint)
 		}
 		if q.State != "" {
-			lines = append(lines, q.Prompt("State", "")+q.State)
+			lines = append(lines, q.Prompt("State", "")+colors.Yellow+q.State+colors.Off)
 		}
 		if q.Value != "" {
 			lines = append(lines, q.Prompt("Current", "")+colors.BrightBlue+q.Value+colors.Off)

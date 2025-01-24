@@ -10,9 +10,9 @@ import (
 type Service struct {
 	Name      string `koanf:"name" json:"name" validate:"required,oneof=api scraper monitor ipfs"`
 	Enabled   bool   `koanf:"enabled" json:"enabled"`
-	Port      int    `koanf:"port,omitempty" json:"port,omitempty" validate:"service_field"`
-	Sleep     int    `koanf:"sleep,omitempty" json:"sleep,omitempty" validate:"service_field"`
-	BatchSize int    `koanf:"batchSize,omitempty" json:"batchSize,omitempty" yaml:"batchSize,omitempty" validate:"service_field"`
+	Port      int    `koanf:"port,omitempty" yaml:"port,omitempty" json:"port,omitempty" validate:"service_field"`
+	Sleep     int    `koanf:"sleep,omitempty" yaml:"sleep,omitempty" json:"sleep,omitempty" validate:"service_field"`
+	BatchSize int    `koanf:"batchSize,omitempty" yaml:"batchSize,omitempty" json:"batchSize,omitempty" validate:"service_field"`
 }
 
 func NewService(serviceType string) Service {

@@ -13,13 +13,13 @@ import (
 )
 
 type Logging struct {
-	Folder     string `koanf:"folder" validate:"required,folder_exists"`
-	Filename   string `koanf:"filename" validate:"required,endswith=.log"`
-	MaxSize    int    `koanf:"maxSize" yaml:"maxSize" validate:"required,min=5"`
-	MaxBackups int    `koanf:"maxBackups" yaml:"maxBackups" validate:"required,min=1"`
-	MaxAge     int    `koanf:"maxAge" yaml:"maxAge" validate:"required,min=1"`
-	Compress   bool   `koanf:"compress"`
-	Level      string `koanf:"level" yaml:"level" validate:"oneof=debug info warn error"`
+	Folder     string `koanf:"folder" json:"folder,omitempty" validate:"required,folder_exists"`
+	Filename   string `koanf:"filename" json:"filename,omitempty" validate:"required,endswith=.log"`
+	MaxSize    int    `koanf:"maxSize" yaml:"maxSize" json:"maxSize,omitempty" validate:"required,min=5"`
+	MaxBackups int    `koanf:"maxBackups" yaml:"maxBackups" json:"maxBackups,omitempty" validate:"required,min=1"`
+	MaxAge     int    `koanf:"maxAge" yaml:"maxAge" json:"maxAge,omitempty" validate:"required,min=1"`
+	Compress   bool   `koanf:"compress" json:"compress,omitempty"`
+	Level      string `koanf:"level" yaml:"level" json:"level,omitempty" validate:"oneof=debug info warn error"`
 }
 
 func NewLogging() Logging {

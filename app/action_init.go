@@ -15,11 +15,12 @@ func (k *KhedraApp) initAction(c *cli.Context) error {
 	}
 
 	steps := []wizard.Screen{
-		wizard.AddScreen(getWelcomeScreen(k.config)),
-		wizard.AddScreen(getGeneralScreen(k.config)),
-		wizard.AddScreen(getServicesScreen(k.config)),
-		wizard.AddScreen(getChainsScreen(k.config)),
-		wizard.AddScreen(getSummaryScreen(k.config)),
+		wizard.AddScreen(getWelcomeScreen()),
+		wizard.AddScreen(getGeneralScreen()),
+		wizard.AddScreen(getServicesScreen()),
+		wizard.AddScreen(getChainsScreen()),
+		wizard.AddScreen(getLoggingScreen()),
+		wizard.AddScreen(getSummaryScreen()),
 	}
 
 	reloadConfig := func(string) (any, error) {
