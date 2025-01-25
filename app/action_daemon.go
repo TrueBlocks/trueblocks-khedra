@@ -2,13 +2,13 @@ package app
 
 import (
 	"fmt"
-	"os"
-	"time"
+	"strings"
 
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	_ "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/env"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/validate"
+	"github.com/TrueBlocks/trueblocks-sdk/v4/services"
 	"github.com/urfave/cli/v2"
 )
 
@@ -29,41 +29,40 @@ func (k *KhedraApp) daemonAction(c *cli.Context) error {
 			if err := validate.TryConnect(chain.Name, rpc, 5); err != nil {
 				return err
 			}
+			k.Info("Connected to", "chain", chain.Name, "rpc", rpc)
 		}
 	}
-	fmt.Printf("Sleeping for 10 seconds")
-	cnt := 0
-	for {
-		if cnt >= 1 {
-			break
+
+	var activeServices []services.Servicer
+	chains := strings.Split(strings.ReplaceAll(k.config.ChainList(), " ", ""), ",")
+	scraperSvc := services.NewScrapeService(
+		k.progLogger,
+		"all",
+		chains,
+		k.config.Services["scraper"].Sleep,
+		k.config.Services["scraper"].BatchSize,
+	)
+	monitorSvc := services.NewMonitorService(nil)
+	apiSvc := services.NewApiService(k.progLogger)
+	ipfsSvc := services.NewIpfsService(k.progLogger)
+	controlService := services.NewControlService(k.progLogger)
+	activeServices = append(activeServices, controlService)
+	activeServices = append(activeServices, scraperSvc)
+	activeServices = append(activeServices, monitorSvc)
+	activeServices = append(activeServices, apiSvc)
+	activeServices = append(activeServices, ipfsSvc)
+	k.Info("Starting khedra daemon", "services", len(activeServices))
+	serviceManager := services.NewServiceManager(activeServices, k.progLogger)
+	for _, svc := range activeServices {
+		if controlSvc, ok := svc.(*services.ControlService); ok {
+			controlSvc.AttachServiceManager(serviceManager)
 		}
-		cnt++
-		if os.Getenv("TEST_MODE") != "true" {
-			time.Sleep(time.Second)
-		}
-		fmt.Printf(".")
 	}
-	fmt.Println(".")
+	if err := serviceManager.StartAllServices(); err != nil {
+		k.Fatal(err.Error())
+	}
+	serviceManager.HandleSignals()
+	select {}
 
-	// if _, proceed, err := app.Load Config(); !proceed {
-	// 	return
-	// } else if err != nil {
-	// 	k.Fatal(err.Error())
-	// } else {
-	// k.Info("Starting Khedra with", "services", len(k.ActiveServices))
-	// // TODO: The following should happen in Load Config
-	// for _, svc := range k.ActiveServices {
-	// 	if controlSvc, ok := svc.(*services.ControlService); ok {
-	// 		controlSvc.AttachServiceManager(k)
-	// 	}
-	// }
-	// // TODO: The previous should happen in Load Config
-	// if err := k.StartAllServices(); err != nil {
-	// 	a.Fatal(err)
-	// }
-	// HandleSignals()
-
-	// 	select {}
-	// }
 	return nil
 }

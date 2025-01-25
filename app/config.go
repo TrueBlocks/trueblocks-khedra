@@ -36,9 +36,9 @@ TELL THE USER WHICH SERVICES ARE BEING STARTED
 RUN INIT EVERY TIME WE START?
 FOR RUNNING CORE
 	os.Setenv("XDG_CONFIG_HOME", a.Config.ConfigPath)
-	os.Setenv("TB_SETTINGS_DEFAULTCHAIN", "mainnet")
-	os.Setenv("TB_SETTINGS_INDEXPATH", a.Config.IndexPath())
-	os.Setenv("TB_SETTINGS_CACHEPATH", a.Config.CachePath())
+	os.Setenv("TB_ SETTINGS_DEFAULTCHAIN", "mainnet")
+	os.Setenv("TB_ SETTINGS_INDEXPATH", a.Config.IndexPath())
+	os.Setenv("TB_ SETTINGS_CACHEPATH", a.Config.CachePath())
 	for chain, providerUrl := range a.Config.ProviderMap {
 		envKey := "TB_CHAINS_" + strings.ToUpper(chain) + "_RPCPROVIDER"
 		os.Setenv(envKey, providerUrl)
