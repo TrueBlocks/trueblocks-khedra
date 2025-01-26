@@ -2,12 +2,9 @@ package types
 
 import (
 	"context"
-	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -38,24 +35,86 @@ func NewLogging() Logging {
 	}
 }
 
-// NewLoggers creates and returns two loggers: one (fileLogger) for
-// logging to a file and another (progressLogger) for logging to stderr.
-func NewLoggers(logging Logging) (*slog.Logger, *slog.Logger) {
-	fileWriter := &lumberjack.Logger{
-		Filename:   filepath.Join(logging.Folder, logging.Filename),
-		MaxSize:    logging.MaxSize,
-		MaxBackups: logging.MaxBackups,
-		MaxAge:     logging.MaxAge,
-		Compress:   logging.Compress,
+const LevelProgress slog.Level = slog.LevelInfo + 1
+
+type multiHandler struct {
+	writeBoth     bool
+	screenHandler slog.Handler
+	fileHandler   slog.Handler
+}
+
+// Enabled determines whether the log level should be processed by this handler.
+// Returns true if the screen handler is enabled for the given level or, if writeBoth
+// is true, if the file handler is enabled for the level. This ensures logs are
+// processed if at least one of the handlers supports the level.
+func (m *multiHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return m.screenHandler.Enabled(ctx, level) || (m.writeBoth && m.fileHandler.Enabled(ctx, level))
+}
+
+func (m *multiHandler) Handle(ctx context.Context, r slog.Record) error {
+	if r.Level == LevelProgress {
+		if m.screenHandler.Enabled(ctx, r.Level) {
+			return m.screenHandler.Handle(ctx, r)
+		}
+		return nil
 	}
 
-	fileHandler := newCustomHandler(fileWriter, logging.Level)
-	fileLogger := slog.New(fileHandler)
+	if m.screenHandler.Enabled(ctx, r.Level) {
+		if err := m.screenHandler.Handle(ctx, r); err != nil {
+			return err
+		}
+	}
+	if m.writeBoth && m.fileHandler.Enabled(ctx, r.Level) {
+		if err := m.fileHandler.Handle(ctx, r); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
-	progressHandler := newCustomHandler(os.Stderr, logging.Level)
-	progressLogger := slog.New(progressHandler)
+func (m *multiHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &multiHandler{
+		screenHandler: m.screenHandler.WithAttrs(attrs),
+		fileHandler:   m.fileHandler.WithAttrs(attrs),
+		writeBoth:     m.writeBoth,
+	}
+}
 
-	return fileLogger, progressLogger
+func (m *multiHandler) WithGroup(name string) slog.Handler {
+	return &multiHandler{
+		screenHandler: m.screenHandler.WithGroup(name),
+		fileHandler:   m.fileHandler.WithGroup(name),
+		writeBoth:     m.writeBoth,
+	}
+}
+
+// NewLogger creates a logger with optional file logging
+func NewLogger(logging Logging) *slog.Logger {
+	screenHandler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		Level: convertLevel(logging.Level),
+	})
+
+	var fileHandler slog.Handler
+	if logging.Filename != "" {
+		fileWriter := &lumberjack.Logger{
+			Filename:   filepath.Join(logging.Folder, logging.Filename),
+			MaxSize:    logging.MaxSize,
+			MaxBackups: logging.MaxBackups,
+			MaxAge:     logging.MaxAge,
+			Compress:   logging.Compress,
+		}
+		fileHandler = slog.NewTextHandler(fileWriter, &slog.HandlerOptions{
+			Level: convertLevel(logging.Level),
+		})
+	}
+
+	handler := &multiHandler{
+		screenHandler: screenHandler,
+		fileHandler:   fileHandler,
+		writeBoth:     logging.Filename != "",
+	}
+
+	return slog.New(handler)
 }
 
 // convertLevel converts a string log level to a slog.Level.
@@ -74,6 +133,7 @@ func convertLevel(level string) slog.Level {
 	}
 }
 
+/*
 type customHandler struct {
 	writer      io.Writer
 	baseHandler slog.Handler
@@ -149,7 +209,6 @@ func (h *customHandler) WithGroup(name string) slog.Handler {
 	return &newHandler
 }
 
-/*
 func NewCustomLogger() (*slog.Logger, slog.Level) {
 	logger.SetLoggerWriter(io.Discard)
 	level := slog.LevelInfo

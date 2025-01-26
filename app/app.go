@@ -12,11 +12,10 @@ import (
 )
 
 type KhedraApp struct {
-	cli        *cli.App
-	config     *types.Config
-	fileLogger *slog.Logger
-	progLogger *slog.Logger
-	chainList  *types.ChainList
+	cli       *cli.App
+	config    *types.Config
+	logger    *slog.Logger
+	chainList *types.ChainList
 }
 
 func NewKhedraApp() *KhedraApp {
@@ -52,6 +51,8 @@ func (k *KhedraApp) ConfigMaker() (types.Config, error) {
 		return types.Config{}, err
 	}
 	k.config = &cfg
-	k.fileLogger, k.progLogger = types.NewLoggers(cfg.Logging)
+	k.logger = types.NewLogger(cfg.Logging)
+	slog.SetDefault(k.logger)
+
 	return cfg, nil
 }

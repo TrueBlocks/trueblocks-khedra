@@ -1,11 +1,9 @@
 package types
 
 import (
-	"bytes"
 	"log/slog"
 	"os"
 	"path/filepath"
-	"regexp"
 	"testing"
 
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/validate"
@@ -205,116 +203,9 @@ func TestLoggingReadAndWrite(t *testing.T) {
 	ReadAndWriteWithAssertions[Logging](t, tempFilePath, content, assertions)
 }
 
-func TestCustomHandlerLogFormatting(t *testing.T) {
-	var output bytes.Buffer
-	handler := newCustomHandler(&output, "info")
-	logger := slog.New(handler)
-	logger.Info("Test message", slog.Int("key", 42))
-
-	logOutput := stripAnsiCodes(t, output.String())
-
-	expectedSubstring := "INFO"
-	assert.Contains(t, logOutput, expectedSubstring, "Expected log output to contain log level")
-	assert.Contains(t, logOutput, "Test message", "Expected log output to contain the message")
-	assert.Contains(t, logOutput, "key=42", "Expected log output to contain attributes")
-}
-
-func TestCustomHandlerLevels(t *testing.T) {
-	var output bytes.Buffer
-	handler := newCustomHandler(&output, "warn")
-	logger := slog.New(handler)
-	logger.Info("This should not be logged")
-	logger.Warn("This should be logged")
-
-	logOutput := stripAnsiCodes(t, output.String())
-
-	assert.NotContains(t, logOutput, "This should not be logged", "Logs below the configured level should not be written")
-	assert.Contains(t, logOutput, "This should be logged", "Logs at or above the configured level should be written")
-}
-
-func TestNewLoggersIntegration(t *testing.T) {
-	var fileOutput, progOutput bytes.Buffer
-
-	fileHandler := newCustomHandler(&fileOutput, "info")
-	progHandler := newCustomHandler(&progOutput, "info")
-
-	fileLogger := slog.New(fileHandler)
-	progLogger := slog.New(progHandler)
-
-	fileLogger.Info("File logger message")
-	progLogger.Info("Prog logger message")
-
-	fileLogOutput := stripAnsiCodes(t, fileOutput.String())
-	progLogOutput := stripAnsiCodes(t, progOutput.String())
-
-	assert.Contains(t, fileLogOutput, "File logger message", "Expected log to appear in file logger output")
-	assert.Contains(t, progLogOutput, "Prog logger message", "Expected log to appear in progress logger output")
-}
-
 func TestConvertLevelUnsupported(t *testing.T) {
 	level := convertLevel("unsupported")
 	if level != slog.LevelInfo {
 		t.Errorf("expected fallback to DefaultLevel, got %v", level)
 	}
-}
-
-func TestCustomHandlerWithAttrs(t *testing.T) {
-	var output bytes.Buffer
-	handler := newCustomHandler(&output, "info")
-	updatedHandler := handler.WithAttrs([]slog.Attr{slog.Int("globalKey", 2)})
-	if updatedHandler == nil {
-		t.Errorf("expected non-nil handler after WithAttrs")
-	}
-	logger := slog.New(updatedHandler)
-	logger.Info("Test message", slog.Int("localKey", 1))
-
-	logOutput := stripAnsiCodes(t, output.String())
-
-	assert.Contains(t, logOutput, "INFO", "Expected log output to contain log level")
-	assert.Contains(t, logOutput, "Test message", "Expected log output to contain the message")
-	assert.Contains(t, logOutput, "globalKey=2", "Expected log output to contain attributes")
-	assert.Contains(t, logOutput, "localKey=1", "Expected log output to contain attributes")
-}
-
-func TestCustomHandlerWithGroup(t *testing.T) {
-	var output bytes.Buffer
-	handler := newCustomHandler(&output, "debug")
-	updatedHandler := handler.WithGroup("group")
-	if updatedHandler == nil {
-		t.Errorf("expected non-nil handler after WithGroup")
-	}
-	logger := slog.New(updatedHandler)
-	logger.Debug("Test message", slog.Int("localKey", 1))
-
-	logOutput := stripAnsiCodes(t, output.String())
-
-	assert.Contains(t, logOutput, "DEBG", "Expected log output to contain log level")
-	assert.Contains(t, logOutput, "Test message", "Expected log output to contain the message")
-	assert.Contains(t, logOutput, "groups=[group]", "Expected log output to contain the group")
-	assert.Contains(t, logOutput, "localKey=1", "Expected log output to contain the attribute")
-}
-
-func TestCustomHandlerWithBoth(t *testing.T) {
-	var output bytes.Buffer
-	handler := newCustomHandler(&output, "debug")
-	updatedHandler := handler.WithGroup("group").WithAttrs([]slog.Attr{slog.Int("globalKey", 2)})
-	if updatedHandler == nil {
-		t.Errorf("expected non-nil handler after WithGroup")
-	}
-	logger := slog.New(updatedHandler)
-	logger.Debug("Test message", slog.Int("localKey", 1))
-
-	logOutput := stripAnsiCodes(t, output.String())
-
-	assert.Contains(t, logOutput, "DEBG", "Expected log output to contain log level")
-	assert.Contains(t, logOutput, "Test message", "Expected log output to contain the message")
-	assert.Contains(t, logOutput, "groups=[group]", "Expected log output to contain the group")
-	assert.Contains(t, logOutput, "globalKey=2", "Expected log output to contain attributes")
-	assert.Contains(t, logOutput, "localKey=1", "Expected log output to contain the attribute")
-}
-
-func stripAnsiCodes(t *testing.T, input string) string {
-	t.Helper()
-	re := regexp.MustCompile(`\x1b\[[0-9;]*m`)
-	return re.ReplaceAllString(input, "")
 }
