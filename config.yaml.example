@@ -51,11 +51,11 @@ services:                          # See note 5
 logging:
   folder: "~/.khedra/logs"         # Path to log directory (must exist and be writable)
   filename: "khedra.log"           # Log file name (must end with .log)
-  level: "info"                    # One of: debug, info, warn, error
   maxSize: 10                      # Max log file size in MB
   maxBackups: 5                    # Number of backup log files to keep
   maxAge: 30                       # Number of days to retain old logs
   compress: true                   # Whether to compress backup logs
+  level: "info"                    # One of: debug, info, warn, error
 
 #
 # **Notes:**

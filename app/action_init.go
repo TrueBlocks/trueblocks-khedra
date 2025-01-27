@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/TrueBlocks/trueblocks-khedra/v2/app/wizard"
+	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/wizard"
 	"github.com/urfave/cli/v2"
 )
 

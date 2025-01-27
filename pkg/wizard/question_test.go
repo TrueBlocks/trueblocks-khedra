@@ -24,7 +24,7 @@ func TestQuestion(t *testing.T) {
 		assert.Equal(t, "What is your name?", question.Question)
 		assert.Equal(t, "", question.Value)
 		assert.Equal(t, "", question.State)
-		assert.Equal(t, "", question.ErrorStr) // Not initialized until processResponse
+		assert.Equal(t, "", question.ErrorStr) // Not initialized until HandleResponse
 		assert.NotNil(t, question.PrepareFn)
 		assert.NotNil(t, question.Validate)
 	}
@@ -42,14 +42,14 @@ func TestQuestion(t *testing.T) {
 		}
 
 		// Valid input
-		err := question.processResponse("download")
+		err := question.HandleResponse("download")
 		assert.NoError(t, err)
 		assert.Equal(t, "download", question.Value)
 		assert.Equal(t, "", question.State)
 		assert.Equal(t, "", question.ErrorStr)
 
 		// Invalid input
-		err = question.processResponse("invalid")
+		err = question.HandleResponse("invalid")
 		assert.Error(t, err)
 		assert.Equal(t, "invalid", question.Value)
 		assert.Equal(t, "", question.State)
@@ -57,7 +57,7 @@ func TestQuestion(t *testing.T) {
 
 		// Empty input (uses current Value)
 		question.Value = "scratch"
-		err = question.processResponse("")
+		err = question.HandleResponse("")
 		assert.NoError(t, err)
 		assert.Equal(t, "scratch", question.Value)
 		assert.Equal(t, "", question.State)

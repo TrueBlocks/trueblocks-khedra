@@ -28,9 +28,6 @@ func AddScreen(screen Screen) Screen {
 	screen.Subtitle = strings.Trim(screen.Subtitle, "\n")
 	screen.Body = strings.Trim(screen.Body, "\n")
 	screen.Instructions = strings.Trim(screen.Instructions, "\n")
-	if len(screen.Questions) == 0 {
-		screen.Questions = []Question{{}}
-	}
 
 	for _, rep := range screen.Replacements {
 		screen.Title = rep.Replace(screen.Title)
@@ -38,16 +35,10 @@ func AddScreen(screen Screen) Screen {
 		screen.Body = rep.Replace(screen.Body)
 		screen.Instructions = rep.Replace(screen.Instructions)
 		for i := range screen.Questions {
-			question := &screen.Questions[i]
-			question.Question = strings.ReplaceAll(question.Question, "\n|", "\n          ")
-			question.Hint = strings.ReplaceAll(question.Hint, "\n|", "\n          ")
-			question.Question = rep.Replace(question.Question)
-			for _, rrep := range question.Replacements {
-				question.Question = rrep.Replace(question.Question)
-				question.Hint = rrep.Replace(question.Hint)
-			}
+			screen.Questions[i].Clean(&rep)
 		}
 	}
+
 	return screen
 }
 
@@ -91,15 +82,17 @@ func (s *Screen) Display(question *Question, caret string) {
 		return []string{}
 	}
 
+	text, _ := question.GetQuestion()
+
 	lines := []string{}
 	lines = append(lines, titleRows(s.Title, s.Subtitle, &s.Style)...)
-	if len(question.Question) > 0 {
-		lines = append(lines, question.getLines()...)
+	if len(text) > 0 {
+		lines = append(lines, question.GetLines()...)
 	} else {
 		lines = append(lines, s.Body)
 	}
 	lines = append(lines, heightPad(strings.Join(lines, "\n"), 13)...)
-	if len(question.Question) > 0 {
+	if len(text) > 0 {
 		lines = append(lines, s.Instructions)
 	} else {
 		lines = append(lines, "Press enter to continue.")

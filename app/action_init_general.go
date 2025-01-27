@@ -7,9 +7,9 @@ import (
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
-	"github.com/TrueBlocks/trueblocks-khedra/v2/app/wizard"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
+	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/wizard"
 )
 
 // screen|---------|---------|---------|---------|---------|---------|---|74

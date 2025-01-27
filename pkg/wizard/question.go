@@ -9,6 +9,17 @@ import (
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
 )
 
+type Questioner interface {
+	HandleResponse(string) error
+	Prompt(string, string, ...bool) string
+	GetLines() []string
+	Prepare(*Screen) bool
+	Clean(*Replacement)
+	Clear()
+	GetQuestion() (string, string)
+	GetError() string
+}
+
 // Question models an interactive user prompt.
 // Fields:
 // - Question: The question displayed to the user.
@@ -31,7 +42,7 @@ type Question struct {
 	Screen       *Screen
 }
 
-func (q *Question) processResponse(input string) error {
+func (q *Question) HandleResponse(input string) error {
 	q.Response = ""
 	q.ErrorStr = ""
 	input = strings.TrimSpace(input)
@@ -82,8 +93,9 @@ func (q *Question) Prompt(str, spacer string, pad ...bool) string {
 	return reps.Replace(str)
 }
 
-func (q *Question) getLines() []string {
+func (q *Question) GetLines() []string {
 	var lines []string
+	q.Clean(nil)
 	if q.Question != "" {
 		lines = append(lines, q.Prompt("Question", "")+q.Question)
 		if q.Hint != "" {
@@ -120,4 +132,35 @@ func (q *Question) Prepare(s *Screen) bool {
 	}
 
 	return false
+}
+
+func (q *Question) Clear() {
+	q.Value = ""
+	q.Response = ""
+	q.ErrorStr = ""
+}
+
+func (q *Question) Clean(rep *Replacement) {
+	q.Question = strings.ReplaceAll(q.Question, "\n|", "\n          ")
+	q.Hint = strings.ReplaceAll(q.Hint, "\n|", "\n          ")
+	if rep != nil {
+		q.Question = rep.Replace(q.Question)
+		q.Hint = rep.Replace(q.Hint)
+	}
+	for _, rrep := range q.Replacements {
+		q.Question = rrep.Replace(q.Question)
+		q.Hint = rrep.Replace(q.Hint)
+	}
+}
+
+func (q *Question) GetQuestion() (string, string) {
+	t := strings.ReplaceAll(q.Question, "\n", " ")
+	t = strings.ReplaceAll(t, "           ", " ")
+	t = strings.TrimSpace(t)
+	r := colors.Magenta + q.Value + colors.Off
+	return t, r
+}
+
+func (q *Question) GetError() string {
+	return q.ErrorStr
 }

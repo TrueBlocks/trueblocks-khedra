@@ -56,7 +56,7 @@ func TestProcessResponse(t *testing.T) {
 			},
 		}
 
-		err := question.processResponse("valid")
+		err := question.HandleResponse("valid")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "valid", question.Value)
@@ -75,7 +75,7 @@ func TestProcessResponse(t *testing.T) {
 			},
 		}
 
-		err := question.processResponse("invalid")
+		err := question.HandleResponse("invalid")
 
 		assert.Error(t, err)
 		assert.Equal(t, "invalid input", question.ErrorStr)
@@ -87,13 +87,13 @@ func TestProcessResponse(t *testing.T) {
 	commandTest := func() {
 		question := &Question{}
 
-		err := question.processResponse("help")
+		err := question.HandleResponse("help")
 		assert.Equal(t, ErrUserHelp, err)
 
-		err = question.processResponse("quit")
+		err = question.HandleResponse("quit")
 		assert.Equal(t, ErrUserQuit, err)
 
-		err = question.processResponse("back")
+		err = question.HandleResponse("back")
 		assert.Equal(t, ErrUserBack, err)
 	}
 	t.Run("Command Test", func(t *testing.T) { commandTest() })

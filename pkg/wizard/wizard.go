@@ -2,7 +2,6 @@ package wizard
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/base"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
@@ -95,10 +94,10 @@ func (w *Wizard) Run() error {
 	for _, screen := range w.screens {
 		fmt.Printf(format, screen.Title)
 		for _, question := range screen.Questions {
-			if len(question.Question) == 0 {
-				continue
+			text, resp := question.GetQuestion()
+			if len(text) > 0 {
+				fmt.Printf("  - %s: %s\n", text, resp)
 			}
-			fmt.Printf("  - %s: %s\n", strings.TrimSpace(strings.ReplaceAll(question.Question, "            ", "      ")), colors.Magenta+question.Value+colors.Off)
 		}
 	}
 
