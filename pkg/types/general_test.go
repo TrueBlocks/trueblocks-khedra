@@ -37,7 +37,7 @@ func TestGeneralValidation(t *testing.T) {
 			general: General{
 				DataFolder: createTempDir(t, true),
 				Strategy:   "scratch",
-				Detail:     "bloomFilters",
+				Detail:     "bloom",
 			},
 			wantErr: false,
 		},
@@ -46,7 +46,7 @@ func TestGeneralValidation(t *testing.T) {
 			general: General{
 				DataFolder: "/non/existent/path",
 				Strategy:   "download",
-				Detail:     "entireIndex",
+				Detail:     "index",
 			},
 			wantErr: false,
 		},
@@ -55,7 +55,7 @@ func TestGeneralValidation(t *testing.T) {
 			general: General{
 				DataFolder: createTempDir(t, false),
 				Strategy:   "scratch",
-				Detail:     "bloomFilters",
+				Detail:     "bloom",
 			},
 			wantErr: false,
 		},
@@ -64,7 +64,7 @@ func TestGeneralValidation(t *testing.T) {
 			general: General{
 				DataFolder: "",
 				Strategy:   "download",
-				Detail:     "entireIndex",
+				Detail:     "index",
 			},
 			wantErr: true,
 		},
@@ -73,7 +73,7 @@ func TestGeneralValidation(t *testing.T) {
 			general: General{
 				DataFolder: createTempDir(t, true),
 				Strategy:   "invalid_strategy",
-				Detail:     "bloomFilters",
+				Detail:     "bloom",
 			},
 			wantErr: true,
 		},
@@ -91,7 +91,7 @@ func TestGeneralValidation(t *testing.T) {
 			general: General{
 				DataFolder: createTempDir(t, true),
 				Strategy:   "",
-				Detail:     "bloomFilters",
+				Detail:     "bloom",
 			},
 			wantErr: true,
 		},
@@ -149,7 +149,7 @@ func TestUnsupportedCharactersInFields(t *testing.T) {
 	content := `
 dataFolder: "expected/folder/\x00name"
 strategy: "invalid_strategy"
-detail: "entireIndex"
+detail: "index"
 `
 	var g General
 	err := yamlv2.Unmarshal([]byte(content), &g)
@@ -174,5 +174,5 @@ func TestNewGeneralValidation(t *testing.T) {
 	// Assert specific defaults
 	assert.NotEmpty(t, g.DataFolder, "DataFolder should not be empty")
 	assert.Equal(t, "download", g.Strategy, "Default Strategy should be 'download'")
-	assert.Equal(t, "entireIndex", g.Detail, "Default Detail should be 'entireIndex'")
+	assert.Equal(t, "index", g.Detail, "Default Detail should be 'index'")
 }

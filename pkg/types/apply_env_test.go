@@ -26,7 +26,7 @@ func TestApplyEnv(t *testing.T) {
 			General: General{
 				DataFolder: "/default/data",
 				Strategy:   "download",
-				Detail:     "entireIndex",
+				Detail:     "index",
 			},
 			Chains: map[string]Chain{
 				"mainnet": {
@@ -45,7 +45,7 @@ func TestApplyEnv(t *testing.T) {
 			General: General{
 				DataFolder: "/env/data",
 				Strategy:   "download",
-				Detail:     "entireIndex",
+				Detail:     "index",
 			},
 			Chains: map[string]Chain{
 				"mainnet": {
@@ -184,7 +184,7 @@ func TestApplyEnv(t *testing.T) {
 					General: General{
 						DataFolder: "/default/data",
 						Strategy:   "download",
-						Detail:     "entireIndex",
+						Detail:     "index",
 					},
 					Chains: map[string]Chain{
 						"mainnet": {

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	_ "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/env"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
@@ -71,7 +72,10 @@ func GetConfigFn() string {
 	}
 
 	cfg := NewConfig()
-	cfg.WriteToFile(fn)
+	err := cfg.WriteToFile(fn)
+	if err != nil {
+		fmt.Println(colors.Red+"error writing config file: %v", err, colors.Off)
+	}
 
 	return fn
 }

@@ -106,7 +106,7 @@ func TestValidateConfig(t *testing.T) {
 		cfg.General = types.General{
 			DataFolder: "",
 			Strategy:   "download",
-			Detail:     "entireIndex",
+			Detail:     "index",
 		}
 		err := validateConfig(cfg)
 		assert.Error(t, err)
@@ -130,7 +130,7 @@ func TestInitializeFolders(t *testing.T) {
 			General: types.General{
 				DataFolder: "/tmp/test-data-folder",
 				Strategy:   "download",
-				Detail:     "entireIndex",
+				Detail:     "index",
 			},
 		}
 
@@ -152,7 +152,7 @@ func TestInitializeFolders(t *testing.T) {
 			General: types.General{
 				DataFolder: "/tmp/test-missing-data-folder",
 				Strategy:   "download",
-				Detail:     "entireIndex",
+				Detail:     "index",
 			},
 		}
 
@@ -178,7 +178,7 @@ func TestInitializeFolders(t *testing.T) {
 			General: types.General{
 				DataFolder: "/tmp/test-data-folder",
 				Strategy:   "download",
-				Detail:     "entireIndex",
+				Detail:     "index",
 			},
 		}
 

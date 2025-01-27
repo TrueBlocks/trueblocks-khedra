@@ -10,7 +10,7 @@ import (
 type General struct {
 	DataFolder string `koanf:"dataFolder" yaml:"dataFolder" json:"dataFolder,omitempty" validate:"required,folder_exists"`
 	Strategy   string `koanf:"strategy" yaml:"strategy" json:"strategy,omitempty" validate:"oneof=download scratch"`
-	Detail     string `koanf:"detail" yaml:"detail" json:"detail,omitempty" validate:"oneof=entireIndex bloomFilters"`
+	Detail     string `koanf:"detail" yaml:"detail" json:"detail,omitempty" validate:"oneof=index bloom"`
 }
 
 func NewGeneral() General {
@@ -34,5 +34,5 @@ func getDefaultStrategy() string {
 }
 
 func getDefaultDetail() string {
-	return "entireIndex"
+	return "index"
 }

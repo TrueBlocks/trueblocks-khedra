@@ -36,6 +36,7 @@ func (k *KhedraApp) initAction(c *cli.Context) error {
 	if err := w.Run(); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -44,6 +45,10 @@ func validWarn(msg, value string) error {
 		return fmt.Errorf(msg+"%w", value, wizard.ErrValidateWarn)
 	}
 	return fmt.Errorf(msg+"%w", wizard.ErrValidateWarn)
+}
+
+func validContinue() error {
+	return fmt.Errorf("continue %w", wizard.ErrValidateMsg)
 }
 
 func validOk(msg, value string) error {

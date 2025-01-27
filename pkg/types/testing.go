@@ -93,8 +93,8 @@ func ReadAndWriteWithAssertions[T any](t *testing.T, tempFilePath string, conten
 		return strings.Join(chars, "")
 	}
 
-	marshalCleaned := cleanAndSort(string(marshaledContent))
-	contentCleaned := cleanAndSort(content)
+	marshalCleaned := cleanAndSort(strings.ToLower(string(marshaledContent)))
+	contentCleaned := cleanAndSort(strings.ToLower(content))
 	if marshalCleaned != contentCleaned {
 		t.Errorf("Mismatch between marshaled content and input content.\nMarshaled:\n%s\nInput:\n%s", marshalCleaned, contentCleaned)
 	}

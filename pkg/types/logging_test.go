@@ -183,11 +183,11 @@ func TestLoggingReadAndWrite(t *testing.T) {
 	content := `
   folder: ~/.khedra/logs
   filename: khedra.log
-  level: debug
   maxSize: 10
   maxBackups: 3
   maxAge: 10
   compress: true
+  level: debug
 `
 
 	assertions := func(t *testing.T, logging *Logging) {
