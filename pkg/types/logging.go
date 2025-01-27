@@ -12,6 +12,7 @@ import (
 type Logging struct {
 	Folder     string `koanf:"folder" json:"folder,omitempty" validate:"required,folder_exists"`
 	Filename   string `koanf:"filename" json:"filename,omitempty" validate:"required,endswith=.log"`
+	ToFile     bool   `koanf:"toFile" json:"toFile,omitempty"`
 	MaxSize    int    `koanf:"maxSize" yaml:"maxSize" json:"maxSize,omitempty" validate:"required,min=5"`
 	MaxBackups int    `koanf:"maxBackups" yaml:"maxBackups" json:"maxBackups,omitempty" validate:"required,min=1"`
 	MaxAge     int    `koanf:"maxAge" yaml:"maxAge" json:"maxAge,omitempty" validate:"required,min=1"`
@@ -27,6 +28,7 @@ func NewLogging() Logging {
 	return Logging{
 		Folder:     filepath.Join(homeDir, ".khedra", "logs"),
 		Filename:   "khedra.log",
+		ToFile:     false,
 		MaxSize:    10,
 		MaxBackups: 3,
 		MaxAge:     10,

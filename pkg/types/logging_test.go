@@ -21,6 +21,7 @@ func TestLoggingNew(t *testing.T) {
 	logging := NewLogging()
 	assert.Equal(t, expectedFolder, logging.Folder)
 	assert.Equal(t, "khedra.log", logging.Filename)
+	assert.False(t, logging.ToFile)
 	assert.Equal(t, 10, logging.MaxSize)
 	assert.Equal(t, 3, logging.MaxBackups)
 	assert.Equal(t, 10, logging.MaxAge)
@@ -41,6 +42,7 @@ func TestLoggingValidation(t *testing.T) {
 			logging: Logging{
 				Folder:     tempDir,
 				Filename:   "app.log",
+				ToFile:     true,
 				MaxSize:    10,
 				MaxBackups: 3,
 				MaxAge:     7,
@@ -54,6 +56,7 @@ func TestLoggingValidation(t *testing.T) {
 			logging: Logging{
 				Folder:     tempDir,
 				Filename:   "app.log",
+				ToFile:     false,
 				MaxSize:    10,
 				MaxBackups: 3,
 				MaxAge:     7,
@@ -67,6 +70,7 @@ func TestLoggingValidation(t *testing.T) {
 			logging: Logging{
 				Folder:     tempDir,
 				Filename:   "app.log",
+				ToFile:     false,
 				MaxSize:    10,
 				MaxBackups: 3,
 				MaxAge:     7,
@@ -79,6 +83,7 @@ func TestLoggingValidation(t *testing.T) {
 			name: "Missing Folder",
 			logging: Logging{
 				Filename:   "app.log",
+				ToFile:     false,
 				MaxSize:    10,
 				MaxBackups: 3,
 				MaxAge:     7,
@@ -92,6 +97,7 @@ func TestLoggingValidation(t *testing.T) {
 			logging: Logging{
 				Folder:     "/non/existent/path",
 				Filename:   "app.log",
+				ToFile:     true,
 				MaxSize:    10,
 				MaxBackups: 3,
 				MaxAge:     7,
@@ -105,6 +111,7 @@ func TestLoggingValidation(t *testing.T) {
 			logging: Logging{
 				Folder:     tempDir,
 				MaxSize:    10,
+				ToFile:     false,
 				MaxBackups: 3,
 				MaxAge:     7,
 				Compress:   true,
@@ -117,6 +124,7 @@ func TestLoggingValidation(t *testing.T) {
 			logging: Logging{
 				Folder:     tempDir,
 				Filename:   "app.txt",
+				ToFile:     false,
 				MaxSize:    10,
 				MaxBackups: 3,
 				MaxAge:     7,
@@ -130,6 +138,7 @@ func TestLoggingValidation(t *testing.T) {
 			logging: Logging{
 				Folder:     tempDir,
 				Filename:   "app.log",
+				ToFile:     false,
 				MaxSize:    0,
 				MaxBackups: 3,
 				MaxAge:     7,
@@ -143,6 +152,7 @@ func TestLoggingValidation(t *testing.T) {
 			logging: Logging{
 				Folder:     tempDir,
 				Filename:   "app.log",
+				ToFile:     false,
 				MaxSize:    10,
 				MaxBackups: -1,
 				MaxAge:     7,
@@ -156,6 +166,7 @@ func TestLoggingValidation(t *testing.T) {
 			logging: Logging{
 				Folder:     tempDir,
 				Filename:   "app.log",
+				ToFile:     true,
 				MaxSize:    10,
 				MaxBackups: 3,
 				MaxAge:     -1,
@@ -183,6 +194,7 @@ func TestLoggingReadAndWrite(t *testing.T) {
 	content := `
   folder: ~/.khedra/logs
   filename: khedra.log
+  toFile: false
   maxSize: 10
   maxBackups: 3
   maxAge: 10
@@ -193,6 +205,7 @@ func TestLoggingReadAndWrite(t *testing.T) {
 	assertions := func(t *testing.T, logging *Logging) {
 		assert.Equal(t, "~/.khedra/logs", logging.Folder, "Folder should match the expected value")
 		assert.Equal(t, "khedra.log", logging.Filename, "Filename should match the expected value")
+		assert.False(t, logging.ToFile, "ToFile should be true")
 		assert.Equal(t, "debug", logging.Level, "Level should match the expected value")
 		assert.Equal(t, 10, logging.MaxSize, "MaxSize should match the expected value")
 		assert.Equal(t, 3, logging.MaxBackups, "MaxBackups should match the expected value")

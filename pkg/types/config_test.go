@@ -74,6 +74,7 @@ func TestConfigNew(t *testing.T) {
 	assert.NotNil(t, cfg.Logging)
 	assert.Equal(t, expectedLogsFolder, cfg.Logging.Folder)
 	assert.Equal(t, "khedra.log", cfg.Logging.Filename)
+	assert.False(t, cfg.Logging.ToFile)
 	assert.Equal(t, 10, cfg.Logging.MaxSize)
 	assert.Equal(t, 3, cfg.Logging.MaxBackups)
 	assert.Equal(t, 10, cfg.Logging.MaxAge)

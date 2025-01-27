@@ -1,5 +1,7 @@
 package types
 
+import "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/validate"
+
 type Chain struct {
 	Name    string   `koanf:"name" validate:"req_if_enabled"`                 // Must be non-empty
 	RPCs    []string `koanf:"rpcs" validate:"req_if_enabled,dive,strict_url"` // Must have at least one reachable RPC URL
@@ -14,6 +16,15 @@ func NewChain(chain string) Chain {
 	}
 }
 
-func (c *Chain) IsEnabled() bool {
-	return c.Enabled
+func (ch *Chain) IsEnabled() bool {
+	return ch.Enabled
+}
+
+func (ch *Chain) HasValidRpc() bool {
+	for _, rpc := range ch.RPCs {
+		if err := validate.TryConnect(ch.Name, rpc, 2); err == nil {
+			return true
+		}
+	}
+	return false
 }

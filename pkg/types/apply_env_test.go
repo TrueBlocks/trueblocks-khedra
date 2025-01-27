@@ -99,6 +99,7 @@ func TestApplyEnv(t *testing.T) {
 	partialLoggingUpdate := func() {
 		defer setEnv(map[string]string{
 			"TB_KHEDRA_LOGGING_FOLDER":   "/env/logs",
+			"TB_KHEDRA_LOGGING_TOFILE":   "true",
 			"TB_KHEDRA_LOGGING_COMPRESS": "true",
 		})()
 
@@ -120,6 +121,7 @@ func TestApplyEnv(t *testing.T) {
 			Services: map[string]Service{},
 			Logging: Logging{
 				Folder:   "/env/logs",
+				ToFile:   true,
 				Compress: true,
 			},
 		}

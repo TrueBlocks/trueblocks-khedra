@@ -211,6 +211,7 @@ services:
 logging:
   folder: "{{ .Logging.Folder }}"
   filename: "{{ .Logging.Filename }}"
+  toFile: {{ .Logging.ToFile }}
   maxSize: {{ .Logging.MaxSize }}
   maxBackups: {{ .Logging.MaxBackups }}
   maxAge: {{ .Logging.MaxAge }}

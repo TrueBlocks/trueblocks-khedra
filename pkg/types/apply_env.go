@@ -25,6 +25,7 @@ const (
 	// Logging Keys
 	KeyLoggingFolder     = "TB_KHEDRA_LOGGING_FOLDER"
 	KeyLoggingFilename   = "TB_KHEDRA_LOGGING_FILENAME"
+	KeyLoggingToFile     = "TB_KHEDRA_LOGGING_TOFILE"
 	KeyLoggingMaxSize    = "TB_KHEDRA_LOGGING_MAXSIZE"
 	KeyLoggingMaxBackups = "TB_KHEDRA_LOGGING_MAXBACKUPS"
 	KeyLoggingMaxAge     = "TB_KHEDRA_LOGGING_MAXAGE"
@@ -156,6 +157,12 @@ func applyEnv(keys []string, receiver *Config) error {
 			receiver.Logging.Folder = envValue
 		case key == KeyLoggingFilename:
 			receiver.Logging.Filename = envValue
+		case key == KeyLoggingToFile:
+			toFile, err := strconv.ParseBool(envValue)
+			if err := validateValueParsing(key, err); err != nil {
+				return err
+			}
+			receiver.Logging.ToFile = toFile
 		case key == KeyLoggingMaxSize:
 			size, err := strconv.Atoi(envValue)
 			if err := validateValueParsing(key, err); err != nil {
