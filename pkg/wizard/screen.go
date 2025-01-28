@@ -17,7 +17,7 @@ type Screen struct {
 	Body         string
 	Instructions string
 	Replacements []Replacement
-	Questions    []Question
+	Questions    []Questioner
 	Style        Style
 	Current      int
 	Wizard       *Wizard
@@ -55,7 +55,7 @@ func (s *Screen) OpenHelp() {
 	coreUtils.System("open " + url)
 }
 
-func (s *Screen) Display(question *Question, caret string) {
+func (s *Screen) Display(question Questioner, caret string) {
 	titleRows := func(t, s string, style *Style) []string {
 		var ret []string
 		if style.Justify == boxes.Center {

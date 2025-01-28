@@ -29,7 +29,7 @@ The next few screens will allow you to configure each service.
 			"\"control\"", "\"scrape\"", "\"monitor\"", "\"api\"", "\"ipfs\"",
 		}},
 	}
-	sQuestions := []wizard.Question{s0, s1, s2, s3, s4}
+	sQuestions := []wizard.Questioner{&s0, &s1, &s2, &s3, &s4}
 	sStyle := wizard.NewStyle()
 
 	return wizard.Screen{
@@ -62,22 +62,25 @@ func sPrepare(key, input string, q *wizard.Question) (string, error) {
 // --------------------------------------------------------
 func sValidate(key string, input string, q *wizard.Question) (string, error) {
 	if cfg, ok := q.Screen.Wizard.Backing.(*types.Config); ok {
-		msgs := []string{
-			`the %s service was enabled`,
-			`the %s service was disabled`,
-			`value must be either "yes" or "no"`,
-		}
 		service := cfg.Services[key]
 		if input == "yes" {
 			service.Enabled = true
 			cfg.Services[key] = service
-			return input, validOk(msgs[0], key)
+			err := cfg.WriteToFile(types.GetConfigFnNoCreate())
+			if err != nil {
+				fmt.Println(colors.Red+"error writing config file: %v", err, colors.Off)
+			}
+			return input, validOk(`the %s service was enabled`, key)
 		} else if input == "no" {
 			service.Enabled = false
 			cfg.Services[key] = service
-			return input, validOk(msgs[1], key)
+			err := cfg.WriteToFile(types.GetConfigFnNoCreate())
+			if err != nil {
+				fmt.Println(colors.Red+"error writing config file: %v", err, colors.Off)
+			}
+			return input, validOk(`the %s service was disabled`, key)
 		} else {
-			return input, fmt.Errorf(msgs[2]+"%w", wizard.ErrValidate)
+			return input, fmt.Errorf(`value must be either "yes" or "no" %w`, wizard.ErrValidate)
 		}
 	}
 	return input, fmt.Errorf(`could not cast backing data`+"%w", wizard.ErrValidate)

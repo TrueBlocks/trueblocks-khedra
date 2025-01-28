@@ -22,7 +22,7 @@ edit here to open the the actual file in your editor.
 	sumReplacements := []wizard.Replacement{
 		{Color: colors.Yellow, Values: []string{sumTitle}},
 	}
-	sumQuestions := []wizard.Question{sum0}
+	sumQuestions := []wizard.Questioner{&sum0}
 	sumStyle := wizard.NewStyle()
 
 	return wizard.Screen{
@@ -37,27 +37,6 @@ edit here to open the the actual file in your editor.
 }
 
 // --------------------------------------------------------
-func sumPrepare(key, input string, q *wizard.Question) (string, error) {
-	switch key {
-	case "edit":
-		return "no", validOk(`don't skip`, input)
-	}
-	return input, nil
-}
-
-// --------------------------------------------------------
-func sumValidate(key string, input string, q *wizard.Question) (string, error) {
-	return input, nil
-}
-
-// --------------------------------------------------------
 var sum0 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
-	Question: "Would you like to edit the config by hand?",
-	PrepareFn: func(input string, q *wizard.Question) (string, error) {
-		return sumPrepare("edit", input, q)
-	},
-	Validate: func(input string, q *wizard.Question) (string, error) {
-		return sumValidate("edit", input, q)
-	},
 }

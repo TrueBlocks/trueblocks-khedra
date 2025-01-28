@@ -1,7 +1,6 @@
 package app
 
 import (
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 
@@ -27,7 +26,7 @@ You may use $HOME or ~/ in your paths to refer to your home directory.
 		{Color: colors.Yellow, Values: []string{lTitle}},
 		{Color: colors.Green, Values: []string{"$HOME", "~/"}},
 	}
-	lQuestions := []wizard.Question{l0, l1, l2}
+	lQuestions := []wizard.Questioner{&l0, &l1, &l2}
 	lStyle := wizard.NewStyle()
 
 	return wizard.Screen{
@@ -42,59 +41,40 @@ You may use $HOME or ~/ in your paths to refer to your home directory.
 }
 
 // --------------------------------------------------------
-func lPrepare(key, input string, q *wizard.Question) (string, error) {
-	if cfg, ok := q.Screen.Wizard.Backing.(*types.Config); ok {
-		lCopy := types.Logging{
-			Filename: cfg.Logging.Filename,
-			Level:    cfg.Logging.Level,
-		}
-		switch key {
-		case "enable":
-			if len(cfg.Logging.Filename) > 0 {
-				input = "yes"
-			} else {
-				input = "no"
-			}
-		case "level":
-			input = cfg.Logging.Level
-		}
-		bytes, _ := json.Marshal(lCopy)
-		q.State = string(bytes)
-	}
-	return input, validOk(`don't skip`, input)
-}
-
-// --------------------------------------------------------
 func lValidate(key string, input string, q *wizard.Question) (string, error) {
 	if cfg, ok := q.Screen.Wizard.Backing.(*types.Config); ok {
 		switch key {
 		case "enable":
-			msgs := []string{
-				`logs will be stored at %s`,
-				`logs will be reported to screen only`,
-				`value must be either "yes" or "no"`,
-			}
 			switch input {
 			case "yes":
-				cfg.Logging.Filename = "khedra.log"
+				cfg.Logging.ToFile = true
+				err := cfg.WriteToFile(types.GetConfigFnNoCreate())
+				if err != nil {
+					fmt.Println(colors.Red+"error writing config file: %v", err, colors.Off)
+				}
 				path := filepath.Join(cfg.General.DataFolder, cfg.Logging.Filename)
-				return input, validOk(msgs[0], path)
+				return input, validOk(`logs will be stored at %s`, path)
 			case "no":
-				cfg.Logging.Filename = ""
-				return input, validOk(msgs[1], cfg.Logging.Filename)
+				cfg.Logging.ToFile = false
+				err := cfg.WriteToFile(types.GetConfigFnNoCreate())
+				if err != nil {
+					fmt.Println(colors.Red+"error writing config file: %v", err, colors.Off)
+				}
+				return input, validOk(`logs will be reported to screen only`, cfg.Logging.Filename)
 			default:
-				return input, fmt.Errorf(msgs[2]+"%w", wizard.ErrValidate)
+				return input, fmt.Errorf(`value must be either "yes" or "no" %w`, wizard.ErrValidate)
 			}
 		case "level":
-			msgs := []string{
-				`logging level will be "%s"`,
-			}
 			if input != "debug" && input != "info" && input != "warn" && input != "error" {
 				err := fmt.Errorf(`value must be either "debug", "info", "warn", or "error"%w`, wizard.ErrValidate)
 				return input, err
 			}
 			cfg.Logging.Level = input
-			msg := fmt.Errorf(msgs[0]+"%w", input, wizard.ErrValidateMsg)
+			err := cfg.WriteToFile(types.GetConfigFnNoCreate())
+			if err != nil {
+				fmt.Println(colors.Red+"error writing config file: %v", err, colors.Off)
+			}
+			msg := fmt.Errorf(`logging level will be "%s" %w`, input, wizard.ErrValidateMsg)
 			return input, msg
 		}
 	}
@@ -113,7 +93,13 @@ var l1 = wizard.Question{
 	Hint: `Logging to the screen is always enabled. If you enable file-based
 |logging, Khedra will also write log files to disk.`,
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
-		return lPrepare("enable", input, q)
+		return prepare[types.Logging](q, func(cfg *types.Config) (string, types.Logging, error) {
+			copy := types.Logging{ToFile: cfg.Logging.ToFile, Filename: cfg.Logging.Filename}
+			if cfg.Logging.ToFile {
+				return "yes", copy, validContinue()
+			}
+			return "no", copy, validContinue()
+		})
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
 		return lValidate("enable", input, q)
@@ -126,7 +112,10 @@ var l2 = wizard.Question{
 	Question: `What log level do you want to enable (debug, info, warn, error)?`,
 	Hint:     `We need a hint`,
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
-		return lPrepare("level", input, q)
+		return prepare[types.Logging](q, func(cfg *types.Config) (string, types.Logging, error) {
+			copy := types.Logging{Level: cfg.Logging.Level}
+			return cfg.Logging.Level, copy, validContinue()
+		})
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
 		return lValidate("level", input, q)

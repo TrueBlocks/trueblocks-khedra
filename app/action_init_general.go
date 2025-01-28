@@ -1,9 +1,7 @@
 package app
 
 import (
-	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
@@ -33,7 +31,7 @@ You may use $HOME or ~/ in your paths to refer to your home directory.`
 			"Unchained\nIndex", "Unchained Index", "$HOME", "~/",
 		}},
 	}
-	gQuestions := []wizard.Question{g0, g1, g2, g3}
+	gQuestions := []wizard.Questioner{&g0, &g1, &g2, &g3}
 	gStyle := wizard.NewStyle()
 
 	return wizard.Screen{
@@ -45,98 +43,6 @@ You may use $HOME or ~/ in your paths to refer to your home directory.`
 		Questions:    gQuestions,
 		Style:        gStyle,
 	}
-}
-
-// --------------------------------------------------------
-func gPrepare(key, input string, q *wizard.Question) (string, error) {
-	if cfg, ok := q.Screen.Wizard.Backing.(*types.Config); ok {
-		show := types.General{}
-		switch key {
-		case "strategy":
-			input = cfg.General.Strategy
-			show.Strategy = input
-		case "detail":
-			input = cfg.General.Detail
-			show.Detail = input
-			if cfg.General.Strategy == "scratch" {
-				return input, validSkipNext(`question skipped`, input)
-			}
-		case "folder":
-			input = cfg.General.DataFolder
-			show.DataFolder = input
-			if cfg.General.Detail == "bloomFilters" {
-				q.Hint = `The bloom filters take up about 5-10gb and the caches may get
-|quite large depending on your usage, so choose a folder where you
-|can store up to 100gb.`
-			} else {
-				q.Hint = `The index takes up about 120-150gb and the caches may get quite
-|large depending on your usage, so choose a folder where you can
-|store up to 300gb.`
-			}
-			q.Hint = strings.ReplaceAll(q.Hint, "\n|", "\n          ")
-		}
-		bytes, _ := json.Marshal(show)
-		q.State = string(bytes)
-	}
-	return input, validOk(`don't skip`, input)
-}
-
-// --------------------------------------------------------
-func gValidate(key string, input string, q *wizard.Question) (string, error) {
-	if cfg, ok := q.Screen.Wizard.Backing.(*types.Config); ok {
-		switch key {
-		case "strategy":
-			msgs := []string{
-				`the index will be downloaded`,
-				`the index will be built from scratch`,
-				`value must be either "download" or "scratch"`,
-			}
-			switch input {
-			case "download":
-				cfg.General.Strategy = input
-				return input, validOk(msgs[0], input)
-			case "scratch":
-				cfg.General.Strategy = input
-				return input, validOk(msgs[1], input)
-			default:
-				return input, fmt.Errorf(msgs[2]+"%w", wizard.ErrValidate)
-			}
-		case "detail":
-			msgs := []string{
-				`only bloom filters will be downloaded`,
-				`both bloom filters and index chunks will be downloaded`,
-				`value must be either "bloomFilters" or "entireIndex"`,
-			}
-			switch input {
-			case "bloomFilters":
-				cfg.General.Detail = input
-				return input, validOk(msgs[0], input)
-			case "entireIndex":
-				cfg.General.Detail = input
-				return input, validOk(msgs[1], input)
-			default:
-				return input, fmt.Errorf(msgs[2]+"%w", wizard.ErrValidate)
-			}
-		case "folder":
-			msgs := []string{
-				`"%s" was created`,
-				`the index will be stored at %s`,
-				"unable to create folder: %s",
-			}
-			path, err := utils.ResolveValidPath(input)
-			if err != nil {
-				return input, fmt.Errorf(msgs[2]+"%w", path, wizard.ErrValidate)
-			}
-
-			cfg.General.DataFolder = input
-			if !file.FolderExists(path) {
-				file.EstablishFolder(path)
-				return input, validWarn(msgs[0], path)
-			}
-			return input, validOk(msgs[1], path)
-		}
-	}
-	return input, validOk(`don't skip`, input)
 }
 
 // --------------------------------------------------------
@@ -153,10 +59,25 @@ var g1 = wizard.Question{
 |more secure but much slower (depending on the chain, perhaps as
 |long as a few days).`,
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
-		return gPrepare("strategy", input, q)
+		return prepare[types.General](q, func(cfg *types.Config) (string, types.General, error) {
+			copy := types.General{Strategy: cfg.General.Strategy}
+			return copy.Strategy, copy, nil
+		})
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
-		return gValidate("strategy", input, q)
+		return confirm[types.General](q, func(cfg *types.Config) (string, types.General, error) {
+			cfg.General.Strategy = input
+			copy := types.General{Strategy: cfg.General.Strategy}
+			switch input {
+			case "download":
+				return input, copy, validOk(`the index will be downloaded`, input)
+			case "scratch":
+				cfg.General.Detail = "index"
+				copy.Detail = "index"
+				return input, copy, validOk(`the index will be built from scratch`, input)
+			}
+			return input, copy, fmt.Errorf(`value must be either "download" or "scratch" %w`, wizard.ErrValidate)
+		})
 	},
 	Replacements: []wizard.Replacement{
 		{Color: colors.BrightBlue, Values: []string{"download", "scratch"}},
@@ -166,18 +87,37 @@ var g1 = wizard.Question{
 // --------------------------------------------------------
 var g2 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
-	Question: `Do you want to download only bloomFilters or the entireIndex?`,
-	Hint: `Downloading blooms takes less time and is smaller (4gb), but is
-|slower when searching. Downloading the entire index takes longer
-|and is larger (180gb), but is much faster during search.`,
+	Question: `Do you want to download only bloom filters or the entire index?`,
+	Hint: `Downloading bloom fiters takes less time and is smaller (4gb),
+|but is slower when searching. Downloading the entire index takes
+|longer and is larger (180gb), but is much faster during search.`,
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
-		return gPrepare("detail", input, q)
+		return prepare[types.General](q, func(cfg *types.Config) (string, types.General, error) {
+			copy := types.General{Detail: cfg.General.Detail}
+			if cfg.General.Strategy == "scratch" {
+				return copy.Detail, copy, validSkipNext()
+			}
+			return copy.Detail, copy, nil
+		})
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
-		return gValidate("detail", input, q)
+		return confirm[types.General](q, func(cfg *types.Config) (string, types.General, error) {
+			cfg.General.Detail = input
+			copy := types.General{Detail: cfg.General.Detail}
+			switch input {
+			case "bloom":
+				cfg.General.Detail = input
+				return input, copy, validOk(`only bloom filters will be downloaded`, input)
+			case "index":
+				cfg.General.Detail = input
+				return input, copy, validOk(`both bloom filters and index chunks will be downloaded`, input)
+			default:
+				return input, copy, fmt.Errorf(`value must be either "bloom" or "index" %w`, wizard.ErrValidate)
+			}
+		})
 	},
 	Replacements: []wizard.Replacement{
-		{Color: colors.BrightBlue, Values: []string{"bloomFilters", "entireIndex"}},
+		{Color: colors.BrightBlue, Values: []string{"bloom", "index"}},
 	},
 }
 
@@ -188,9 +128,39 @@ var g3 = wizard.Question{
 |binary caches?`,
 	Hint: `<set on load>`,
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
-		return gPrepare("folder", input, q)
+		return prepare[types.General](q, func(cfg *types.Config) (string, types.General, error) {
+			copy := types.General{DataFolder: cfg.General.DataFolder}
+			if cfg.General.Detail == "bloom" {
+				q.Hint = bloomHint
+			} else {
+				q.Hint = indexHint
+			}
+			return cfg.General.DataFolder, copy, nil
+		})
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
-		return gValidate("folder", input, q)
+		return confirm[types.General](q, func(cfg *types.Config) (string, types.General, error) {
+			cfg.General.DataFolder = input
+			copy := types.General{DataFolder: cfg.General.DataFolder}
+			path, err := utils.ResolveValidPath(input)
+			if err != nil {
+				return input, copy, fmt.Errorf("unable to create folder: %s %w", path, wizard.ErrValidate)
+			}
+			if !file.FolderExists(path) {
+				file.EstablishFolder(path)
+				return input, copy, validWarn(`"%s" was created`, path)
+			}
+			return input, copy, validOk(`the index will be stored at %s`, path)
+		})
 	},
 }
+
+// --------------------------------------------------------
+var bloomHint = `The bloom filters take up about 5-10gb and the caches may get
+|quite large depending on your usage, so choose a folder where you
+|can store up to 100gb.`
+
+// --------------------------------------------------------
+var indexHint = `The index takes up about 120-150gb and the caches may get quite
+|large depending on your usage, so choose a folder where you can
+|store up to 300gb.`

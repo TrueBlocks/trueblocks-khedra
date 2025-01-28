@@ -36,7 +36,8 @@ func displayScreen(w *Wizard, screenIndex int) error {
 
 	for i := curScreen.Current; i < len(curScreen.Questions); i++ {
 		nSkipped := 0
-		question := &curScreen.Questions[i]
+		question := curScreen.Questions[i]
+
 		if skip := question.Prepare(curScreen); !skip {
 			caret := curScreen.GetCaret(w.caret, i, nSkipped)
 			curScreen.Display(question, caret)
@@ -83,7 +84,7 @@ func displayScreen(w *Wizard, screenIndex int) error {
 					if i == 0 {
 						return err
 					}
-					prevQuestion := &curScreen.Questions[i-1]
+					prevQuestion := curScreen.Questions[i-1]
 					skip := prevQuestion.Prepare(curScreen)
 					if skip {
 						curScreen.Questions[i-2].Clear()

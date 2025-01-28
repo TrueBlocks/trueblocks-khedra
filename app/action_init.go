@@ -1,9 +1,13 @@
 package app
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
+	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/wizard"
 	"github.com/urfave/cli/v2"
 )
@@ -58,9 +62,37 @@ func validOk(msg, value string) error {
 	return fmt.Errorf(msg+"%w", wizard.ErrValidateMsg)
 }
 
-func validSkipNext(msg, value string) error {
-	if strings.Contains(msg, "%s") {
-		return fmt.Errorf(msg+"%w", value, wizard.ErrSkipQuestion)
+func validSkipNext() error {
+	return fmt.Errorf("skip next %w", wizard.ErrSkipQuestion)
+}
+
+// --------------------------------------------------------
+type processFn[T any] func(cfg *types.Config) (string, T, error)
+
+// --------------------------------------------------------
+func prepare[T any](q *wizard.Question, fn processFn[T]) (string, error) {
+	if cfg, ok := q.Screen.Wizard.Backing.(*types.Config); ok {
+		input, copy, err := fn(cfg)
+		bytes, _ := json.Marshal(copy)
+		q.State = string(bytes)
+		return input, err
 	}
-	return fmt.Errorf(msg+"%w", wizard.ErrSkipQuestion)
+	return "", validContinue()
+}
+
+// --------------------------------------------------------
+func confirm[T any](q *wizard.Question, fn processFn[T]) (string, error) {
+	if cfg, ok := q.Screen.Wizard.Backing.(*types.Config); ok {
+		input, copy, err := fn(cfg)
+		if !errors.Is(err, wizard.ErrValidate) {
+			err1 := cfg.WriteToFile(types.GetConfigFnNoCreate())
+			if err1 != nil {
+				fmt.Println(colors.Red+"error writing config file: %v", err, colors.Off)
+			}
+		}
+		bytes, _ := json.Marshal(copy)
+		q.State = string(bytes)
+		return input, err
+	}
+	return "", validContinue()
 }
