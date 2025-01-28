@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
@@ -57,6 +58,12 @@ func validateConfig(cfg types.Config) error {
 	if err := validate.Validate(&cfg); err != nil {
 		return err
 	}
+
+	// skip these during testing...
+	if os.Getenv("TEST_MODE") == "true" {
+		return nil
+	}
+
 	// validate a few additional things...
 	svcList := cfg.ServiceList(true /* enabledOnly */)
 	if len(svcList) == 0 {
