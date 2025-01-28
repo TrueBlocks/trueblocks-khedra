@@ -115,24 +115,31 @@ func isWritable(path string) bool {
 	return true
 }
 
-func (c *Config) ChainList() string {
+func (c *Config) ChainList(enabledOnly bool) string {
 	var ret []string
-	for key := range c.Chains {
-		ret = append(ret, key)
+	for key, ch := range c.Chains {
+		if !enabledOnly || ch.Enabled {
+			ret = append(ret, key)
+		}
 	}
 	return strings.Join(ret, ",")
 }
 
-func (c *Config) ServiceList() string {
+func (c *Config) ServiceList(enabledOnly bool) string {
 	var ret []string
-	for key := range c.Services {
-		ret = append(ret, key)
+	for key, svc := range c.Services {
+		if !enabledOnly || svc.Enabled {
+			ret = append(ret, key)
+		}
 	}
 	return strings.Join(ret, ",")
 }
 
 // WriteToFile writes the Config struct to a file using a YAML template with comments.
 func (c *Config) WriteToFile(fn string) error {
+	c.General.DataFolder = filepath.Clean(c.General.DataFolder)
+	c.Logging.Folder = filepath.Clean(c.Logging.Folder)
+
 	t, err := template.New("config").Parse(strings.TrimSpace(tmpl) + "\n")
 	if err != nil {
 		return err
@@ -173,12 +180,12 @@ const tmpl = `
 #
 # For more information see the users manual at https://khedra.trueblocks.io
 #
-# This file is found either in the current folder or at ~/.khedra/config.yaml
-# (in the user's home folder). For multiple instantiations put the config
-# file in the local folder.
-#
 # You may easily edit this file with "khedra config edit" or by typing
 # "edit" on the "khedra init" command line.
+#
+# You may add as many chains as you wish. The Mainnet RPC is required even
+# though you may disable it from processing. Additional chains require
+# a working RPC endpoint. The file will be validated when loaded.
 #
 # Note that any comments you write in this file will be overwritten.
 

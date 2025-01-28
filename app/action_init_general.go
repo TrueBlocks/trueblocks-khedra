@@ -66,12 +66,13 @@ var g1 = wizard.Question{
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
 		return confirm[types.General](q, func(cfg *types.Config) (string, types.General, error) {
-			cfg.General.Strategy = input
-			copy := types.General{Strategy: cfg.General.Strategy}
+			copy := types.General{Strategy: input}
 			switch input {
 			case "download":
+				cfg.General.Strategy = input
 				return input, copy, validOk(`the index will be downloaded`, input)
 			case "scratch":
+				cfg.General.Strategy = input
 				cfg.General.Detail = "index"
 				copy.Detail = "index"
 				return input, copy, validOk(`the index will be built from scratch`, input)
@@ -102,8 +103,7 @@ var g2 = wizard.Question{
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
 		return confirm[types.General](q, func(cfg *types.Config) (string, types.General, error) {
-			cfg.General.Detail = input
-			copy := types.General{Detail: cfg.General.Detail}
+			copy := types.General{Detail: input}
 			switch input {
 			case "bloom":
 				cfg.General.Detail = input
@@ -140,12 +140,12 @@ var g3 = wizard.Question{
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
 		return confirm[types.General](q, func(cfg *types.Config) (string, types.General, error) {
-			cfg.General.DataFolder = input
-			copy := types.General{DataFolder: cfg.General.DataFolder}
+			copy := types.General{DataFolder: input}
 			path, err := utils.ResolveValidPath(input)
 			if err != nil {
 				return input, copy, fmt.Errorf("unable to create folder: %s %w", path, wizard.ErrValidate)
 			}
+			cfg.General.DataFolder = input
 			if !file.FolderExists(path) {
 				file.EstablishFolder(path)
 				return input, copy, validWarn(`"%s" was created`, path)

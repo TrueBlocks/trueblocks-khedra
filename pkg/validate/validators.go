@@ -94,7 +94,7 @@ func folderExistsValidator(fv FieldValidator) error {
 
 	sanitizedValue := utils.ToValidPath(value)
 	if sanitizedValue != value {
-		return Failed(fv, "invalid characters in path", fmt.Sprintf("%q", value))
+		return Failed(fv, "invalid characters in path", fmt.Sprintf("%q-%q", value, sanitizedValue))
 	}
 
 	value = utils.ResolvePath(value)

@@ -31,10 +31,10 @@ func TestConfigNew(t *testing.T) {
 	assert.NotNil(t, cfg.Chains["mainnet"])
 	assert.NotNil(t, cfg.Chains["sepolia"])
 
-	service := cfg.Chains["mainnet"]
-	assert.Equal(t, "mainnet", service.Name)
-	assert.Equal(t, "http://localhost:8545", service.RPCs[0])
-	assert.True(t, service.Enabled)
+	chain := cfg.Chains["mainnet"]
+	assert.Equal(t, "mainnet", chain.Name)
+	assert.Equal(t, "http://localhost:8545", chain.RPCs[0])
+	assert.True(t, chain.Enabled)
 
 	assert.NotNil(t, cfg.Services)
 	assert.Equal(t, 4, len(cfg.Services))
@@ -45,7 +45,7 @@ func TestConfigNew(t *testing.T) {
 
 	svc := cfg.Services["scraper"]
 	assert.Equal(t, "scraper", svc.Name)
-	assert.False(t, svc.Enabled)
+	assert.True(t, svc.Enabled)
 	assert.Equal(t, 0, svc.Port)
 	assert.Equal(t, 10, svc.Sleep)
 	assert.Equal(t, 500, svc.BatchSize)
@@ -59,14 +59,14 @@ func TestConfigNew(t *testing.T) {
 
 	svc = cfg.Services["api"]
 	assert.Equal(t, "api", svc.Name)
-	assert.False(t, svc.Enabled)
+	assert.True(t, svc.Enabled)
 	assert.Equal(t, 8080, svc.Port)
 	assert.Equal(t, 0, svc.Sleep)
 	assert.Equal(t, 0, svc.BatchSize)
 
 	svc = cfg.Services["ipfs"]
 	assert.Equal(t, "ipfs", svc.Name)
-	assert.False(t, svc.Enabled)
+	assert.True(t, svc.Enabled)
 	assert.Equal(t, 5001, svc.Port)
 	assert.Equal(t, 0, svc.Sleep)
 	assert.Equal(t, 0, svc.BatchSize)

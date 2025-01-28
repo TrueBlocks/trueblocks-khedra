@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
@@ -41,47 +40,6 @@ You may use $HOME or ~/ in your paths to refer to your home directory.
 }
 
 // --------------------------------------------------------
-func lValidate(key string, input string, q *wizard.Question) (string, error) {
-	if cfg, ok := q.Screen.Wizard.Backing.(*types.Config); ok {
-		switch key {
-		case "enable":
-			switch input {
-			case "yes":
-				cfg.Logging.ToFile = true
-				err := cfg.WriteToFile(types.GetConfigFnNoCreate())
-				if err != nil {
-					fmt.Println(colors.Red+"error writing config file: %v", err, colors.Off)
-				}
-				path := filepath.Join(cfg.General.DataFolder, cfg.Logging.Filename)
-				return input, validOk(`logs will be stored at %s`, path)
-			case "no":
-				cfg.Logging.ToFile = false
-				err := cfg.WriteToFile(types.GetConfigFnNoCreate())
-				if err != nil {
-					fmt.Println(colors.Red+"error writing config file: %v", err, colors.Off)
-				}
-				return input, validOk(`logs will be reported to screen only`, cfg.Logging.Filename)
-			default:
-				return input, fmt.Errorf(`value must be either "yes" or "no" %w`, wizard.ErrValidate)
-			}
-		case "level":
-			if input != "debug" && input != "info" && input != "warn" && input != "error" {
-				err := fmt.Errorf(`value must be either "debug", "info", "warn", or "error"%w`, wizard.ErrValidate)
-				return input, err
-			}
-			cfg.Logging.Level = input
-			err := cfg.WriteToFile(types.GetConfigFnNoCreate())
-			if err != nil {
-				fmt.Println(colors.Red+"error writing config file: %v", err, colors.Off)
-			}
-			msg := fmt.Errorf(`logging level will be "%s" %w`, input, wizard.ErrValidateMsg)
-			return input, msg
-		}
-	}
-	return input, validOk(`don't skip`, input)
-}
-
-// --------------------------------------------------------
 var l0 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
 }
@@ -102,7 +60,20 @@ var l1 = wizard.Question{
 		})
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
-		return lValidate("enable", input, q)
+		return confirm[types.Logging](q, func(cfg *types.Config) (string, types.Logging, error) {
+			copy := types.Logging{Filename: cfg.Logging.Filename, ToFile: cfg.Logging.ToFile}
+			switch input {
+			case "no":
+				cfg.Logging.ToFile = false
+				copy.ToFile = cfg.Logging.ToFile
+				return input, copy, validOk(`logs will be reported to screen only`, "")
+			case "yes":
+				cfg.Logging.ToFile = true
+				copy.ToFile = cfg.Logging.ToFile
+				return input, copy, validOk(`logs will be stored at %s`, cfg.Logging.Filename)
+			}
+			return input, copy, fmt.Errorf(`value must be either "yes" or "no" %w`, wizard.ErrValidate)
+		})
 	},
 }
 
@@ -110,7 +81,7 @@ var l1 = wizard.Question{
 var l2 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
 	Question: `What log level do you want to enable (debug, info, warn, error)?`,
-	Hint:     `We need a hint`,
+	Hint:     `Select a log level from the list.`,
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
 		return prepare[types.Logging](q, func(cfg *types.Config) (string, types.Logging, error) {
 			copy := types.Logging{Level: cfg.Logging.Level}
@@ -118,6 +89,14 @@ var l2 = wizard.Question{
 		})
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
-		return lValidate("level", input, q)
+		return confirm[types.Logging](q, func(cfg *types.Config) (string, types.Logging, error) {
+			copy := types.Logging{Level: input}
+			if input != "debug" && input != "info" && input != "warn" && input != "error" {
+				err := fmt.Errorf(`value must be either "debug", "info", "warn", or "error"%w`, wizard.ErrValidate)
+				return input, copy, err
+			}
+			cfg.Logging.Level = input
+			return input, copy, validOk(`logging level will be "%s"`, input)
+		})
 	},
 }

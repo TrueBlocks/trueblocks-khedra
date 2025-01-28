@@ -20,7 +20,7 @@ func NewService(serviceType string) Service {
 	case "scraper":
 		return Service{
 			Name:      "scraper",
-			Enabled:   false,
+			Enabled:   true,
 			Sleep:     10,
 			BatchSize: 500,
 		}
@@ -34,13 +34,13 @@ func NewService(serviceType string) Service {
 	case "api":
 		return Service{
 			Name:    "api",
-			Enabled: false,
+			Enabled: true,
 			Port:    8080,
 		}
 	case "ipfs":
 		return Service{
 			Name:    "ipfs",
-			Enabled: false,
+			Enabled: true,
 			Port:    5001,
 		}
 	default:

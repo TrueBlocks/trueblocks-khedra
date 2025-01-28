@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"path/filepath"
 
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
@@ -45,10 +46,30 @@ func loadFileConfig() (types.Config, error) {
 	return fileCfg, nil
 }
 
+func finalCleanup(cfg *types.Config) error {
+	cfg.General.DataFolder = filepath.Clean(cfg.General.DataFolder)
+	cfg.Logging.Folder = filepath.Clean(cfg.Logging.Folder)
+	return nil
+}
+
 func validateConfig(cfg types.Config) error {
+	// validate with validators...
 	if err := validate.Validate(&cfg); err != nil {
 		return err
 	}
+	// validate a few additional things...
+	svcList := cfg.ServiceList(true /* enabledOnly */)
+	if len(svcList) == 0 {
+		return fmt.Errorf("at least one service must be enabled")
+	}
+	chList := cfg.ChainList(true /* enabledOnly */)
+	if len(chList) == 0 {
+		return fmt.Errorf("at least one chain must be enabled")
+	}
+	if ch, ok := cfg.Chains["mainnet"]; !ok || len(ch.RPCs) == 0 {
+		return fmt.Errorf("mainnet RPC must be provided")
+	}
+
 	return nil
 }
 

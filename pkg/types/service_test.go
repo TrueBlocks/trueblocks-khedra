@@ -22,7 +22,7 @@ func TestNewService(t *testing.T) {
 			serviceType: "scraper",
 			expected: Service{
 				Name:      "scraper",
-				Enabled:   false,
+				Enabled:   true,
 				Sleep:     10,
 				BatchSize: 500,
 			},
@@ -42,7 +42,7 @@ func TestNewService(t *testing.T) {
 			serviceType: "api",
 			expected: Service{
 				Name:    "api",
-				Enabled: false,
+				Enabled: true,
 				Port:    8080,
 			},
 		},
@@ -51,7 +51,7 @@ func TestNewService(t *testing.T) {
 			serviceType: "ipfs",
 			expected: Service{
 				Name:    "ipfs",
-				Enabled: false,
+				Enabled: true,
 				Port:    5001,
 			},
 		},

@@ -1,7 +1,6 @@
 package app
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -48,54 +47,6 @@ If you are rate limited (likely), use the sleep option. See "help".
 }
 
 // --------------------------------------------------------
-func cPrepare(key, input string, q *wizard.Question) (string, error) {
-	if cfg, ok := q.Screen.Wizard.Backing.(*types.Config); ok {
-		if key == "mainnet" {
-			if ch, ok := cfg.Chains[key]; !ok {
-				ch.Name = key
-				ch.Enabled = true
-				cfg.Chains[key] = ch
-			}
-
-			if ch, ok := cfg.Chains[key]; !ok {
-				log.Fatal("chain not found")
-			} else {
-				if !ch.HasValidRpc() {
-					bytes, _ := json.Marshal(&ch)
-					q.State = string(bytes)
-					msg := fmt.Sprintf("no rpcs for chain %s ", key)
-					return strings.Join(ch.RPCs, ","), fmt.Errorf(msg+"%w", wizard.ErrValidate)
-				}
-			}
-		}
-	}
-	return input, validOk("skip - have all rpcs", input)
-}
-
-// --------------------------------------------------------
-func cValidate(key string, input string, q *wizard.Question) (string, error) {
-	if _, ok := q.Screen.Wizard.Backing.(*types.Config); ok {
-		if cfg, ok := q.Screen.Wizard.Backing.(*types.Config); ok {
-			if key == "mainnet" {
-				if ch, ok := cfg.Chains[key]; !ok {
-					log.Fatal("chain not found")
-				} else {
-					ch.RPCs = strings.Split(input, ",")
-					cfg.Chains[key] = ch
-					if !ch.HasValidRpc() {
-						bytes, _ := json.Marshal(&ch)
-						q.State = string(bytes)
-						msg := fmt.Sprintf("no rpcs for chain %s ", key)
-						return strings.Join(ch.RPCs, ","), fmt.Errorf(msg+"%w", wizard.ErrValidate)
-					}
-				}
-			}
-		}
-	}
-	return input, nil
-}
-
-// --------------------------------------------------------
 var c0 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
 }
@@ -103,17 +54,35 @@ var c0 = wizard.Question{
 // --------------------------------------------------------
 var c1 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
-	Question: `Please provide an RPC for Ethereum mainnet?`,
-	Hint: `Khedra requires an Ethereum mainnet RPC. It needs to read
-|state from the Unchained Index smart contract. Type "help" for
-|more information.`,
+	Question: `Please provide an RPC for Ethereum mainnet.`,
+	Hint: `Khedra requires a valid, reachable RPC for Mainnet
+|Ethereum. It must read state from the Unchained Index smart
+|contract. When you press enter, the RPC will be validated.`,
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
-		// qq := ChainQuestion{Question: *q}
-		return cPrepare("mainnet", input, q)
+		return prepare[types.Chain](q, func(cfg *types.Config) (string, types.Chain, error) {
+			if _, ok := cfg.Chains["mainnet"]; !ok {
+				cfg.Chains["mainnet"] = types.NewChain("mainnet")
+			}
+			copy := cfg.Chains["mainnet"]
+			copy.Name = ""
+			return strings.Join(copy.RPCs, ","), copy, validContinue()
+		})
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
-		// qq := ChainQuestion{Question: *q}
-		return cValidate("mainnet", input, q)
+		return confirm[types.Chain](q, func(cfg *types.Config) (string, types.Chain, error) {
+			copy, ok := cfg.Chains["mainnet"]
+			if !ok {
+				log.Fatal("chain mainnet not found")
+			}
+			copy.RPCs = strings.Split(input, ",")
+			if !copy.HasValidRpc() {
+				copy.Name = ""
+				return strings.Join(copy.RPCs, ","), copy, fmt.Errorf(`no rpcs for chain mainnet %w`, wizard.ErrValidate)
+			}
+			cfg.Chains["mainnet"] = copy
+			copy.Name = ""
+			return input, copy, validOk("mainnet rpc set to %s", input)
+		})
 	},
 	Replacements: []wizard.Replacement{
 		{Color: colors.Green, Values: []string{"\"help\"", "Unchained Index"}},
@@ -123,22 +92,24 @@ var c1 = wizard.Question{
 // --------------------------------------------------------
 var c2 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
-	Question: `Which chains do you want to index?`,
-	Hint: `Enter a comma separated list of chains to index. The wizard will
-|ask you next for RPCs. Enter "chains" to open a large list of
-|EVM chains. Use the shortNames from that list to name your
-|chains. When you publish your index, others' indexes will
-|match (e.g., mainnet, gnosis, optimism, sepolia, etc.)`,
+	Question: `Do you want to index other chains?`,
+	Hint: `You may index as many chains as you wish. All you need
+|is a separate, fast RPC endpoint for each chain. If
+|you do want to index another chain, type "edit" to open
+|the file in your editor. Adding your own chains should be
+|obvious. Save your work to return to this screen.`,
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
-		// qq := ChainQuestion{Question: *q}
-		return cPrepare("chain", input, q)
+		q.Screen.Instructions = `Type "edit" to add another chain or press enter to continue.`
+		return input, validContinue()
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
-		// qq := ChainQuestion{Question: *q}
-		return cValidate("chain", input, q)
+		if input != "edit" && len(input) > 0 {
+			return "", fmt.Errorf(`"edit" is the only valid response %w`, wizard.ErrValidate)
+		}
+		return input, validContinue()
 	},
 }
 
-// type ChainQuestion struct {
-// 	wizard.Question
-// }
+type ChainQuestion struct {
+	wizard.Question
+}
