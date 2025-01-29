@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,7 +10,6 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	_ "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/env"
-	"github.com/TrueBlocks/trueblocks-sdk/v4/services"
 	"github.com/urfave/cli/v2"
 )
 
@@ -75,38 +73,38 @@ func (k *KhedraApp) daemonAction(c *cli.Context) error {
 	time.Sleep(2 * time.Second)
 	os.Exit(0)
 
-	var activeServices []services.Servicer
-	chains := strings.Split(strings.ReplaceAll(k.config.EnabledChains(), " ", ""), ",")
-	scraperSvc := services.NewScrapeService(
-		k.logger.GetLogger(),
-		"all",
-		chains,
-		k.config.Services["scraper"].Sleep,
-		k.config.Services["scraper"].BatchSize,
-	)
-	monitorSvc := services.NewMonitorService(nil)
-	apiSvc := services.NewApiService(k.logger.GetLogger())
-	ipfsSvc := services.NewIpfsService(k.logger.GetLogger())
-	controlService := services.NewControlService(k.logger.GetLogger())
-	activeServices = append(activeServices, controlService)
-	activeServices = append(activeServices, scraperSvc)
-	activeServices = append(activeServices, monitorSvc)
-	activeServices = append(activeServices, apiSvc)
-	activeServices = append(activeServices, ipfsSvc)
-	slog.Info("Starting khedra daemon", "services", len(activeServices))
-	serviceManager := services.NewServiceManager(activeServices, k.logger.GetLogger())
-	for _, svc := range activeServices {
-		if controlSvc, ok := svc.(*services.ControlService); ok {
-			controlSvc.AttachServiceManager(serviceManager)
-		}
-	}
-	if err := serviceManager.StartAllServices(); err != nil {
-		k.Fatal(err.Error())
-	}
-	serviceManager.HandleSignals()
-	if true {
-		select {}
-	}
+	// var activeServices []services.Servicer
+	// chains := strings.Split(strings.ReplaceAll(k.config.EnabledChains(), " ", ""), ",")
+	// scraperSvc := services.NewScrapeService(
+	// 	k.logger.GetLogger(),
+	// 	"all",
+	// 	chains,
+	// 	k.config.Services["scraper"].Sleep,
+	// 	k.config.Services["scraper"].BatchSize,
+	// )
+	// monitorSvc := services.NewMonitorService(nil)
+	// apiSvc := services.NewApiService(k.logger.GetLogger())
+	// ipfsSvc := services.NewIpfsService(k.logger.GetLogger())
+	// controlService := services.NewControlService(k.logger.GetLogger())
+	// activeServices = append(activeServices, controlService)
+	// activeServices = append(activeServices, scraperSvc)
+	// activeServices = append(activeServices, monitorSvc)
+	// activeServices = append(activeServices, apiSvc)
+	// activeServices = append(activeServices, ipfsSvc)
+	// slog.Info("Starting khedra daemon", "services", len(activeServices))
+	// serviceManager := services.NewServiceManager(activeServices, k.logger.GetLogger())
+	// for _, svc := range activeServices {
+	// 	if controlSvc, ok := svc.(*services.ControlService); ok {
+	// 		controlSvc.AttachServiceManager(serviceManager)
+	// 	}
+	// }
+	// if err := serviceManager.StartAllServices(); err != nil {
+	// 	k.Fatal(err.Error())
+	// }
+	// serviceManager.HandleSignals()
+	// if true {
+	// 	select {}
+	// }
 
 	return nil
 }
