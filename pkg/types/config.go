@@ -24,7 +24,7 @@ type Config struct {
 
 func NewConfig() Config {
 	chains := map[string]Chain{
-		"mainnet": NewChain("mainnet"),
+		"mainnet": NewChain("mainnet", 1),
 	}
 	services := map[string]Service{
 		"scraper": NewService("scraper"),
@@ -39,6 +39,14 @@ func NewConfig() Config {
 		Services: services,
 		Logging:  NewLogging(),
 	}
+}
+
+func (c *Config) IndexPath() string {
+	return filepath.Join(c.General.DataFolder, "unchained")
+}
+
+func (c *Config) CachePath() string {
+	return filepath.Join(c.General.DataFolder, "cache")
 }
 
 func GetConfigFnNoCreate() string {

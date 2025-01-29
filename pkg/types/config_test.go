@@ -29,7 +29,7 @@ func TestConfigNew(t *testing.T) {
 	assert.NotNil(t, cfg.Chains)
 	assert.Equal(t, 1, len(cfg.Chains))
 	assert.NotNil(t, cfg.Chains["mainnet"])
-	assert.NotNil(t, cfg.Chains["sepolia"])
+	assert.Equal(t, 1, cfg.Chains["mainnet"].ChainId)
 
 	chain := cfg.Chains["mainnet"]
 	assert.Equal(t, "mainnet", chain.Name)

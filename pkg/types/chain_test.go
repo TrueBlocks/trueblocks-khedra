@@ -10,7 +10,7 @@ import (
 // Testing status: reviewed
 
 func TestNewChain(t *testing.T) {
-	c := NewChain("TestChain")
+	c := NewChain("TestChain", -1)
 
 	assert.Equal(t, "TestChain", c.Name)
 	assert.Equal(t, []string{"http://localhost:8545"}, c.RPCs)
@@ -30,6 +30,7 @@ func TestChainValidation(t *testing.T) {
 				Name:    "mainnet",
 				RPCs:    []string{"https://mainnet.infura.io/v3/YOUR_PROJECT_ID"},
 				Enabled: true,
+				ChainId: 1,
 			},
 			wantErr: false,
 		},
@@ -39,6 +40,7 @@ func TestChainValidation(t *testing.T) {
 				Name:    "sepolia",
 				RPCs:    []string{"https://sepolia.infura.io/v3/YOUR_PROJECT_ID", "https://another.valid.rpc"},
 				Enabled: false,
+				ChainId: 1,
 			},
 			wantErr: false,
 		},
@@ -48,6 +50,7 @@ func TestChainValidation(t *testing.T) {
 				Name:    "",
 				RPCs:    []string{"https://mainnet.infura.io/v3/YOUR_PROJECT_ID"},
 				Enabled: true,
+				ChainId: 1,
 			},
 			wantErr: true,
 		},
@@ -57,6 +60,7 @@ func TestChainValidation(t *testing.T) {
 				Name:    "mainnet",
 				RPCs:    []string{},
 				Enabled: true,
+				ChainId: 1,
 			},
 			wantErr: true,
 		},
@@ -66,14 +70,16 @@ func TestChainValidation(t *testing.T) {
 				Name:    "mainnet",
 				RPCs:    []string{"invalid-url"},
 				Enabled: true,
+				ChainId: 1,
 			},
 			wantErr: true,
 		},
 		{
 			name: "Valid Chain with missing Enabled field",
 			chain: Chain{
-				Name: "mainnet",
-				RPCs: []string{"https://mainnet.infura.io/v3/YOUR_PROJECT_ID"},
+				Name:    "mainnet",
+				RPCs:    []string{"https://mainnet.infura.io/v3/YOUR_PROJECT_ID"},
+				ChainId: 1,
 			},
 			wantErr: false, // Enabled defaults to false, which is valid
 		},
@@ -98,6 +104,7 @@ name: "TestChain"
 rpcs:
   - "http://localhost:8545"
 enabled: true
+chainId: 0
 `
 
 	assertions := func(t *testing.T, chain *Chain) {

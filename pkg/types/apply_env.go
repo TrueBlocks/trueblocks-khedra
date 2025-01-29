@@ -36,6 +36,7 @@ const (
 	// Chain Keys
 	ChainKeyRPCs    = "rpcs"
 	ChainKeyEnabled = "enabled"
+	ChainKeyChainId = "chainid"
 
 	// Service Keys
 	ServiceKeyEnabled   = "enabled"
@@ -97,6 +98,14 @@ func applyEnv(keys []string, receiver *Config) error {
 				return err
 			}
 			chain.Enabled = enabled
+			return nil
+		},
+		ChainKeyChainId: func(chain *Chain, value string) error {
+			chainId, err := strconv.Atoi(value)
+			if err := validateValueParsing(ChainKeyChainId, err); err != nil {
+				return err
+			}
+			chain.ChainId = chainId
 			return nil
 		},
 	}

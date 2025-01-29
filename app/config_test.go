@@ -24,7 +24,7 @@ func TestLoadConfig_ValidConfig(t *testing.T) {
 
 	cfg := types.Config{
 		Chains: map[string]types.Chain{
-			"mainnet": {Name: "mainnet", RPCs: []string{"http://rpc1.mainnet"}, Enabled: true},
+			"mainnet": {Name: "mainnet", RPCs: []string{"http://rpc1.mainnet"}, Enabled: true, ChainId: 1},
 		},
 		Services: map[string]types.Service{
 			"scraper": types.NewService("scraper"),
@@ -76,7 +76,9 @@ func TestLoadConfig_EnvOverrides(t *testing.T) {
 		Chains: map[string]types.Chain{
 			"mainnet": {
 				RPCs:    []string{"http://rpc1.mainnet"},
-				Enabled: true},
+				Enabled: true,
+				ChainId: 1,
+			},
 		},
 		Services: map[string]types.Service{
 			"api": {
@@ -123,6 +125,7 @@ func TestLoadConfig_ValidationFailure(t *testing.T) {
 			"mainnet": {
 				RPCs:    []string{},
 				Enabled: true,
+				ChainId: 1,
 			},
 		},
 		Services: map[string]types.Service{
@@ -158,11 +161,13 @@ func TestChainEnvOverrides(t *testing.T) {
 	defer types.SetupTest([]string{
 		"TB_KHEDRA_CHAINS_MAINNET_RPCS=http://rpc1.mainnet,http://rpc2.mainnet",
 		"TB_KHEDRA_CHAINS_MAINNET_ENABLED=false",
+		"TB_KHEDRA_CHAINS_MAINNET_CHAINID=2",
 	})()
 
 	cfg, err := LoadConfig()
 	assert.NoError(t, err, t.Name())
 	assert.Equal(t, []string{"http://rpc1.mainnet", "http://rpc2.mainnet"}, cfg.Chains["mainnet"].RPCs, "RPCs for mainnet should be overridden by environment variable")
+	assert.Equal(t, 2, cfg.Chains["mainnet"].ChainId, "ChainId for mainnet should be overridden by environment variable")
 }
 
 func TestChainInvalidBooleanValue(t *testing.T) {
@@ -254,6 +259,7 @@ func TestChainLargeNumberOfChains(t *testing.T) {
 			Name:    chainName,
 			RPCs:    []string{fmt.Sprintf("http://%s.rpc", chainName)},
 			Enabled: true,
+			ChainId: i + 1,
 		}
 	}
 

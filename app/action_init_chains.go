@@ -61,7 +61,7 @@ var c1 = wizard.Question{
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
 		return prepare[types.Chain](q, func(cfg *types.Config) (string, types.Chain, error) {
 			if _, ok := cfg.Chains["mainnet"]; !ok {
-				cfg.Chains["mainnet"] = types.NewChain("mainnet")
+				cfg.Chains["mainnet"] = types.NewChain("mainnet", 1)
 			}
 			copy := cfg.Chains["mainnet"]
 			copy.Name = ""

@@ -9,21 +9,25 @@ chains:
     rpcs:                        # A list of RPC endpoints (at least one is required)
       - "rpc_endpoint_for_mainnet"
     enabled: true                # `true` if this chain is enabled
+    chainId: 1                   # Chain ID
 
   sepolia:
     rpcs:
       - "rpc_endpoint_for_sepolia"
     enabled: true
+    chainId: 11155111
 
   gnosis:                         # Add as many chains as your machine can handle
     rpcs:
       - "rpc_endpoint_for_gnosis" # must be a reachable, valid URL if the chain is enabled
     enabled: false                # this chain is disabled
+    chainId: 100
 
   optimism:
     rpcs:
       - "rpc_endpoint_for_optimism"
     enabled: false
+    chainId: 10
 
 services:                          # See note 5
   scraper:                         # Required. (One of: api, scraper, monitor, ipfs, control)

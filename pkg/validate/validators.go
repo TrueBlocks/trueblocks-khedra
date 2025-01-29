@@ -167,3 +167,17 @@ func strictURLValidator(fv FieldValidator) error {
 
 	return Passed(fv, value, "")
 }
+
+// nonZeroValidator ensures the field value is an integer greater than zero.
+func nonZeroValidator(fv FieldValidator) error {
+	value, err := getIntValue(fv.fieldValue)
+	if err != nil {
+		return Failed(fv, "is not an integer", fv.fieldValue.Kind().String())
+	}
+
+	if value == 0 {
+		return Failed(fv, "must be non-zero", fmt.Sprintf("%d", value))
+	}
+
+	return Passed(fv, fmt.Sprintf("%d", value), "")
+}

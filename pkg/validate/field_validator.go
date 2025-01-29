@@ -48,6 +48,7 @@ func init() {
 	ValidatorRegistry["endswith"] = endswithValidator
 	ValidatorRegistry["folder_exists"] = folderExistsValidator
 	ValidatorRegistry["strict_url"] = strictURLValidator
+	ValidatorRegistry["non_zero"] = nonZeroValidator
 	ValidatorRegistry["required"] = requiredValidator
 	ValidatorRegistry["req_if_enabled"] = reqIfEnabledValidator
 	ValidatorRegistry["dive"] = func(fv FieldValidator) error { return nil }
