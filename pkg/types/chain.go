@@ -22,9 +22,9 @@ func (ch *Chain) IsEnabled() bool {
 	return ch.Enabled
 }
 
-func (ch *Chain) HasValidRpc() bool {
+func (ch *Chain) HasValidRpc(tries int) bool {
 	for _, rpc := range ch.RPCs {
-		if err := validate.TryConnect(ch.Name, rpc, 2); err == nil {
+		if err := validate.TryConnect(ch.Name, rpc, tries); err == nil {
 			return true
 		}
 	}

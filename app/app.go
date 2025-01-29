@@ -14,7 +14,7 @@ import (
 type KhedraApp struct {
 	cli       *cli.App
 	config    *types.Config
-	logger    *slog.Logger
+	logger    *types.CustomLogger
 	chainList *types.ChainList
 }
 
@@ -52,7 +52,7 @@ func (k *KhedraApp) ConfigMaker() (types.Config, error) {
 	}
 	k.config = &cfg
 	k.logger = types.NewLogger(cfg.Logging)
-	slog.SetDefault(k.logger)
+	slog.SetDefault(k.logger.GetLogger())
 
 	return cfg, nil
 }

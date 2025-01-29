@@ -11,7 +11,7 @@ import (
 
 type ChainList struct {
 	Chains    []ChainListItem `json:"chains"`
-	ChainsMap map[string]*ChainListItem
+	ChainsMap map[int]*ChainListItem
 }
 
 type ChainListItem struct {
@@ -44,9 +44,9 @@ func UpdateChainList() (*ChainList, error) {
 		if err != nil {
 			return &ChainList{}, err
 		}
-		chainList.ChainsMap = make(map[string]*ChainListItem)
+		chainList.ChainsMap = make(map[int]*ChainListItem)
 		for _, chain := range chainList.Chains {
-			chainList.ChainsMap[chain.ShortName] = &chain
+			chainList.ChainsMap[chain.ChainId] = &chain
 		}
 		return &chainList, nil
 	}

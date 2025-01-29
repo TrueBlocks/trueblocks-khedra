@@ -75,7 +75,7 @@ var c1 = wizard.Question{
 				log.Fatal("chain mainnet not found")
 			}
 			copy.RPCs = strings.Split(input, ",")
-			if !copy.HasValidRpc() {
+			if !copy.HasValidRpc(2) {
 				copy.Name = ""
 				return strings.Join(copy.RPCs, ","), copy, fmt.Errorf(`no rpcs for chain mainnet %w`, wizard.ErrValidate)
 			}

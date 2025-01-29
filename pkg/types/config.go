@@ -123,10 +123,10 @@ func isWritable(path string) bool {
 	return true
 }
 
-func (c *Config) ChainList(enabledOnly bool) string {
+func (c *Config) EnabledChains() string {
 	var ret []string
 	for key, ch := range c.Chains {
-		if !enabledOnly || ch.Enabled {
+		if ch.Enabled {
 			ret = append(ret, key)
 		}
 	}
@@ -211,6 +211,7 @@ chains:
       - "{{ $rpc }}"
 {{- end }}
     enabled: {{ $value.Enabled }}
+    chainId: {{ $value.ChainId }}
 {{- end }}
 
 services:

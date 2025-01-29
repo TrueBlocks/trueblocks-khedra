@@ -69,7 +69,7 @@ func validateConfig(cfg types.Config) error {
 	if len(svcList) == 0 {
 		return fmt.Errorf("at least one service must be enabled")
 	}
-	chList := cfg.ChainList(true /* enabledOnly */)
+	chList := cfg.EnabledChains()
 	if len(chList) == 0 {
 		return fmt.Errorf("at least one chain must be enabled")
 	}

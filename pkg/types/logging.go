@@ -37,7 +37,40 @@ func NewLogging() Logging {
 	}
 }
 
+// convertLevel converts a string log level to a slog.Level.
+func convertLevel(level string) slog.Level {
+	switch level {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
+}
+
 const LevelProgress slog.Level = slog.LevelInfo + 1
+
+func levelToString(level slog.Level) string {
+	switch level {
+	case LevelProgress:
+		return "PROG"
+	case slog.LevelDebug:
+		return "DEBUG"
+	case slog.LevelInfo:
+		return "INFO"
+	case slog.LevelWarn:
+		return "WARN"
+	case slog.LevelError:
+		return "ERROR"
+	default:
+		return level.String() // Fallback to default slog formatting
+	}
+}
 
 type multiHandler struct {
 	writeBoth     bool
@@ -54,6 +87,7 @@ func (m *multiHandler) Enabled(ctx context.Context, level slog.Level) bool {
 }
 
 func (m *multiHandler) Handle(ctx context.Context, r slog.Record) error {
+	// Special handling for LevelProgress (only screenHandler, no fileHandler)
 	if r.Level == LevelProgress {
 		if m.screenHandler.Enabled(ctx, r.Level) {
 			return m.screenHandler.Handle(ctx, r)
@@ -61,6 +95,7 @@ func (m *multiHandler) Handle(ctx context.Context, r slog.Record) error {
 		return nil
 	}
 
+	// Dispatch to handlers
 	if m.screenHandler.Enabled(ctx, r.Level) {
 		if err := m.screenHandler.Handle(ctx, r); err != nil {
 			return err
@@ -90,10 +125,33 @@ func (m *multiHandler) WithGroup(name string) slog.Handler {
 	}
 }
 
-// NewLogger creates a logger with optional file logging
-func NewLogger(logging Logging) *slog.Logger {
+// CustomLogger wraps slog.Logger and adds a Progress method
+type CustomLogger struct {
+	*slog.Logger
+	screenHandler slog.Handler
+}
+
+// Progress logs a message at the custom "PROG" level (screen only)
+func (c *CustomLogger) Progress(msg string, args ...any) {
+	if c.screenHandler.Enabled(context.Background(), LevelProgress) {
+		c.Logger.Log(context.Background(), LevelProgress, msg, args...)
+	}
+}
+
+// NewLogger creates a logger with an additional Progress method
+func NewLogger(logging Logging) *CustomLogger {
+	replaceLevel := func(groups []string, attr slog.Attr) slog.Attr {
+		if attr.Key == slog.LevelKey {
+			if level, ok := attr.Value.Any().(slog.Level); ok {
+				return slog.Attr{Key: slog.LevelKey, Value: slog.StringValue(levelToString(level))}
+			}
+		}
+		return attr
+	}
+
 	screenHandler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
-		Level: convertLevel(logging.Level),
+		Level:       convertLevel(logging.Level),
+		ReplaceAttr: replaceLevel,
 	})
 
 	var fileHandler slog.Handler
@@ -106,7 +164,8 @@ func NewLogger(logging Logging) *slog.Logger {
 			Compress:   logging.Compress,
 		}
 		fileHandler = slog.NewTextHandler(fileWriter, &slog.HandlerOptions{
-			Level: convertLevel(logging.Level),
+			Level:       convertLevel(logging.Level),
+			ReplaceAttr: replaceLevel,
 		})
 	}
 
@@ -116,21 +175,12 @@ func NewLogger(logging Logging) *slog.Logger {
 		writeBoth:     logging.Filename != "",
 	}
 
-	return slog.New(handler)
+	return &CustomLogger{
+		Logger:        slog.New(handler),
+		screenHandler: screenHandler,
+	}
 }
 
-// convertLevel converts a string log level to a slog.Level.
-func convertLevel(level string) slog.Level {
-	switch level {
-	case "debug":
-		return slog.LevelDebug
-	case "info":
-		return slog.LevelInfo
-	case "warn":
-		return slog.LevelWarn
-	case "error":
-		return slog.LevelError
-	default:
-		return slog.LevelInfo
-	}
+func (c *CustomLogger) GetLogger() *slog.Logger {
+	return c.Logger
 }
