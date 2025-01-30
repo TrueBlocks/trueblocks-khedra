@@ -12,14 +12,12 @@ import (
 )
 
 type KhedraApp struct {
-	cli       *cli.App
-	config    *types.Config
-	logger    *types.CustomLogger
-	chainList *types.ChainList
+	cli    *cli.App
+	config *types.Config
+	logger *types.CustomLogger
 }
 
 func NewKhedraApp() *KhedraApp {
-	var err error
 	k := KhedraApp{}
 
 	// If khedra is already running, one of these ports is serving the
@@ -34,9 +32,6 @@ func NewKhedraApp() *KhedraApp {
 		}
 	}
 
-	if k.chainList, err = types.UpdateChainList(); err != nil {
-		fmt.Println(err.Error())
-	}
 	k.cli = initCli(&k)
 	return &k
 }

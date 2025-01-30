@@ -13,6 +13,7 @@ import (
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	_ "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/env"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
+	sdk "github.com/TrueBlocks/trueblocks-sdk/v4"
 )
 
 type Config struct {
@@ -39,6 +40,13 @@ func NewConfig() Config {
 		Services: services,
 		Logging:  NewLogging(),
 	}
+}
+
+func (c *Config) Version() string {
+	v := sdk.Version()
+	v = strings.Replace(v, "GHC-TrueBlocks//", "", 1)
+	v = strings.Replace(v, "-release", "", 1)
+	return v
 }
 
 func (c *Config) IndexPath() string {
@@ -211,7 +219,7 @@ chains:
       - "{{ $rpc }}"
 {{- end }}
     enabled: {{ $value.Enabled }}
-    chainId: {{ $value.ChainId }}
+    chainId: {{ $value.ChainID }}
 {{- end }}
 
 services:

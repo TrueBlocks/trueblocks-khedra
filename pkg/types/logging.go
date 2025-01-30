@@ -2,10 +2,14 @@ package types
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"time"
 
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
@@ -37,7 +41,6 @@ func NewLogging() Logging {
 	}
 }
 
-// convertLevel converts a string log level to a slog.Level.
 func convertLevel(level string) slog.Level {
 	switch level {
 	case "debug":
@@ -68,7 +71,7 @@ func levelToString(level slog.Level) string {
 	case slog.LevelError:
 		return "ERROR"
 	default:
-		return level.String() // Fallback to default slog formatting
+		return level.String()
 	}
 }
 
@@ -78,16 +81,11 @@ type multiHandler struct {
 	fileHandler   slog.Handler
 }
 
-// Enabled determines whether the log level should be processed by this handler.
-// Returns true if the screen handler is enabled for the given level or, if writeBoth
-// is true, if the file handler is enabled for the level. This ensures logs are
-// processed if at least one of the handlers supports the level.
 func (m *multiHandler) Enabled(ctx context.Context, level slog.Level) bool {
 	return m.screenHandler.Enabled(ctx, level) || (m.writeBoth && m.fileHandler.Enabled(ctx, level))
 }
 
 func (m *multiHandler) Handle(ctx context.Context, r slog.Record) error {
-	// Special handling for LevelProgress (only screenHandler, no fileHandler)
 	if r.Level == LevelProgress {
 		if m.screenHandler.Enabled(ctx, r.Level) {
 			return m.screenHandler.Handle(ctx, r)
@@ -95,7 +93,6 @@ func (m *multiHandler) Handle(ctx context.Context, r slog.Record) error {
 		return nil
 	}
 
-	// Dispatch to handlers
 	if m.screenHandler.Enabled(ctx, r.Level) {
 		if err := m.screenHandler.Handle(ctx, r); err != nil {
 			return err
@@ -125,34 +122,87 @@ func (m *multiHandler) WithGroup(name string) slog.Handler {
 	}
 }
 
-// CustomLogger wraps slog.Logger and adds a Progress method
 type CustomLogger struct {
 	*slog.Logger
 	screenHandler slog.Handler
 }
 
-// Progress logs a message at the custom "PROG" level (screen only)
+func (c *CustomLogger) Fatal(msg string, args ...any) {
+	c.Error(msg, args...)
+	os.Exit(1)
+}
+
 func (c *CustomLogger) Progress(msg string, args ...any) {
 	if c.screenHandler.Enabled(context.Background(), LevelProgress) {
 		c.Logger.Log(context.Background(), LevelProgress, msg, args...)
 	}
 }
 
-// NewLogger creates a logger with an additional Progress method
-func NewLogger(logging Logging) *CustomLogger {
-	replaceLevel := func(groups []string, attr slog.Attr) slog.Attr {
-		if attr.Key == slog.LevelKey {
-			if level, ok := attr.Value.Any().(slog.Level); ok {
-				return slog.Attr{Key: slog.LevelKey, Value: slog.StringValue(levelToString(level))}
-			}
-		}
-		return attr
+type ColorTextHandler struct {
+	Writer io.Writer
+	Level  slog.Level
+}
+
+func (h *ColorTextHandler) Handle(ctx context.Context, r slog.Record) error {
+	levelColors := map[slog.Level]string{
+		slog.LevelDebug: colors.Cyan,
+		slog.LevelInfo:  colors.Green,
+		slog.LevelWarn:  colors.BrightYellow,
+		slog.LevelError: colors.Red,
+		LevelProgress:   colors.BrightBlue,
 	}
 
-	screenHandler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
-		Level:       convertLevel(logging.Level),
-		ReplaceAttr: replaceLevel,
+	timestamp := r.Time.Format(time.RFC3339)
+	levelColor, exists := levelColors[r.Level]
+	if !exists {
+		levelColor = colors.Off
+	}
+	levelStr := fmt.Sprintf("%s%s%s", levelColor, levelToString(r.Level), colors.Off)
+
+	fixedMsg := ""
+	attrs := ""
+	r.Attrs(func(a slog.Attr) bool {
+		if a.Key == "time" {
+			return true
+		}
+		attrs += fmt.Sprintf("%s%s%s=%v ", colors.Green, a.Key, colors.Off, a.Value)
+		return true
 	})
+
+	if attrs != "" {
+		fixedMsg = fmt.Sprintf("%-25.25s", r.Message)
+	} else {
+		fixedMsg = r.Message
+	}
+
+	var msg string
+	if attrs != "" {
+		msg = fmt.Sprintf("%s %s\t%s\t%s\n", timestamp, levelStr, fixedMsg, attrs)
+	} else {
+		msg = fmt.Sprintf("%s %s\t%s\n", timestamp, levelStr, fixedMsg)
+	}
+
+	_, err := h.Writer.Write([]byte(msg))
+	return err
+}
+
+func (h *ColorTextHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return level >= h.Level
+}
+
+func (h *ColorTextHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return h
+}
+
+func (h *ColorTextHandler) WithGroup(name string) slog.Handler {
+	return h
+}
+
+func NewLogger(logging Logging) *CustomLogger {
+	screenHandler := &ColorTextHandler{
+		Writer: os.Stderr,
+		Level:  convertLevel(logging.Level),
+	}
 
 	var fileHandler slog.Handler
 	if logging.Filename != "" {
@@ -164,8 +214,7 @@ func NewLogger(logging Logging) *CustomLogger {
 			Compress:   logging.Compress,
 		}
 		fileHandler = slog.NewTextHandler(fileWriter, &slog.HandlerOptions{
-			Level:       convertLevel(logging.Level),
-			ReplaceAttr: replaceLevel,
+			Level: convertLevel(logging.Level),
 		})
 	}
 
