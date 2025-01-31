@@ -75,25 +75,33 @@ func (k *KhedraApp) daemonAction(c *cli.Context) error {
 	controlService := services.NewControlService(k.logger.GetLogger())
 	activeServices = append(activeServices, controlService)
 	for _, svc := range k.config.Services {
-		if svc.Enabled {
-			switch svc.Name {
-			case "scraper":
-				chains := strings.Split(strings.ReplaceAll(k.config.EnabledChains(), " ", ""), ",")
-				scraperSvc := services.NewScrapeService(
-					k.logger.GetLogger(),
-					"all",
-					chains,
-					k.config.Services["scraper"].Sleep,
-					k.config.Services["scraper"].BatchSize,
-				)
-				activeServices = append(activeServices, scraperSvc)
-			case "monitor":
-				monitorSvc := services.NewMonitorService(nil)
-				activeServices = append(activeServices, monitorSvc)
-			case "api":
+		switch svc.Name {
+		case "scraper":
+			chains := strings.Split(strings.ReplaceAll(k.config.EnabledChains(), " ", ""), ",")
+			scraperSvc := services.NewScrapeService(
+				k.logger.GetLogger(),
+				"all",
+				chains,
+				k.config.Services["scraper"].Sleep,
+				k.config.Services["scraper"].BatchSize,
+			)
+			activeServices = append(activeServices, scraperSvc)
+			if !svc.Enabled {
+				scraperSvc.Pause()
+			}
+		case "monitor":
+			monitorSvc := services.NewMonitorService(nil)
+			activeServices = append(activeServices, monitorSvc)
+			if !svc.Enabled {
+				monitorSvc.Pause()
+			}
+		case "api":
+			if svc.Enabled {
 				apiSvc := services.NewApiService(k.logger.GetLogger())
 				activeServices = append(activeServices, apiSvc)
-			case "ipfs":
+			}
+		case "ipfs":
+			if svc.Enabled {
 				ipfsSvc := services.NewIpfsService(k.logger.GetLogger())
 				activeServices = append(activeServices, ipfsSvc)
 			}
