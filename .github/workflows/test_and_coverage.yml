@@ -16,7 +16,7 @@ jobs:
       # Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Install Go 1.23
+      - name: Install Go 1.23.1
         run: |
           ARCH=$(uname -m)
           if [ "$ARCH" = "x86_64" ]; then
