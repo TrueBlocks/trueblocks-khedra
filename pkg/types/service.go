@@ -100,5 +100,5 @@ func init() {
 		return validate.Passed(fv, "valid", serviceName)
 	}
 
-	validate.RegisterValidator("service_field", serviceFieldValidator)
+	_ = validate.RegisterValidator("service_field", serviceFieldValidator)
 }

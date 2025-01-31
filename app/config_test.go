@@ -41,7 +41,7 @@ func TestLoadConfig_ValidConfig(t *testing.T) {
 	}
 
 	bytes, _ := yamlv2.Marshal(cfg)
-	coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
+	_ = coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
 
 	result, err := LoadConfig()
 	assert.NoError(t, err, t.Name())
@@ -55,7 +55,7 @@ func TestLoadConfig_ValidConfig(t *testing.T) {
 func TestLoadConfig_InvalidFileConfig(t *testing.T) {
 	defer types.SetupTest([]string{})()
 
-	os.WriteFile(types.GetConfigFn(), []byte("invalid_yaml"), 0644)
+	_ = os.WriteFile(types.GetConfigFn(), []byte("invalid_yaml"), 0644)
 
 	_, err := LoadConfig()
 	assert.Error(t, err, t.Name())
@@ -103,7 +103,7 @@ func TestLoadConfig_EnvOverrides(t *testing.T) {
 	}
 
 	bytes, _ := yamlv2.Marshal(cfg)
-	coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
+	_ = coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
 
 	result, err := LoadConfig()
 	assert.NoError(t, err, t.Name())
@@ -148,7 +148,7 @@ func TestLoadConfig_ValidationFailure(t *testing.T) {
 	}
 
 	bytes, _ := yamlv2.Marshal(cfg)
-	coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
+	_ = coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
 
 	_, err := LoadConfig()
 	assert.Error(t, err, t.Name())
@@ -264,7 +264,7 @@ func TestChainLargeNumberOfChains(t *testing.T) {
 	}
 
 	bytes, _ := yamlv2.Marshal(cfg)
-	coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
+	_ = coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
 
 	var err error
 	if cfg, err = LoadConfig(); err != nil {

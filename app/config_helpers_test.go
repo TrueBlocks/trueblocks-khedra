@@ -16,7 +16,7 @@ import (
 func TestLoadFileConfig(t *testing.T) {
 	invalidFile := func() {
 		defer types.SetupTest([]string{})()
-		coreFile.StringToAsciiFile(types.GetConfigFn(), "invalid: [:::]")
+		_ = coreFile.StringToAsciiFile(types.GetConfigFn(), "invalid: [:::]")
 
 		_, err := loadFileConfig()
 		assert.Error(t, err)
@@ -31,7 +31,7 @@ func TestLoadFileConfig(t *testing.T) {
 		chain.RPCs = []string{"http://localhost:8545", "http://localhost:8546"}
 		cfg.Chains["mainnet"] = chain
 		bytes, _ := yamlv2.Marshal(cfg)
-		coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
+		_ = coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
 		// fmt.Println(string(bytes))
 
 		result, err := loadFileConfig()
@@ -134,8 +134,8 @@ func TestInitializeFolders(t *testing.T) {
 			},
 		}
 
-		os.MkdirAll(cfg.Logging.Folder, os.ModePerm)
-		os.MkdirAll(cfg.General.DataFolder, os.ModePerm)
+		_ = os.MkdirAll(cfg.Logging.Folder, os.ModePerm)
+		_ = os.MkdirAll(cfg.General.DataFolder, os.ModePerm)
 
 		err := initializeFolders(cfg)
 		assert.NoError(t, err)

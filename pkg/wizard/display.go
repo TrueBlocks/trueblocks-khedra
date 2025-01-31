@@ -71,14 +71,14 @@ func displayScreen(w *Wizard, screenIndex int) error {
 					i--
 				case errors.Is(err, ErrUserEdit):
 					configPath := types.GetConfigFn()
-					curScreen.EditFile(configPath)
+					_ = curScreen.EditFile(configPath)
 					if err := curScreen.Reload(configPath); err != nil {
 						return err
 					}
 					i--
 				case errors.Is(err, ErrUserChains):
 					chainsPath := strings.ReplaceAll(types.GetConfigFn(), "config.yaml", "chains.json")
-					curScreen.EditFile(chainsPath)
+					_ = curScreen.EditFile(chainsPath)
 					i--
 				case errors.Is(err, ErrUserBack):
 					if i == 0 {

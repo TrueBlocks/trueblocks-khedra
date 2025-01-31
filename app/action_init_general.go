@@ -147,7 +147,7 @@ var g3 = wizard.Question{
 			}
 			cfg.General.DataFolder = input
 			if !file.FolderExists(path) {
-				file.EstablishFolder(path)
+				_ = file.EstablishFolder(path)
 				return input, copy, validWarn(`"%s" was created`, path)
 			}
 			return input, copy, validOk(`the index will be stored at %s`, path)

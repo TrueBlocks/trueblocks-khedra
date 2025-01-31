@@ -16,7 +16,7 @@ func initCli(k *KhedraApp) *cli.App {
 	showError := func(c *cli.Context, showHelp bool, err error) {
 		_, _ = c.App.Writer.Write([]byte("\n" + colors.Red + "Error: " + err.Error() + colors.Off + "\n\n"))
 		if showHelp {
-			cli.ShowAppHelp(c)
+			_ = cli.ShowAppHelp(c)
 		}
 	}
 

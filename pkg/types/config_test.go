@@ -88,7 +88,7 @@ func TestConfigEstablish(t *testing.T) {
 
 	cfg := NewConfig()
 	bytes, _ := yamlv2.Marshal(cfg)
-	coreFile.StringToAsciiFile(configFile, string(bytes))
+	_ = coreFile.StringToAsciiFile(configFile, string(bytes))
 
 	assert.FileExists(t, configFile)
 	os.Remove(configFile)

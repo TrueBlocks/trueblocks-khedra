@@ -57,7 +57,7 @@ type Explorer struct {
 
 func UpdateChainList() (*ChainList, error) {
 	configPath := utils.ResolvePath("~/.khedra")
-	file.EstablishFolder(configPath)
+	_ = file.EstablishFolder(configPath)
 	chainUrl := "https://chainid.network/chains.json"
 	chainsFn := filepath.Join(configPath, "chains.json")
 	if bytes, err := utils.DownloadAndStore(chainUrl, chainsFn, 24*time.Hour); err != nil {

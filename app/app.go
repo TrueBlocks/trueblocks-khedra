@@ -37,7 +37,7 @@ func NewKhedraApp() *KhedraApp {
 }
 
 func (k *KhedraApp) Run() {
-	k.cli.Run(os.Args)
+	_ = k.cli.Run(os.Args)
 }
 
 func (k *KhedraApp) ConfigMaker() (types.Config, error) {
