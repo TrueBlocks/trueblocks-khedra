@@ -116,77 +116,77 @@ func TestValidateConfig(t *testing.T) {
 }
 
 // ---------------------------------------------------------
-// func TestInitializeFolders(t *testing.T) {
-// 	cleanup := func(cfg types.Config) {
-// 		os.RemoveAll(cfg.Logging.Folder)
-// 		os.RemoveAll(cfg.General.DataFolder)
-// 	}
+func TestInitializeFolders(t *testing.T) {
+	cleanup := func(cfg types.Config) {
+		os.RemoveAll(cfg.Logging.Folder)
+		os.RemoveAll(cfg.General.DataFolder)
+	}
 
-// 	allFoldersExist := func() {
-// 		cfg := types.Config{
-// 			Logging: types.Logging{
-// 				Folder: "/tmp/test-logging-folder",
-// 			},
-// 			General: types.General{
-// 				DataFolder: "/tmp/test-data-folder",
-// 				Strategy:   "download",
-// 				Detail:     "index",
-// 			},
-// 		}
+	allFoldersExist := func() {
+		cfg := types.Config{
+			Logging: types.Logging{
+				Folder: "/tmp/test-logging-folder",
+			},
+			General: types.General{
+				DataFolder: "/tmp/test-data-folder",
+				Strategy:   "download",
+				Detail:     "index",
+			},
+		}
 
-// 		_ = os.MkdirAll(cfg.Logging.Folder, os.ModePerm)
-// 		_ = os.MkdirAll(cfg.General.DataFolder, os.ModePerm)
+		_ = os.MkdirAll(cfg.Logging.Folder, os.ModePerm)
+		_ = os.MkdirAll(cfg.General.DataFolder, os.ModePerm)
 
-// 		err := initializeFolders(cfg)
-// 		assert.NoError(t, err)
+		err := initializeFolders(cfg)
+		assert.NoError(t, err)
 
-// 		cleanup(cfg)
-// 	}
-// 	t.Run("All Folders Exist", func(t *testing.T) { allFoldersExist() })
+		cleanup(cfg)
+	}
+	t.Run("All Folders Exist", func(t *testing.T) { allFoldersExist() })
 
-// 	createMissingFolders := func() {
-// 		cfg := types.Config{
-// 			Logging: types.Logging{
-// 				Folder: "/tmp/test-missing-logging-folder",
-// 			},
-// 			General: types.General{
-// 				DataFolder: "/tmp/test-missing-data-folder",
-// 				Strategy:   "download",
-// 				Detail:     "index",
-// 			},
-// 		}
+	createMissingFolders := func() {
+		cfg := types.Config{
+			Logging: types.Logging{
+				Folder: "/tmp/test-missing-logging-folder",
+			},
+			General: types.General{
+				DataFolder: "/tmp/test-missing-data-folder",
+				Strategy:   "download",
+				Detail:     "index",
+			},
+		}
 
-// 		cleanup(cfg)
+		cleanup(cfg)
 
-// 		err := initializeFolders(cfg)
-// 		assert.NoError(t, err)
+		err := initializeFolders(cfg)
+		assert.NoError(t, err)
 
-// 		_, err = os.Stat(cfg.Logging.Folder)
-// 		assert.NoError(t, err)
-// 		_, err = os.Stat(cfg.General.DataFolder)
-// 		assert.NoError(t, err)
+		_, err = os.Stat(cfg.Logging.Folder)
+		assert.NoError(t, err)
+		_, err = os.Stat(cfg.General.DataFolder)
+		assert.NoError(t, err)
 
-// 		cleanup(cfg)
-// 	}
-// 	t.Run("Create Missing Folders", func(t *testing.T) { createMissingFolders() })
+		cleanup(cfg)
+	}
+	t.Run("Create Missing Folders", func(t *testing.T) { createMissingFolders() })
 
-// 	errorOnInvalidPath := func() {
-// 		cfg := types.Config{
-// 			Logging: types.Logging{
-// 				Folder: "/invalid-folder-path/\\0",
-// 			},
-// 			General: types.General{
-// 				DataFolder: "/tmp/test-data-folder",
-// 				Strategy:   "download",
-// 				Detail:     "index",
-// 			},
-// 		}
+	errorOnInvalidPath := func() {
+		cfg := types.Config{
+			Logging: types.Logging{
+				Folder: "/invalid-folder-path/\\0",
+			},
+			General: types.General{
+				DataFolder: "/tmp/test-data-folder",
+				Strategy:   "download",
+				Detail:     "index",
+			},
+		}
 
-// 		err := initializeFolders(cfg)
-// 		assert.Error(t, err)
-// 		assert.Contains(t, err.Error(), "failed to create folder")
+		err := initializeFolders(cfg)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to create folder")
 
-// 		cleanup(cfg)
-// 	}
-// 	t.Run("Error On Invalid Path", func(t *testing.T) { errorOnInvalidPath() })
-// }
+		cleanup(cfg)
+	}
+	t.Run("Error On Invalid Path", func(t *testing.T) { errorOnInvalidPath() })
+}
