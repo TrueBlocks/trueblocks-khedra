@@ -28,7 +28,7 @@ func TestLoadFileConfig(t *testing.T) {
 
 		cfg := types.NewConfig()
 		chain := cfg.Chains["mainnet"]
-		chain.RPCs = []string{"http://localhost:8545", "http://localhost:8546"}
+		chain.RPCs = []string{"http://localhost:8545"}
 		cfg.Chains["mainnet"] = chain
 		bytes, _ := yamlv2.Marshal(cfg)
 		_ = coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
