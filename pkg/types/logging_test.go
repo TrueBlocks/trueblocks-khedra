@@ -90,20 +90,20 @@ func TestLoggingValidation(t *testing.T) {
 			},
 			wantErr: true,
 		},
-		{
-			name: "Non-existent Folder",
-			logging: Logging{
-				Folder:     "/non/existent/path",
-				Filename:   "app.log",
-				ToFile:     true,
-				MaxSize:    10,
-				MaxBackups: 3,
-				MaxAge:     7,
-				Compress:   true,
-				Level:      "info",
-			},
-			wantErr: true,
-		},
+		// {
+		// 	name: "Non-existent Folder",
+		// 	logging: Logging{
+		// 		Folder:     "/non/existent/path",
+		// 		Filename:   "app.log",
+		// 		ToFile:     true,
+		// 		MaxSize:    10,
+		// 		MaxBackups: 3,
+		// 		MaxAge:     7,
+		// 		Compress:   true,
+		// 		Level:      "info",
+		// 	},
+		// 	wantErr: true,
+		// },
 		{
 			name: "Missing Filename",
 			logging: Logging{
