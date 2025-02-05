@@ -155,11 +155,9 @@ func (k *KhedraApp) createChifraConfig() error {
 	chainStr := k.config.EnabledChains()
 	chains := strings.Split(chainStr, ",")
 	for _, chain := range chains {
-		chainConfig := filepath.Join(k.config.General.DataFolder, "config", chain)
-		if err := file.EstablishFolder(chainConfig); err != nil {
+		if err := k.createChainConfig(chain); err != nil {
 			return err
 		}
-		k.logger.Progress("Creating chain config", "chainConfig", chainConfig)
 	}
 
 	tmpl, err := template.New("tmpl").Parse(configTmpl)
@@ -194,6 +192,28 @@ func (k *KhedraApp) createChifraConfig() error {
 // 14160,apps,Accounts,monitors,acctExport,n3,,,,,note,,,,,,The --watch option requires two additional parameters to be specified: `--watchlist` and `--commands`.
 // 14170,apps,Accounts,monitors,acctExport,n4,,,,,note,,,,,,Addresses provided on the command line are ignored in `--watch` mode.
 // 14180,apps,Accounts,monitors,acctExport,n5,,,,,note,,,,,,Providing the value `existing` to the `--watchlist` monitors all existing monitor files (see --list).
+
+func (k *KhedraApp) createChainConfig(chain string) error {
+	chainConfig := filepath.Join(k.config.General.DataFolder, "config", chain)
+	if err := file.EstablishFolder(chainConfig); err != nil {
+		return fmt.Errorf("failed to create folder %s: %w", chainConfig, err)
+	}
+
+	k.logger.Progress("Creating chain config", "chainConfig", chainConfig)
+
+	// baseURL := "https://raw.githubusercontent.com/TrueBlocks/trueblocks-core/refs/heads/master/src/other/install/per-chain/"
+	// url, err := url.JoinPath(baseURL, chain, "allocs.csv")
+	// if err != nil {
+	// 	return err
+	// }
+	// allocFn := filepath.Join(chainConfig, "allocs.csv")
+	// dur := 100 * 365 * 24 * time.Hour // 100 years
+	// if _, err := utils.DownloadAndStore(url, allocFn, dur); err != nil {
+	// 	return fmt.Errorf("failed to download and store allocs.csv for chain %s: %w", chain, err)
+	// }
+
+	return nil
+}
 
 var configTmpl string = `[version]
   current = "{{.Version}}"
