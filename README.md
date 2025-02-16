@@ -12,25 +12,35 @@ Key features:
 
 ## Installation
 
-1. **Prerequisites**  
-   - Make sure you have [TrueBlocks Core](https://github.com/TrueBlocks/trueblocks-core) installed.  
-   - A C++ build environment (such as `g++` or `clang++`) if you plan to compile from source.  
-   - [CMake](https://cmake.org/) (version 3.16 or higher recommended).  
-   - (Optional) [Docker](https://docs.docker.com/get-docker/) if you plan to run via container.
+### Prerequisites
 
-2. **Clone this Repository**  
-    git clone https://github.com/TrueBlocks/trueblocks-khedra.git  
-    cd trueblocks-khedra  
+- Make sure you have [TrueBlocks Core](https://github.com/TrueBlocks/trueblocks-core) installed.  
+- A C++ build environment (such as `g++` or `clang++`) if you plan to compile from source.  
+- [CMake](https://cmake.org/) (version 3.16 or higher recommended).  
+- (Optional) [Docker](https://docs.docker.com/get-docker/) if you plan to run via container.
 
-3. **Build from Source**  
-    mkdir build && cd build  
-    cmake ..  
-    make  
+### Clone this Repository
+
+  ```[bash]
+      git clone https://github.com/TrueBlocks/trueblocks-khedra.git  
+      cd trueblocks-khedra  
+  ```
+
+### Build from Source
+
+  ```[bash]
+      mkdir build && cd build  
+      cmake ..  
+      make  
+  ```
 
    After a successful build, you’ll find the `khedra` executable (or library, depending on how the project is organized) in the build output.
 
-4. **Install**  
-    sudo make install  
+### Install
+
+```[bash]
+sudo make install  
+```
 
 ## Configuration
 
@@ -111,4 +121,4 @@ Refer to the sample configuration file (`.conf.example`) in this repo for a temp
 
 ---
 
-_This project is part of the [TrueBlocks](https://github.com/TrueBlocks) ecosystem._
+This project is part of the [TrueBlocks](https://github.com/TrueBlocks) ecosystem.
