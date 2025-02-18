@@ -55,14 +55,27 @@ Refer to the sample configuration file (`.conf.example`) in this repo for a temp
 
 ---
 
-## Docker Version
+## Docker Version - Building & Running
 
-<!--
-  BEGIN SECTION: (Exact text from trueblocks-core README)
-  Copy/Paste the "Docker Version" section here verbatim.
--->
+Build the Docker image:
 
-**(Paste the *exact* Docker Version text from the trueblocks-core README here.)**
+```bash
+docker build -t trueblocks-khedra .
+```
+
+Run the Docker container (showing the help message by default):
+
+```bash
+docker run --rm -it trueblocks-khedra
+```
+
+Use a custom command, for example to specify a subcommand or different flags:
+
+```bash
+docker run --rm -it trueblocks-khedra some-subcommand --flag
+```
+
+Adjust paths, environment variables, or your config file strategy as needed. You can also mount external volumes (e.g., a local ~/.trueblocks directory) if you prefer to maintain data outside the container.
 
 ---
 
