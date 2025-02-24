@@ -51,7 +51,10 @@ func init() {
 	ValidatorRegistry["non_zero"] = nonZeroValidator
 	ValidatorRegistry["required"] = requiredValidator
 	ValidatorRegistry["req_if_enabled"] = reqIfEnabledValidator
-	ValidatorRegistry["dive"] = func(fv FieldValidator) error { return nil }
+	ValidatorRegistry["dive"] = func(fv FieldValidator) error {
+		_ = fv
+		return nil
+	}
 }
 
 // RegisterValidator registers a new validator function if it does not

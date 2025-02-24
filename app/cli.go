@@ -21,6 +21,7 @@ func initCli(k *KhedraApp) *cli.App {
 	}
 
 	var onUsageError = func(c *cli.Context, err error, isSubcommand bool) error {
+		_ = isSubcommand
 		showError(c, true, err)
 		return nil
 	}
@@ -96,6 +97,7 @@ func initCli(k *KhedraApp) *cli.App {
 		},
 		OnUsageError: onUsageError,
 		CommandNotFound: func(c *cli.Context, command string) {
+			_ = command
 			var err error
 			if unknown := getUnknownCmd(); len(unknown) > 0 {
 				err = fmt.Errorf("command '%s' not found", unknown)

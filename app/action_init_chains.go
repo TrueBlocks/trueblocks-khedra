@@ -59,6 +59,7 @@ var c1 = wizard.Question{
 |Ethereum. It must read state from the Unchained Index smart
 |contract. When you press enter, the RPC will be validated.`,
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
+		_ = input
 		return prepare[types.Chain](q, func(cfg *types.Config) (string, types.Chain, error) {
 			if _, ok := cfg.Chains["mainnet"]; !ok {
 				cfg.Chains["mainnet"] = types.NewChain("mainnet", 1)
@@ -69,6 +70,7 @@ var c1 = wizard.Question{
 		})
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
+		_ = input
 		return confirm[types.Chain](q, func(cfg *types.Config) (string, types.Chain, error) {
 			copy, ok := cfg.Chains["mainnet"]
 			if !ok {
@@ -103,6 +105,7 @@ var c2 = wizard.Question{
 		return input, validContinue()
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
+		_ = q
 		if input != "edit" && len(input) > 0 {
 			return "", fmt.Errorf(`"edit" is the only valid response %w`, wizard.ErrValidate)
 		}
