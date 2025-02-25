@@ -60,7 +60,7 @@ var c1 = wizard.Question{
 |contract. When you press enter, the RPC will be validated.`,
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
 		_ = input
-		return prepare[types.Chain](q, func(cfg *types.Config) (string, types.Chain, error) {
+		return prepare(q, func(cfg *types.Config) (string, types.Chain, error) {
 			if _, ok := cfg.Chains["mainnet"]; !ok {
 				cfg.Chains["mainnet"] = types.NewChain("mainnet", 1)
 			}
@@ -71,7 +71,7 @@ var c1 = wizard.Question{
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
 		_ = input
-		return confirm[types.Chain](q, func(cfg *types.Config) (string, types.Chain, error) {
+		return confirm(q, func(cfg *types.Config) (string, types.Chain, error) {
 			copy, ok := cfg.Chains["mainnet"]
 			if !ok {
 				log.Fatal("chain mainnet not found")

@@ -211,7 +211,7 @@ func TestLoggingReadAndWrite(t *testing.T) {
 		assert.True(t, logging.Compress, "Compress should be true")
 	}
 
-	ReadAndWriteWithAssertions[Logging](t, tempFilePath, content, assertions)
+	ReadAndWriteWithAssertions(t, tempFilePath, content, assertions)
 }
 
 func TestConvertLevelUnsupported(t *testing.T) {

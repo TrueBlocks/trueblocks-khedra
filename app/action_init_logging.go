@@ -52,7 +52,7 @@ var l1 = wizard.Question{
 |logging, Khedra will also write log files to disk.`,
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
 		_ = input
-		return prepare[types.Logging](q, func(cfg *types.Config) (string, types.Logging, error) {
+		return prepare(q, func(cfg *types.Config) (string, types.Logging, error) {
 			copy := types.Logging{ToFile: cfg.Logging.ToFile, Filename: cfg.Logging.Filename}
 			if cfg.Logging.ToFile {
 				return "yes", copy, validContinue()
@@ -62,7 +62,7 @@ var l1 = wizard.Question{
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
 		_ = input
-		return confirm[types.Logging](q, func(cfg *types.Config) (string, types.Logging, error) {
+		return confirm(q, func(cfg *types.Config) (string, types.Logging, error) {
 			copy := types.Logging{Filename: cfg.Logging.Filename, ToFile: cfg.Logging.ToFile}
 			switch input {
 			case "no":
@@ -86,14 +86,14 @@ var l2 = wizard.Question{
 	Hint:     `Select a log level from the list.`,
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
 		_ = input
-		return prepare[types.Logging](q, func(cfg *types.Config) (string, types.Logging, error) {
+		return prepare(q, func(cfg *types.Config) (string, types.Logging, error) {
 			copy := types.Logging{Level: cfg.Logging.Level}
 			return cfg.Logging.Level, copy, validContinue()
 		})
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
 		_ = input
-		return confirm[types.Logging](q, func(cfg *types.Config) (string, types.Logging, error) {
+		return confirm(q, func(cfg *types.Config) (string, types.Logging, error) {
 			copy := types.Logging{Level: input}
 			if input != "debug" && input != "info" && input != "warn" && input != "error" {
 				err := fmt.Errorf(`value must be either "debug", "info", "warn", or "error"%w`, wizard.ErrValidate)
