@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/base"
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
 )
@@ -82,7 +83,7 @@ func endswithValidator(fv FieldValidator) error {
 // folderExistsValidator ensures the field value is a string representing a path to an existing
 // folder or creates a writable folder, if not.
 func folderExistsValidator(fv FieldValidator) error {
-	isTesting := os.Getenv("TEST_MODE") == "true"
+	isTesting := base.IsTestMode()
 	if isTesting {
 		return Passed(fv, "skipped", "")
 	}

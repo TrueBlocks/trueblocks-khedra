@@ -2,9 +2,9 @@ package app
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/base"
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
@@ -60,7 +60,7 @@ func validateConfig(cfg types.Config) error {
 	}
 
 	// skip these during testing...
-	if os.Getenv("TEST_MODE") == "true" {
+	if base.IsTestMode() {
 		return nil
 	}
 
