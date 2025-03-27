@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/base"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	_ "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/env"
@@ -58,7 +59,7 @@ func (c *Config) CachePath() string {
 }
 
 func GetConfigFnNoCreate() string {
-	if os.Getenv("TEST_MODE") == "true" {
+	if base.IsTestMode() {
 		tmpDir := os.TempDir()
 		return filepath.Join(tmpDir, "config.yaml")
 	}
@@ -77,7 +78,7 @@ func GetConfigFnNoCreate() string {
 // be either in the current folder or in the default location. If
 // there is no such file, establish it
 func GetConfigFn() string {
-	if os.Getenv("TEST_MODE") == "true" {
+	if base.IsTestMode() {
 		tmpDir := os.TempDir()
 		return filepath.Join(tmpDir, "config.yaml")
 	}

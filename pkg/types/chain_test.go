@@ -113,5 +113,5 @@ chainId: 0
 		assert.True(t, chain.Enabled, "Expected enabled to be true, got %v", chain.Enabled)
 	}
 
-	ReadAndWriteWithAssertions[Chain](t, tempFilePath, content, assertions)
+	ReadAndWriteWithAssertions(t, tempFilePath, content, assertions)
 }

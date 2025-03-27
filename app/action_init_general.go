@@ -59,13 +59,15 @@ var g1 = wizard.Question{
 |more secure but much slower (depending on the chain, perhaps as
 |long as a few days).`,
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
-		return prepare[types.General](q, func(cfg *types.Config) (string, types.General, error) {
+		_ = input
+		return prepare(q, func(cfg *types.Config) (string, types.General, error) {
 			copy := types.General{Strategy: cfg.General.Strategy}
 			return copy.Strategy, copy, nil
 		})
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
-		return confirm[types.General](q, func(cfg *types.Config) (string, types.General, error) {
+		_ = input
+		return confirm(q, func(cfg *types.Config) (string, types.General, error) {
 			copy := types.General{Strategy: input}
 			switch input {
 			case "download":
@@ -93,7 +95,8 @@ var g2 = wizard.Question{
 |but is slower when searching. Downloading the entire index takes
 |longer and is larger (180gb), but is much faster during search.`,
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
-		return prepare[types.General](q, func(cfg *types.Config) (string, types.General, error) {
+		_ = input
+		return prepare(q, func(cfg *types.Config) (string, types.General, error) {
 			copy := types.General{Detail: cfg.General.Detail}
 			if cfg.General.Strategy == "scratch" {
 				return copy.Detail, copy, validSkipNext()
@@ -102,7 +105,8 @@ var g2 = wizard.Question{
 		})
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
-		return confirm[types.General](q, func(cfg *types.Config) (string, types.General, error) {
+		_ = input
+		return confirm(q, func(cfg *types.Config) (string, types.General, error) {
 			copy := types.General{Detail: input}
 			switch input {
 			case "bloom":
@@ -128,7 +132,8 @@ var g3 = wizard.Question{
 |binary caches?`,
 	Hint: `<set on load>`,
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
-		return prepare[types.General](q, func(cfg *types.Config) (string, types.General, error) {
+		_ = input
+		return prepare(q, func(cfg *types.Config) (string, types.General, error) {
 			copy := types.General{DataFolder: cfg.General.DataFolder}
 			if cfg.General.Detail == "bloom" {
 				q.Hint = bloomHint
@@ -139,7 +144,8 @@ var g3 = wizard.Question{
 		})
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
-		return confirm[types.General](q, func(cfg *types.Config) (string, types.General, error) {
+		_ = input
+		return confirm(q, func(cfg *types.Config) (string, types.General, error) {
 			copy := types.General{DataFolder: input}
 			path, err := utils.ResolveValidPath(input)
 			if err != nil {

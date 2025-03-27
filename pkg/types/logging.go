@@ -144,6 +144,7 @@ type ColorTextHandler struct {
 }
 
 func (h *ColorTextHandler) Handle(ctx context.Context, r slog.Record) error {
+	_ = ctx
 	levelColors := map[slog.Level]string{
 		slog.LevelDebug: colors.Cyan,
 		slog.LevelInfo:  colors.Green,
@@ -187,14 +188,17 @@ func (h *ColorTextHandler) Handle(ctx context.Context, r slog.Record) error {
 }
 
 func (h *ColorTextHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	_ = ctx
 	return level >= h.Level
 }
 
 func (h *ColorTextHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	_ = attrs
 	return h
 }
 
 func (h *ColorTextHandler) WithGroup(name string) slog.Handler {
+	_ = name
 	return h
 }
 

@@ -95,13 +95,15 @@ var s0 = wizard.Question{
 var s1 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
 	Question: `Do you want to enable the "scraper" service?`,
-	Hint: `The "scraper" service constanly watches the blockchain and
+	Hint: `The "scraper" service constantly watches the blockchain and
 |updates the Unchained Index with new data. If you disable it,
 |your index will fall behind.`,
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
+		_ = input
 		return sPrepare("scraper", input, q)
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
+		_ = input
 		return sValidate("scraper", input, q)
 	},
 	Replacements: []wizard.Replacement{
@@ -118,9 +120,11 @@ var s2 = wizard.Question{
 |constantly keep the caches fresh for how ever many addresses you
 |like. You may not enable this service.`,
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
+		_ = input
 		return sPrepare("monitor", input, q)
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
+		_ = input
 		return sValidate("monitor", input, q)
 	},
 	Replacements: []wizard.Replacement{
@@ -135,9 +139,11 @@ var s3 = wizard.Question{
 	Hint: `The "api" service serves all of chifra's endpoints as
 |described here: https://trueblocks.io/api/.`,
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
+		_ = input
 		return sPrepare("api", input, q)
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
+		_ = input
 		return sValidate("api", input, q)
 	},
 	Replacements: []wizard.Replacement{
@@ -153,9 +159,11 @@ var s4 = wizard.Question{
 |Each time a new index chunk and bloom filter is created, if this
 |service is enabled, it will automatically be pinned to IPFS.`,
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
+		_ = input
 		return sPrepare("ipfs", input, q)
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {
+		_ = input
 		return sValidate("ipfs", input, q)
 	},
 	Replacements: []wizard.Replacement{

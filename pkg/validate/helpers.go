@@ -24,6 +24,9 @@ func getIntValue(fieldVal reflect.Value) (int64, error) {
 }
 
 func Passed(fv FieldValidator, value, test string) error {
+	_ = fv
+	_ = value
+	_ = test
 	// c := fmt.Sprintf(" context=%q", fv.context)
 	// if fv.context == "" {
 	// 	c = ""
