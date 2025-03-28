@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/base"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
 	"github.com/mattn/go-runewidth"
 )
@@ -115,30 +114,30 @@ func padRow(line string, width int, bs Border, just Justification) string {
 
 	padTotal := width - textWidth
 	if bs&LeftBorder != 0 {
-		padTotal = base.Max(0, padTotal-1)
+		padTotal = max(0, padTotal-1)
 	}
 	if bs&RightBorder != 0 {
-		padTotal = base.Max(0, padTotal-1)
+		padTotal = max(0, padTotal-1)
 	}
 	padLeft, padRight := 0, 0
 
 	switch just {
 	case Left:
 		padLeft = margin
-		padRight = base.Max(0, padTotal-padLeft)
+		padRight = max(0, padTotal-padLeft)
 	case Center:
 		padLeft = padTotal / 2
 		if padTotal%2 != 0 {
 			padLeft++
 		}
-		padRight = base.Max(0, padTotal-padLeft)
+		padRight = max(0, padTotal-padLeft)
 	case Right:
 		padRight = margin
-		padLeft = base.Max(0, padTotal-padRight)
+		padLeft = max(0, padTotal-padRight)
 	}
 
 	if padLeft+textWidth+padRight > width {
-		padRight = base.Max(0, width-padLeft-textWidth)
+		padRight = max(0, width-padLeft-textWidth)
 	}
 
 	return strings.Repeat(padStr, padLeft) + line + strings.Repeat(padStr, padRight)

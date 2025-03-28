@@ -3,7 +3,6 @@ package wizard
 import (
 	"fmt"
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/base"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 )
 
@@ -88,7 +87,7 @@ func (w *Wizard) Run() error {
 	fmt.Println("Your answers:")
 	width := 0
 	for _, screen := range w.screens {
-		width = base.Max(width, len(screen.Title)+4)
+		width = max(width, len(screen.Title)+4)
 	}
 	format := fmt.Sprintf("%s%%-%d.%ds%s\n", colors.Green, width, width, colors.Off)
 	for _, screen := range w.screens {

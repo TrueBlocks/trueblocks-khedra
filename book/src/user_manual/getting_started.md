@@ -232,6 +232,7 @@ Defines the blockchain networks to interact with. Each chain must have:
 - **`enabled`**: Whether the chain is active.
 
 #### Behavior for Empty RPCs
+
 - If the `RPCs` field is empty in the environment, it is ignored and the configuration file's value is preserved.
 - If the `RPCs` field is empty in the final configuration (after merging), the configuration will be rejected.
 
