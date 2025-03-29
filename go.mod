@@ -3,8 +3,8 @@ module github.com/TrueBlocks/trueblocks-khedra/v2
 go 1.23.1
 
 require (
-	github.com/TrueBlocks/trueblocks-core/src/apps/chifra v0.0.0-20250328223800-50cd5d7a6cb7
-	github.com/TrueBlocks/trueblocks-sdk/v5 v5.0.0-20250329002009-c07cbf9fc971
+	github.com/TrueBlocks/trueblocks-core/src/apps/chifra v0.0.0-20250329011249-9faa29fe970f
+	github.com/TrueBlocks/trueblocks-sdk/v5 v5.0.0
 	github.com/alecthomas/assert/v2 v2.11.0
 	github.com/goccy/go-yaml v1.15.15
 	github.com/joho/godotenv v1.5.1
@@ -20,7 +20,6 @@ require (
 
 require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/TrueBlocks/trueblocks-sdk/v4 v4.2.0 // indirect
 	github.com/alecthomas/participle/v2 v2.0.0 // indirect
 	github.com/alecthomas/repr v0.4.0 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
