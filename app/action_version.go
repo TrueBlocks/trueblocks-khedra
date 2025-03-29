@@ -3,7 +3,7 @@ package app
 import (
 	"fmt"
 
-	sdk "github.com/TrueBlocks/trueblocks-sdk/v4"
+	sdk "github.com/TrueBlocks/trueblocks-sdk/v5"
 	"github.com/urfave/cli/v2"
 )
 

@@ -20,7 +20,7 @@ app: $(SRC_GO)
 	@go build -o $(dest) *.go
 
 update:
-	@go get "github.com/TrueBlocks/trueblocks-sdk/v4@latest"
+	@go get "github.com/TrueBlocks/trueblocks-sdk/v5@latest"
 	@go get github.com/TrueBlocks/trueblocks-core/src/apps/chifra@latest
 
 install:
