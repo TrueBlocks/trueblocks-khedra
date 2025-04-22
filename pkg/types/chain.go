@@ -1,6 +1,8 @@
 package types
 
-import "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/validate"
+import (
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
+)
 
 type Chain struct {
 	Name    string   `koanf:"name" json:"name,omitempty" validate:"req_if_enabled"` // Must be non-empty
@@ -22,38 +24,18 @@ func (ch Chain) IsEnabled() bool {
 	return ch.Enabled
 }
 
-func (ch Chain) HasValidRpc(tries int) bool {
-	for _, rpc := range ch.RPCs {
-		if err := validate.TryConnect(ch.Name, rpc, tries); err == nil {
-			return true
-		}
+func (cc Chain) Symbol() string {
+	if item := utils.GetChainListItem("~/.khedra", cc.ChainID); item != nil {
+		return item.NativeCurrency.Symbol
 	}
-	return false
+	return "Unknown"
 }
 
-func (ch Chain) Symbol() string {
-	if chainList, err := UpdateChainList(); err != nil {
-		return "Unknown"
-	} else {
-		if ch, ok := chainList.ChainsMap[ch.ChainID]; !ok {
-			return "Unknown"
-		} else {
-			return ch.NativeCurrency.Symbol
+func (cc Chain) RemoteExplorer() string {
+	if item := utils.GetChainListItem("~/.khedra", cc.ChainID); item != nil {
+		if len(item.Explorers) > 0 {
+			return item.Explorers[0].URL
 		}
 	}
-}
-
-func (ch Chain) RemoteExplorer() string {
-	if chainList, err := UpdateChainList(); err != nil {
-		return "Unknown"
-	} else {
-		if ch, ok := chainList.ChainsMap[ch.ChainID]; !ok {
-			return "Unknown"
-		} else {
-			if len(ch.Explorers) > 0 {
-				return ch.Explorers[0].URL
-			}
-			return ""
-		}
-	}
+	return "Unknown"
 }

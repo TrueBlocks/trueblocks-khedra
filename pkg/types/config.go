@@ -12,8 +12,8 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/base"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
 	_ "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/env"
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v5"
 )
 

@@ -24,7 +24,7 @@ func (k *KhedraApp) daemonAction(c *cli.Context) error {
 
 	for _, ch := range k.config.Chains {
 		if ch.Enabled {
-			if !ch.HasValidRpc(4) {
+			if !HasValidRpc(&ch, 4) {
 				return fmt.Errorf("chain %s has no valid RPC", ch.Name)
 			}
 			k.logger.Progress("Connected to", "chain", ch.Name)
@@ -208,7 +208,7 @@ func (k *KhedraApp) createChainConfig(chain string) error {
 	// }
 	// allocFn := filepath.Join(chainConfig, "allocs.csv")
 	// dur := 100 * 365 * 24 * time.Hour // 100 years
-	// if _, err := utils.DownloadAndStore(url, allocFn, dur); err != nil {
+	// if _, err := utils.Download AndStore(url, allocFn, dur); err != nil {
 	// 	return fmt.Errorf("failed to download and store allocs.csv for chain %s: %w", chain, err)
 	// }
 

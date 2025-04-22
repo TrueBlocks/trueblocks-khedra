@@ -6,9 +6,8 @@ import (
 	"os/exec"
 	"strings"
 
-	coreUtils "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
 	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/boxes"
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/utils"
 )
 
 type Screen struct {
@@ -52,7 +51,7 @@ func (s *Screen) OpenHelp() {
 	}
 	title := utils.StripColors(s.Title)
 	url := "https://khedra.trueblocks.io/user_manual/wizard/" + helpMap[title] + ".html"
-	coreUtils.System("open " + url)
+	utils.System("open " + url)
 }
 
 func (s *Screen) Display(question Questioner, caret string) {
