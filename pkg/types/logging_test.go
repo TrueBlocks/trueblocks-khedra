@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/validate"
+	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/validate"
 	"github.com/alecthomas/assert/v2"
 )
 

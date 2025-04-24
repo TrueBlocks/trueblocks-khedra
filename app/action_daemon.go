@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
-	_ "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/env"
+	_ "github.com/TrueBlocks/trueblocks-khedra/v5/pkg/env"
 	"github.com/TrueBlocks/trueblocks-sdk/v5/services"
 	"github.com/urfave/cli/v2"
 )

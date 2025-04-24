@@ -1,4 +1,4 @@
-module github.com/TrueBlocks/trueblocks-khedra/v2
+module github.com/TrueBlocks/trueblocks-khedra/v5
 
 go 1.23.1
 

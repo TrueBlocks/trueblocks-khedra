@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/validate"
+	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/validate"
 )
 
 type Service struct {

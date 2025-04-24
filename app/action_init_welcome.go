@@ -2,8 +2,8 @@ package app
 
 import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/boxes"
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/wizard"
+	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/boxes"
+	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/wizard"
 )
 
 func getWelcomeScreen() wizard.Screen {

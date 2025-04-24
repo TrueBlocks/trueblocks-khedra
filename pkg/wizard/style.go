@@ -1,6 +1,6 @@
 package wizard
 
-import "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/boxes"
+import "github.com/TrueBlocks/trueblocks-khedra/v5/pkg/boxes"
 
 type Style struct {
 	Outer   boxes.Border

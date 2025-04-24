@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/wizard"
+	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
+	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/wizard"
 )
 
 // screen|---------|---------|---------|---------|---------|---------|---|74

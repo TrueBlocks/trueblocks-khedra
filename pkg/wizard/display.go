@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
+	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
 )
 
 var ErrUserQuit = errors.New("user quit")
