@@ -14,7 +14,7 @@ import (
 func getGeneralScreen() wizard.Screen {
 	gTitle := `General Settings`
 	gSubtitle := ``
-	gInstructions := `Type your answer and press enter. ("q"=quit, "b"=back, "h"=help)`
+	gInstructions := ``
 	gBody := `
 The General group of options controls where Khedra stores the Unchained
 Index and its caches. It also helps you choose a download strategy for
@@ -25,13 +25,17 @@ depending on the configuration. As always, type "help" to get more
 information.
 
 You may use $HOME or ~/ in your paths to refer to your home directory.`
+
 	gReplacements := []wizard.Replacement{
 		{Color: colors.Yellow, Values: []string{gTitle}},
 		{Color: colors.Green, Values: []string{
 			"Unchained\nIndex", "Unchained Index", "$HOME", "~/",
 		}},
 	}
-	gQuestions := []wizard.Questioner{&g0, &g1, &g2, &g3}
+
+	// Show all options (formerly advanced mode)
+	gQuestions := []wizard.Questioner{&g1, &g2, &g3}
+
 	gStyle := wizard.NewStyle()
 
 	return wizard.Screen{
@@ -43,11 +47,6 @@ You may use $HOME or ~/ in your paths to refer to your home directory.`
 		Questions:    gQuestions,
 		Style:        gStyle,
 	}
-}
-
-// --------------------------------------------------------
-var g0 = wizard.Question{
-	//.....question-|---------|---------|---------|---------|---------|----|65
 }
 
 // --------------------------------------------------------
@@ -115,9 +114,8 @@ var g2 = wizard.Question{
 			case "index":
 				cfg.General.Detail = input
 				return input, copy, validOk(`both bloom filters and index chunks will be downloaded`, input)
-			default:
-				return input, copy, fmt.Errorf(`value must be either "bloom" or "index" %w`, wizard.ErrValidate)
 			}
+			return input, copy, fmt.Errorf(`value must be either "bloom" or "index" %w`, wizard.ErrValidate)
 		})
 	},
 	Replacements: []wizard.Replacement{
@@ -130,7 +128,8 @@ var g3 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
 	Question: `Where do you want to store the Unchained Index and the
 |binary caches?`,
-	Hint: `<set on load>`,
+	Hint:           `<set on load>`,
+	ValidationType: "folder", // Add validation type for real-time feedback
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
 		_ = input
 		return prepare(q, func(cfg *types.Config) (string, types.General, error) {

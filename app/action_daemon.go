@@ -2,13 +2,19 @@ package app
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"log/slog"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/config"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	_ "github.com/TrueBlocks/trueblocks-khedra/v5/pkg/env"
 	"github.com/TrueBlocks/trueblocks-sdk/v5/services"
@@ -31,8 +37,12 @@ func (k *KhedraApp) daemonAction(c *cli.Context) error {
 		}
 	}
 	k.logger.Info("Processing chains...", "chainList", k.config.EnabledChains())
+	k.logger.Info("Paths:", "indexPath", k.config.IndexPath())
+	k.logger.Info("", "cachePath", k.config.CachePath())
 
-	os.Setenv("XDG_CONFIG_HOME", k.config.General.DataFolder)
+	rootFolder := config.PathToRootConfig()
+
+	os.Setenv("XDG_CONFIG_HOME", rootFolder)
 	os.Setenv("TB_SETTINGS_DEFAULTCHAIN", "mainnet")
 	os.Setenv("TB_SETTINGS_INDEXPATH", k.config.IndexPath())
 	os.Setenv("TB_SETTINGS_CACHEPATH", k.config.CachePath())
@@ -56,7 +66,7 @@ func (k *KhedraApp) daemonAction(c *cli.Context) error {
 
 	k.logger.Progress("Starting services", "services", k.config.ServiceList(true /* enabledOnly */))
 
-	configFn := filepath.Join(k.config.General.DataFolder, "trueBlocks.toml")
+	configFn := filepath.Join(rootFolder, "trueBlocks.toml")
 	if file.FileExists(configFn) {
 		k.logger.Info("Config file found", "fn", configFn)
 		if !k.chainsConfigured(configFn) {
@@ -65,7 +75,7 @@ func (k *KhedraApp) daemonAction(c *cli.Context) error {
 		}
 	} else {
 		k.logger.Warn("Config file not found", "fn", configFn)
-		if err := k.createChifraConfig(); err != nil {
+		if err := k.createChifraConfig(rootFolder); err != nil {
 			k.logger.Error("Error creating config file", "error", err)
 			return err
 		}
@@ -147,15 +157,15 @@ func (k *KhedraApp) chainsConfigured(configFn string) bool {
 	return true
 }
 
-func (k *KhedraApp) createChifraConfig() error {
-	if err := file.EstablishFolder(k.config.General.DataFolder); err != nil {
+func (k *KhedraApp) createChifraConfig(rootFolder string) error {
+	if err := file.EstablishFolder(rootFolder); err != nil {
 		return err
 	}
 
 	chainStr := k.config.EnabledChains()
 	chains := strings.Split(chainStr, ",")
 	for _, chain := range chains {
-		if err := k.createChainConfig(chain); err != nil {
+		if err := k.createChainConfigFolder(rootFolder, chain); err != nil {
 			return err
 		}
 	}
@@ -173,7 +183,7 @@ func (k *KhedraApp) createChifraConfig() error {
 		return fmt.Errorf("empty config file")
 	}
 
-	configFn := filepath.Join(k.config.General.DataFolder, "trueBlocks.toml")
+	configFn := filepath.Join(rootFolder, "trueBlocks.toml")
 	err = file.StringToAsciiFile(configFn, buf.String())
 	if err != nil {
 		return err
@@ -193,24 +203,26 @@ func (k *KhedraApp) createChifraConfig() error {
 // 14170,apps,Accounts,monitors,acctExport,n4,,,,,note,,,,,,Addresses provided on the command line are ignored in `--watch` mode.
 // 14180,apps,Accounts,monitors,acctExport,n5,,,,,note,,,,,,Providing the value `existing` to the `--watchlist` monitors all existing monitor files (see --list).
 
-func (k *KhedraApp) createChainConfig(chain string) error {
-	chainConfig := filepath.Join(k.config.General.DataFolder, "config", chain)
+func (k *KhedraApp) createChainConfigFolder(rootFolder string, chain string) error {
+	chainConfig := filepath.Join(rootFolder, "config", chain)
 	if err := file.EstablishFolder(chainConfig); err != nil {
 		return fmt.Errorf("failed to create folder %s: %w", chainConfig, err)
 	}
 
-	k.logger.Progress("Creating chain config", "chainConfig", chainConfig)
-
-	// baseURL := "https://raw.githubusercontent.com/TrueBlocks/trueblocks-core/refs/heads/master/src/other/install/per-chain/"
-	// url, err := url.JoinPath(baseURL, chain, "allocs.csv")
-	// if err != nil {
-	// 	return err
-	// }
-	// allocFn := filepath.Join(chainConfig, "allocs.csv")
-	// dur := 100 * 365 * 24 * time.Hour // 100 years
-	// if _, err := utils.Download AndStore(url, allocFn, dur); err != nil {
-	// 	return fmt.Errorf("failed to download and store allocs.csv for chain %s: %w", chain, err)
-	// }
+	baseURL := "https://raw.githubusercontent.com/TrueBlocks/trueblocks-core/refs/heads/master/src/other/install/per-chain"
+	url, err := url.JoinPath(baseURL, chain, "allocs.csv")
+	if err != nil {
+		return err
+	}
+	allocFn := filepath.Join(chainConfig, "allocs.csv")
+	dur := 100 * 365 * 24 * time.Hour // 100 years
+	if _, err := downloadAndStore(url, allocFn, dur); err != nil {
+		k.logger.Warn(fmt.Errorf("failed to download and store allocs.csv for chain %s: %w", chain, err).Error())
+		// It's not an error to not have an allocation file. IsArchiveNode assumes archive if not present.
+		return nil
+	}
+	k.logger.Progress("Creating chain config", "chainConfig", allocFn)
+	k.logger.Progress("Creating chain config", "source", url)
 
 	return nil
 }
@@ -620,3 +632,67 @@ func (opts *MonitorsOptions) getMonitorList() []monitor.Monitor {
 			}
 
 */
+
+// TODO: Search for this function in trueblocks-core/src/apps/pkg/utils. It's identical to here.
+// TODO: Make that function public and remove this one.
+func downloadAndStore(url, filename string, dur time.Duration) ([]byte, error) {
+	if file.FileExists(filename) {
+		lastModDate, err := file.GetModTime(filename)
+		if err != nil {
+			return nil, err
+		}
+		if time.Since(lastModDate) < dur {
+			data, err := os.ReadFile(filename)
+			if err != nil {
+				return nil, err
+			}
+			return data, nil
+		}
+	}
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		// If the file doesn't exist remotely, store an empty file
+		if err := os.WriteFile(filename, []byte{}, 0644); err != nil {
+			return nil, err
+		}
+		// Optionally update its mod time
+		_ = file.Touch(filename)
+		return []byte{}, nil
+	} else if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("received status %d %s for URL %s",
+			resp.StatusCode, resp.Status, url)
+	}
+
+	rawData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var prettyData []byte
+	if json.Valid(rawData) {
+		var jsonData interface{}
+		if err := json.Unmarshal(rawData, &jsonData); err != nil {
+			return nil, err
+		}
+		prettyData, err = json.MarshalIndent(jsonData, "", "  ")
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		prettyData = rawData
+	}
+
+	if err := os.WriteFile(filename, prettyData, 0644); err != nil {
+		return nil, err
+	}
+
+	_ = file.Touch(filename)
+
+	return prettyData, nil
+}

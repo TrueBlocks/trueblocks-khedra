@@ -29,17 +29,18 @@ type Questioner interface {
 // - Prepare: A function for pre-question processing.
 // - Validate: A function to validate user input, returning the processed value or an error.
 type Question struct {
-	Question     string
-	Hint         string
-	Value        string
-	State        string
-	Response     string
-	ErrorStr     string
-	PrepareFn    func(string, *Question) (string, error)
-	Validate     func(string, *Question) (string, error)
-	Replacements []Replacement
-	Messages     []string
-	Screen       *Screen
+	Question       string
+	Hint           string
+	Value          string
+	State          string
+	Response       string
+	ErrorStr       string
+	PrepareFn      func(string, *Question) (string, error)
+	Validate       func(string, *Question) (string, error)
+	Replacements   []Replacement
+	Messages       []string
+	Screen         *Screen
+	ValidationType string // Type of validation to apply ("rpc", "folder", etc.)
 }
 
 func (q *Question) HandleResponse(input string) error {
@@ -49,6 +50,18 @@ func (q *Question) HandleResponse(input string) error {
 	if input == "" {
 		input = utils.StripColors(q.Value)
 	}
+
+	if q.ValidationType != "" && input != "" {
+		if validationFunc := GetValidationFunc(q.ValidationType); validationFunc != nil {
+			feedback := validationFunc(input)
+			if !feedback.IsValid {
+				q.ErrorStr = feedback.Message
+				return ErrValidate
+			}
+			q.Response = FormatValidationFeedback(feedback)
+		}
+	}
+
 	switch input {
 	case "h", "help":
 		return ErrUserHelp
@@ -75,6 +88,7 @@ func (q *Question) HandleResponse(input string) error {
 			return err
 		} else {
 			q.Value = input
+			q.Response = input
 		}
 	}
 	return nil
@@ -97,10 +111,13 @@ func (q *Question) GetLines() []string {
 	var lines []string
 	q.Clean(nil)
 	if q.Question != "" {
-		lines = append(lines, q.Prompt("Question", "")+q.Question)
-		if q.Hint != "" {
-			lines = append(lines, q.Prompt("Hint", "")+q.Hint)
+		if len(q.Question) > 0 {
+			lines = append(lines, splitLines(q.Prompt("Question", ""), q.Question)...)
 		}
+		if len(q.Hint) > 0 {
+			lines = append(lines, splitLines(q.Prompt("Hint", ""), q.Hint)...)
+		}
+
 		if q.State != "" {
 			lines = append(lines, q.Prompt("State", "")+colors.Yellow+q.State+colors.Off)
 		}
@@ -141,15 +158,13 @@ func (q *Question) Clear() {
 }
 
 func (q *Question) Clean(rep *Replacement) {
-	q.Question = strings.ReplaceAll(q.Question, "\n|", "\n          ")
-	q.Hint = strings.ReplaceAll(q.Hint, "\n|", "\n          ")
 	if rep != nil {
 		q.Question = rep.Replace(q.Question)
 		q.Hint = rep.Replace(q.Hint)
 	}
-	for _, rrep := range q.Replacements {
-		q.Question = rrep.Replace(q.Question)
-		q.Hint = rrep.Replace(q.Hint)
+	for _, qRep := range q.Replacements {
+		q.Question = qRep.Replace(q.Question)
+		q.Hint = qRep.Replace(q.Hint)
 	}
 }
 
@@ -163,4 +178,17 @@ func (q *Question) GetQuestion() (string, string) {
 
 func (q *Question) GetError() string {
 	return q.ErrorStr
+}
+
+func splitLines(prompt, line string) []string {
+	parts := strings.Split(line, "|")
+	for i := 0; i < len(parts); i++ {
+		part := strings.TrimSpace(parts[i])
+		if i == 0 {
+			parts[i] = prompt + part
+		} else {
+			parts[i] = strings.Repeat(" ", 10) + part
+		}
+	}
+	return parts
 }

@@ -6,20 +6,23 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
 	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/boxes"
+	"github.com/mattn/go-runewidth"
 )
 
 type Screen struct {
-	Title        string
-	Subtitle     string
-	Body         string
-	Instructions string
-	Replacements []Replacement
-	Questions    []Questioner
-	Style        Style
-	Current      int
-	Wizard       *Wizard
+	Title         string
+	Subtitle      string
+	Body          string
+	Instructions  string
+	Replacements  []Replacement
+	Questions     []Questioner
+	Style         Style
+	Current       int
+	Wizard        *Wizard
+	NavigationBar *NavigationBar // Add navigation bar field
 }
 
 func AddScreen(screen Screen) Screen {
@@ -43,7 +46,7 @@ func AddScreen(screen Screen) Screen {
 
 func (s *Screen) OpenHelp() {
 	helpMap := map[string]string{
-		"KHEDRA WIZARD":     "welcome",
+		"Welcome Screen":    "welcome",
 		"General Settings":  "general",
 		"Services Settings": "services",
 		"Chain Settings":    "chains",
@@ -55,25 +58,6 @@ func (s *Screen) OpenHelp() {
 }
 
 func (s *Screen) Display(question Questioner, caret string) {
-	titleRows := func(t, s string, style *Style) []string {
-		var ret []string
-		if style.Justify == boxes.Center {
-			lines := []string{t, "", s}
-			ret = []string{boxes.Box(lines, 57, style.Inner, style.Justify)}
-		} else {
-			lines := []string{t + " (" + s + ")"}
-			if len(s) == 0 {
-				lines = []string{t}
-			}
-			lines = append(lines, "──────────────────────────────────────────────────────────────────────────")
-			b := boxes.Box(lines, screenWidth-2, boxes.NoBorder, style.Justify)
-			b = strings.TrimSpace(b)
-			ret = []string{b}
-		}
-		ret = append(ret, "")
-		return ret
-	}
-
 	heightPad := func(body string, want int) []string {
 		have := len(strings.Split(body, "\n"))
 		if have < want {
@@ -82,23 +66,101 @@ func (s *Screen) Display(question Questioner, caret string) {
 		return []string{}
 	}
 
-	text, _ := question.GetQuestion()
+	questionText, _ := question.GetQuestion()
+
+	// Add navigation bar if available
+	var navBarContent string
+	if s.NavigationBar != nil {
+		navBarContent = s.NavigationBar.Render()
+	}
 
 	lines := []string{}
-	lines = append(lines, titleRows(s.Title, s.Subtitle, &s.Style)...)
-	if len(text) > 0 {
-		lines = append(lines, question.GetLines()...)
-	} else {
-		lines = append(lines, s.Body)
+
+	// Add navigation bar first if available
+	if navBarContent != "" {
+		lines = append(lines, navBarContent)
 	}
+
+	// Show body only when there are no questions or the current question is empty
+	if len(questionText) == 0 && len(s.Body) > 0 {
+		// Remove leading blank line from body before adding
+		body := colors.Green + strings.TrimPrefix(s.Body, "\n") + colors.Off
+		lines = append(lines, body)
+	}
+
+	// Now add question content if there is any
+	if len(questionText) > 0 {
+		questionLines := question.GetLines()
+		wrappedLines := []string{}
+
+		// Maximum content width to prevent overflow
+		boxStyle := boxes.NewStyle()
+		maxWidth := boxStyle.Width - 4 // Subtract padding and borders
+
+		// Wrap each line if necessary
+		for _, line := range questionLines {
+			// Skip empty lines
+			if len(line) == 0 {
+				wrappedLines = append(wrappedLines, line)
+				continue
+			}
+
+			// If line is too long, wrap it
+			if runewidth.StringWidth(utils.StripColors(line)) > maxWidth {
+				// Split by words and reconstruct with wrapping
+				words := strings.Fields(line) // Preserve color codes
+				var currentLine string
+
+				for _, word := range words {
+					// If adding this word would make the line too long, start a new line
+					if len(currentLine) > 0 &&
+						runewidth.StringWidth(utils.StripColors(currentLine+" "+word)) > maxWidth {
+						wrappedLines = append(wrappedLines, currentLine)
+						currentLine = word
+					} else {
+						if len(currentLine) > 0 {
+							currentLine += " " + word
+						} else {
+							currentLine = word
+						}
+					}
+				}
+
+				// Add the last line
+				if len(currentLine) > 0 {
+					wrappedLines = append(wrappedLines, currentLine)
+				}
+			} else {
+				wrappedLines = append(wrappedLines, line)
+			}
+		}
+
+		lines = append(lines, wrappedLines...)
+	}
+
 	lines = append(lines, heightPad(strings.Join(lines, "\n"), 13)...)
-	if len(text) > 0 {
+	if len(questionText) > 0 && len(s.Instructions) > 0 {
 		lines = append(lines, s.Instructions)
-	} else {
-		lines = append(lines, "Press enter to continue.")
 	}
-	screen := boxes.Box(lines, screenWidth, s.Style.Outer, boxes.Left)
-	fmt.Printf("%s%s\n%s", clearScreen, screen, question.Prompt(caret, "  ", false))
+
+	// Add keyboard shortcuts bar
+	shortcutBar := GetShortcutBarForScreen(s.Title, s.Wizard)
+	lines = append(lines, shortcutBar)
+
+	// Create a box with updated styles using the new boxes package
+	boxStyle := boxes.NewStyle()
+
+	// Create content as string
+	content := strings.Join(lines, "\n")
+
+	// Clear the screen first
+	fmt.Print("\033[H\033[2J") // ANSI escape sequence to clear screen and move cursor to home position
+
+	// Create a box with single border style
+	fmt.Println(boxes.Box(strings.Split(content, "\n"), boxStyle.Width, boxes.Single|boxes.All, boxes.Left))
+
+	// Print the prompt without a newline to avoid extra line
+	fmt.Print(question.Prompt(caret+" ", "  ", false))
 }
 
 func (s *Screen) GetCaret(caret string, i, skipped int) string {
@@ -106,7 +168,6 @@ func (s *Screen) GetCaret(caret string, i, skipped int) string {
 		caret = fmt.Sprintf("%d/%d"+caret, i+1-skipped, len(s.Questions)-skipped)
 	}
 	return caret
-
 }
 
 var clearScreen = "\033[2J\033[H"

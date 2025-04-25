@@ -12,7 +12,7 @@ import (
 func getLoggingScreen() wizard.Screen {
 	lTitle := `Logging Settings`
 	lSubtitle := ``
-	lInstructions := `Type your answer and press enter. ("q"=quit, "b"=back, "h"=help)`
+	lInstructions := ``
 	lBody := `
 The Logging group of options helps you set up Khedra's logging options.
 
@@ -48,8 +48,8 @@ var l0 = wizard.Question{
 var l1 = wizard.Question{
 	//.....question-|---------|---------|---------|---------|---------|----|65
 	Question: `Do you want to enable file-based logging?`,
-	Hint: `Logging to the screen is always enabled. If you enable file-based
-|logging, Khedra will also write log files to disk.`,
+	Hint: `Logging to the screen is always enabled. If you
+|enable file-based logging, logging will also write to disk.`,
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
 		_ = input
 		return prepare(q, func(cfg *types.Config) (string, types.Logging, error) {

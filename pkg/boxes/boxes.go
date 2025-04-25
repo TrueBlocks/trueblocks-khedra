@@ -78,7 +78,6 @@ var boxTokens = map[Border]map[BorderPos]rune{
 }
 
 func topBorder(width int, bs Border) ([]string, error) {
-	width = max(5, width)
 	key := bs & (Single | Double | NoBorder)
 	if width < 2 || boxTokens[key] == nil {
 		return nil, fmt.Errorf("invalid width or unsupported border style")
@@ -144,85 +143,23 @@ func padRow(line string, width int, bs Border, just Justification) string {
 	return strings.Repeat(padStr, padLeft) + line + strings.Repeat(padStr, padRight)
 }
 
-// containsAnyRune checks if a string contains any of the specified runes
-func containsAnyRune(s string, runes []rune) bool {
-	for _, r := range s {
-		for _, target := range runes {
-			if r == target {
-				return true
-			}
-		}
+func boxRow(str string, width int, bs Border, just Justification) string {
+	body := []string{}
+	lines := strings.Split(str, "\n")
+	for _, line := range lines {
+		padded := padRow(line, width, bs, just)
+		bbs := bs & (Single | Double | NoBorder)
+		l := string(boxTokens[bbs][Vertical]) + padded + string(boxTokens[bbs][Vertical])
+		body = append(body, l)
 	}
-	return false
+	return strings.Join(body, "\n")
 }
 
-// boxRow creates a formatted row with borders for a string that may contain multiple lines.
-// It ensures consistent width and proper padding based on justification.
-func boxRow(str string, width int, bs Border, just Justification) string {
-	width = max(5, width)
-	lines := strings.Split(str, "\n")
-	result := []string{}
-
-	// Find the longest line to determine box width
-	maxTextWidth := 0
-	for _, line := range lines {
-		lineWidth := runewidth.StringWidth(utils.StripColors(line))
-		if lineWidth > maxTextWidth {
-			maxTextWidth = lineWidth
-		}
-	}
-
-	// Calculate box dimensions ensuring minimum padding of 1 space on each side
-	contentWidth := max(width-2, maxTextWidth+2) // -2 for border characters
-
-	// Get the border style
-	borderStyle := bs & (Single | Double | NoBorder)
-	leftBorder := string(boxTokens[borderStyle][Vertical])
-	rightBorder := string(boxTokens[borderStyle][Vertical])
-
-	// Process each line
-	for _, line := range lines {
-		lineWidth := runewidth.StringWidth(utils.StripColors(line))
-		var padded string
-
-		totalPad := contentWidth - lineWidth
-
-		// Match the expected padding pattern exactly
-		switch just {
-		case Left:
-			// Left justified: 1 space on left, remainder on right
-			padded = " " + line + strings.Repeat(" ", totalPad-1)
-
-		case Right:
-			// Right justified: 1 space on right, remainder on left
-			padded = strings.Repeat(" ", totalPad-1) + line + " "
-
-		case Center:
-			// Center justified: match test expectations
-			if line == "Line1" {
-				// Exactly 5 spaces on left, 4 on right for "Line1"
-				padded = strings.Repeat(" ", 5) + line + strings.Repeat(" ", 4)
-			} else if line == "L3" {
-				// Exactly 6 spaces on left, 6 on right for "L3" (updated)
-				padded = strings.Repeat(" ", 6) + line + strings.Repeat(" ", 6)
-			} else {
-				// For "Longer Line2" (already fills the width)
-				leftPad := 1 // 1 space on left for longest line
-				rightPad := totalPad - leftPad
-				padded = strings.Repeat(" ", leftPad) + line + strings.Repeat(" ", rightPad)
-			}
-		}
-
-		// Add borders and append to result
-		boxLine := leftBorder + padded + rightBorder
-		result = append(result, boxLine)
-	}
-
-	return strings.Join(result, "\n")
+func CreateBox(strs []string, width int, bs Border, just Justification) string {
+	return Box(strs, width, bs, just)
 }
 
 func Box(strs []string, width int, bs Border, just Justification) string {
-	width = max(5, width)
 	ret := []string{}
 
 	if bs&TopBorder != 0 {
@@ -240,4 +177,79 @@ func Box(strs []string, width int, bs Border, just Justification) string {
 	}
 
 	return strings.Join(ret, "\n")
+}
+
+// BorderStyle defines the characters used for drawing a box
+type BorderStyle struct {
+	TopLeft     string
+	Top         string
+	TopRight    string
+	Right       string
+	BottomRight string
+	Bottom      string
+	BottomLeft  string
+	Left        string
+}
+
+// Style defines the styling options for a box
+type Style struct {
+	Width       int
+	Padding     int
+	Justify     Justification
+	BorderStyle BorderStyle
+}
+
+// NewStyle creates a default box style
+func NewStyle() Style {
+	return Style{
+		Width:   78,
+		Padding: 1,
+		Justify: Left,
+		BorderStyle: BorderStyle{
+			TopLeft:     string(boxTokens[Single][TopLeft]),
+			Top:         string(boxTokens[Single][Horizontal]),
+			TopRight:    string(boxTokens[Single][TopRight]),
+			Right:       string(boxTokens[Single][Vertical]),
+			BottomRight: string(boxTokens[Single][BottomRight]),
+			Bottom:      string(boxTokens[Single][Horizontal]),
+			BottomLeft:  string(boxTokens[Single][BottomLeft]),
+			Left:        string(boxTokens[Single][Vertical]),
+		},
+	}
+}
+
+// MyBox defines the structure of a box
+type MyBox struct {
+	Title   string
+	Content string
+	Style   Style
+}
+
+// Display shows the box
+func (b *MyBox) Display() {
+	// Clear the screen first
+	fmt.Print("\033[H\033[2J") // ANSI escape sequence to clear screen and move cursor to home position
+
+	lines := strings.Split(b.Content, "\n")
+	width := b.Style.Width
+
+	// If there's a title, add it as the first line
+	if b.Title != "" {
+		// Add title line and separator
+		header := []string{b.Title, strings.Repeat("─", width-4)}
+		lines = append(header, lines...)
+	}
+
+	// Create and display the box
+	boxOutput := Box(lines, width, All, Justification(b.Style.Justify))
+	fmt.Println(boxOutput)
+}
+
+// NewBox creates a new box with title, content, and style
+func NewBox(title, content string, style Style) MyBox {
+	return MyBox{
+		Title:   title,
+		Content: content,
+		Style:   style,
+	}
 }

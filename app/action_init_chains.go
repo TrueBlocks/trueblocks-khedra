@@ -14,7 +14,7 @@ import (
 func getChainsScreen() wizard.Screen {
 	cTitle := `Chain Settings`
 	cSubtitle := ``
-	cInstructions := `Type your answers and press enter. ("b"=back, "q"=quit)`
+	cInstructions := ``
 	cBody := `
 Khedra will index any EVM chain. The only requirement is a working RPC
 endpoint. You may index more than one chain.
@@ -58,6 +58,7 @@ var c1 = wizard.Question{
 	Hint: `Khedra requires a valid, reachable RPC for Mainnet
 |Ethereum. It must read state from the Unchained Index smart
 |contract. When you press enter, the RPC will be validated.`,
+	ValidationType: "rpc", // Add validation type for real-time validation
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
 		_ = input
 		return prepare(q, func(cfg *types.Config) (string, types.Chain, error) {
@@ -101,7 +102,7 @@ var c2 = wizard.Question{
 |the file in your editor. Adding your own chains should be
 |obvious. Save your work to return to this screen.`,
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
-		q.Screen.Instructions = `Type "edit" to add another chain or press enter to continue.`
+		q.Screen.Instructions = `Type "edit" to manually configure other chains.`
 		return input, validContinue()
 	},
 	Validate: func(input string, q *wizard.Question) (string, error) {

@@ -2,14 +2,13 @@ package app
 
 import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
-	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/boxes"
 	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/wizard"
 )
 
 func getWelcomeScreen() wizard.Screen {
-	wTitle := `KHEDRA WIZARD`
+	wTitle := `Welcome Screen`
 	wSubtitle := `Index, monitor, serve, and share blockchain data.`
-	wInstructions := `Press enter to continue.`
+	wInstructions := ``
 	wBody := `
 Welcome to Khedra, a local-first indexer/monitor for EVM blockchains. This
 wizard will walk you through step by step to config the app.
@@ -25,7 +24,7 @@ to a previous screen, or "edit" to open the configuration file.
 	}
 	wQuestions := []wizard.Questioner{&w0}
 	wStyle := wizard.NewStyle()
-	wStyle.Justify = boxes.Center
+	wStyle.Justify = "center" //boxes.Center
 
 	return wizard.Screen{
 		Title:        wTitle,

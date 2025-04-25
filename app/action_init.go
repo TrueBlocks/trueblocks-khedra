@@ -18,14 +18,13 @@ func (k *KhedraApp) initAction(c *cli.Context) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	steps := []wizard.Screen{
-		wizard.AddScreen(getWelcomeScreen()),
-		wizard.AddScreen(getGeneralScreen()),
-		wizard.AddScreen(getServicesScreen()),
-		wizard.AddScreen(getChainsScreen()),
-		wizard.AddScreen(getLoggingScreen()),
-		wizard.AddScreen(getSummaryScreen()),
-	}
+	// Register the help handler for context-sensitive help
+	registerHelpHandler()
+
+	// Register validation functions for real-time feedback
+	registerValidationFunctions()
+
+	steps := getInitScreens()
 
 	reloadConfig := func(string) (any, error) {
 		if cfg, err := LoadConfig(); err != nil {
@@ -95,4 +94,16 @@ func confirm[T any](q *wizard.Question, fn processFn[T]) (string, error) {
 		return input, err
 	}
 	return "", validContinue()
+}
+
+func getInitScreens() []wizard.Screen {
+	return []wizard.Screen{
+		getWelcomeScreen(),
+		getGeneralScreen(),
+		getChainsScreen(),
+		getServicesScreen(),
+		getServicePortsScreen(),
+		getLoggingScreen(),
+		getSummaryScreen(),
+	}
 }

@@ -1,17 +1,24 @@
 package wizard
 
-import "github.com/TrueBlocks/trueblocks-khedra/v5/pkg/boxes"
+type Border int
+type Justification string
+
+const (
+	Single Border = 1
+	Double Border = 2
+	All    Border = 15 // This would be TopBorder | BottomBorder | LeftBorder | RightBorder
+)
 
 type Style struct {
-	Outer   boxes.Border
-	Inner   boxes.Border
-	Justify boxes.Justification
+	Outer   Border
+	Inner   Border
+	Justify Justification
 }
 
 func NewStyle() Style {
 	return Style{
-		Outer:   boxes.Single | boxes.All,
-		Inner:   boxes.Double | boxes.All,
-		Justify: boxes.Left,
+		Outer:   Single | All,
+		Inner:   Double | All,
+		Justify: "Left",
 	}
 }
