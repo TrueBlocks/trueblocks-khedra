@@ -65,7 +65,8 @@ func (s *Screen) Display(question Questioner, caret string) {
 			if len(s) == 0 {
 				lines = []string{t}
 			}
-			b := boxes.Box(lines, screenWidth, boxes.Single|boxes.BottomBorder|boxes.LeftBorder|boxes.RightBorder|boxes.TCorners, style.Justify)
+			lines = append(lines, "──────────────────────────────────────────────────────────────────────────")
+			b := boxes.Box(lines, screenWidth-2, boxes.NoBorder, style.Justify)
 			b = strings.TrimSpace(b)
 			ret = []string{b}
 		}
