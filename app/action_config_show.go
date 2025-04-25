@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
-	_ "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/env"
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
+	_ "github.com/TrueBlocks/trueblocks-khedra/v5/pkg/env"
+	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
 	"github.com/urfave/cli/v2"
 	yamlv2 "gopkg.in/yaml.v2"
 )

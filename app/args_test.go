@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
+	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
 )
 
 // Testing status: reviewed

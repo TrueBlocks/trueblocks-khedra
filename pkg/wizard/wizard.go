@@ -2,43 +2,80 @@ package wizard
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 )
 
-type Wizard struct {
-	screens   []Screen
-	caret     string
-	current   int
-	completed bool
-	displayFn func(*Wizard, int) error
-	Backing   any
-	ReloadFn  func(string) (any, error)
+// HelpHandlerFunc is a function that provides context-sensitive help
+// based on the current screen and question
+type HelpHandlerFunc func(screen *Screen, question *Question) string
+
+// Global help handler
+var globalHelpHandler HelpHandlerFunc
+
+// SetHelpHandler sets the global help handler function
+func SetHelpHandler(handler HelpHandlerFunc) {
+	globalHelpHandler = handler
 }
 
-func NewWizard(screens []Screen, caret string, backing any, reloadFn func(string) (any, error)) *Wizard {
+// GetHelp returns help text for the current context
+func GetHelp(screen *Screen, question *Question) string {
+	if globalHelpHandler != nil {
+		return globalHelpHandler(screen, question)
+	}
+	return "Help is not available for this item."
+}
+
+type Wizard struct {
+	screens    []Screen
+	title      string
+	current    int
+	completed  bool
+	displayFn  func(*Wizard, int) error
+	Backing    any
+	ReloaderFn func(string) (any, error)
+}
+
+func NewWizard(screens []Screen, title string, data any, reloaderFn func(string) (any, error)) *Wizard {
 	if len(screens) == 0 {
 		panic("screens cannot be empty")
 	}
-	if backing == nil || reloadFn == nil {
-		panic("neither backing nor reloadFn may be nil")
+	if data == nil || reloaderFn == nil {
+		panic("neither data nor reloadFn may be nil")
+	}
+	ret := &Wizard{
+		screens:    screens,
+		title:      title,
+		current:    0,
+		Backing:    data,
+		ReloaderFn: reloaderFn,
+		displayFn:  displayScreen, // Set the default display function
 	}
 
-	if caret == "" {
-		caret = "--> "
+	// Get screen titles for navigation
+	screenTitles := make([]string, len(screens))
+	for i, screen := range screens {
+		screenTitles[i] = screen.Title
 	}
 
-	return &Wizard{
-		screens:   screens,
-		caret:     caret,
-		displayFn: displayScreen,
-		Backing:   backing,
-		ReloadFn:  reloadFn,
+	// Update wizard with navigation bars
+	for i := range ret.screens {
+		// Create a navigation bar for this screen
+		navBar := NewNavigationBar(i, len(screens), screenTitles)
+
+		// Set this wizard as the screen's wizard (for context)
+		ret.screens[i].Wizard = ret
+
+		// Set the navigation bar for this screen
+		ret.screens[i].NavigationBar = navBar
 	}
+
+	return ret
 }
 
 func (w *Wizard) Reload(fn string) (err error) {
-	w.Backing, err = w.ReloadFn(fn)
+	w.Backing, err = w.ReloaderFn(fn)
 	return
 }
 
@@ -95,7 +132,8 @@ func (w *Wizard) Run() error {
 		for _, question := range screen.Questions {
 			text, resp := question.GetQuestion()
 			if len(text) > 0 {
-				fmt.Printf("  - %s: %s\n", text, resp)
+				cleanText := strings.ReplaceAll(text, "|", "")
+				fmt.Printf("  - %s: %s\n", cleanText, resp)
 			}
 		}
 	}

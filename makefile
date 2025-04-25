@@ -1,3 +1,5 @@
+.PHONY: app
+
 SRC_GO := $(shell find . -name '*.go')
 
 #-------------------------------------------------
@@ -11,21 +13,19 @@ dest=$(bin)/$(exec)
 all: $(SRC_GO)
 	@make app
 
-every:
-	@cd ../build ; make ; cd -
-	@make app
-
-app: $(SRC_GO)
+app:
+	@cd ../build ; make khedra ; cd -
 	@mkdir -p $(bin)
 	@go build -o $(dest) *.go
 
 update:
 	@go get "github.com/TrueBlocks/trueblocks-sdk/v5@latest"
 	@go get github.com/TrueBlocks/trueblocks-core/src/apps/chifra@latest
+	@go get -u ./...
 
 install:
-	@make build
-	@mv khedra ~/go/bin
+	@make app
+	@mv $(dest) ~/go/bin
 
 test: $(SRC_GO)
 	@go test ./...

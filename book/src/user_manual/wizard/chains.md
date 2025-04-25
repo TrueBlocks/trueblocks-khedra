@@ -1,38 +1,72 @@
-# Chains Configuration Screen
-
-## Function
+# Chain Settings Screen
 
 ```ascii
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ Chain Settings                                                               │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│ Khedra will index any number of EVM chains, however it requires an           │
-│ RPC endpoint for each to do so. Fast, dedicated local endpoints are          │
-│ preferred. Likely, you will get rate limited if you point to a remote        │
-│ endpoing, but if you do, you may use the Sleep option to slow down           │
-│ operation. See "help".                                                       │
+│ Khedra works with the Ethereum mainnet chain and any EVM-compatible          │
+│ blockchain. Each chain requires at least one RPC endpoint URL and a          │
+│ chain name.                                                                  │
 │                                                                              │
-│ You may add chains to the list by typing the chain's name. Remove chains     │
-│ with "remove <chain>". Or, an easier way is to edit the configuration        │
-│ file directly by typing "edit". The mainnet chain is required.               │
+│ Ethereum mainnet must be configured even if other chains are enabled.        │
+│ The format of an RPC endpoint is protocol://host:port. For example:          │
+│ http://localhost:8545 or https://mainnet.infura.io/v3/YOUR-PROJECT-ID.       │
+│                                                                              │
+│ The next few screens will help you configure your chains.                    │
 │                                                                              │
 │ Press enter to continue.                                                     │
+│                                                                              │
+│ Keyboard: [h] Help [q] Quit [b] Back [enter] Continue                        │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Purpose
 
-- Configure blockchain networks (chains) for monitoring or interaction.
+- Configures blockchain connections for indexing and monitoring
+- Ensures proper RPC endpoint setup for each chain
+- Explains the requirement for Ethereum mainnet
 
 ## Key Features
 
-- Select relevant chains.
-- Set chain-specific parameters such as endpoints and authentication.
+- Multiple chain support with standardized naming
+- RPC endpoint configuration and validation
+- Clear explanation of requirements and format
 
-## Example Usage
+## Chain Configuration
 
-```go
-screen := getChainsScreen(cfg)
-wizard.AddScreen(screen)
-```
+The chains configuration screen guides you through setting up:
+
+1. **Ethereum Mainnet (Required)**
+   - At least one valid RPC endpoint
+   - Used for core functionality and the Unchained Index
+
+2. **Additional EVM Chains (Optional)**
+   - Sepolia, Gnosis, Optimism, and other EVM-compatible chains
+   - Each requires at least one RPC endpoint
+   - Enable/disable option for each chain
+
+## RPC Endpoint Requirements
+
+For each chain, you must provide:
+
+- A valid RPC URL in the format `protocol://host:port`
+- Proper authentication details if required (e.g., Infura project ID)
+- Endpoints with sufficient capabilities for indexing (archive nodes recommended)
+
+THIS TEXT NEEDS TO BE REVIEWED.
+## Validation Checks
+
+The wizard performs these validations on each RPC endpoint:
+
+- URL format validation
+- Connection test to verify the endpoint is reachable
+- Chain ID verification to ensure the endpoint matches the selected chain
+- API method support check for required JSON-RPC methods
+THIS TEXT NEEDS TO BE REVIEWED.
+
+## Implementation
+
+The chain configuration uses the Screen struct with specialized validation for RPC endpoints. The wizard prioritizes setting up Ethereum mainnet first, then offers options to configure additional chains as needed.
+
+For each chain, the wizard walks through enabling the chain, configuring RPC endpoints, and validating the connection before proceeding to the next chain.

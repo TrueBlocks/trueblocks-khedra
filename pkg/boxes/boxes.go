@@ -155,6 +155,10 @@ func boxRow(str string, width int, bs Border, just Justification) string {
 	return strings.Join(body, "\n")
 }
 
+func CreateBox(strs []string, width int, bs Border, just Justification) string {
+	return Box(strs, width, bs, just)
+}
+
 func Box(strs []string, width int, bs Border, just Justification) string {
 	ret := []string{}
 
@@ -163,24 +167,8 @@ func Box(strs []string, width int, bs Border, just Justification) string {
 		ret = append(ret, tb...)
 	}
 
-	containsAnyRune := func(s string, runes []rune) bool {
-		for _, r := range s {
-			for _, target := range runes {
-				if r == target {
-					return true
-				}
-			}
-		}
-		return false
-	}
-	tRunes := []rune{'┬', '├', '┴', '┤', '┼', '╦', '╠', '╩', '╣', '╬'}
-
 	for _, s := range strs {
-		if !containsAnyRune(s, tRunes) && bs&(LeftBorder|RightBorder) != 0 {
-			ret = append(ret, boxRow(s, width, bs, just))
-		} else {
-			ret = append(ret, padRow(s, width, bs, just))
-		}
+		ret = append(ret, boxRow(s, width, bs, just))
 	}
 
 	if bs&BottomBorder != 0 {
@@ -189,4 +177,79 @@ func Box(strs []string, width int, bs Border, just Justification) string {
 	}
 
 	return strings.Join(ret, "\n")
+}
+
+// BorderStyle defines the characters used for drawing a box
+type BorderStyle struct {
+	TopLeft     string
+	Top         string
+	TopRight    string
+	Right       string
+	BottomRight string
+	Bottom      string
+	BottomLeft  string
+	Left        string
+}
+
+// Style defines the styling options for a box
+type Style struct {
+	Width       int
+	Padding     int
+	Justify     Justification
+	BorderStyle BorderStyle
+}
+
+// NewStyle creates a default box style
+func NewStyle() Style {
+	return Style{
+		Width:   78,
+		Padding: 1,
+		Justify: Left,
+		BorderStyle: BorderStyle{
+			TopLeft:     string(boxTokens[Single][TopLeft]),
+			Top:         string(boxTokens[Single][Horizontal]),
+			TopRight:    string(boxTokens[Single][TopRight]),
+			Right:       string(boxTokens[Single][Vertical]),
+			BottomRight: string(boxTokens[Single][BottomRight]),
+			Bottom:      string(boxTokens[Single][Horizontal]),
+			BottomLeft:  string(boxTokens[Single][BottomLeft]),
+			Left:        string(boxTokens[Single][Vertical]),
+		},
+	}
+}
+
+// MyBox defines the structure of a box
+type MyBox struct {
+	Title   string
+	Content string
+	Style   Style
+}
+
+// Display shows the box
+func (b *MyBox) Display() {
+	// Clear the screen first
+	fmt.Print("\033[H\033[2J") // ANSI escape sequence to clear screen and move cursor to home position
+
+	lines := strings.Split(b.Content, "\n")
+	width := b.Style.Width
+
+	// If there's a title, add it as the first line
+	if b.Title != "" {
+		// Add title line and separator
+		header := []string{b.Title, strings.Repeat("─", width-4)}
+		lines = append(header, lines...)
+	}
+
+	// Create and display the box
+	boxOutput := Box(lines, width, All, Justification(b.Style.Justify))
+	fmt.Println(boxOutput)
+}
+
+// NewBox creates a new box with title, content, and style
+func NewBox(title, content string, style Style) MyBox {
+	return MyBox{
+		Title:   title,
+		Content: content,
+		Style:   style,
+	}
 }

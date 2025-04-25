@@ -7,17 +7,18 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 )
 
+// Replacement defines a color replacement for text
 type Replacement struct {
 	Color  string
 	Values []string
 }
 
-func (r *Replacement) Replace(in string) string {
-	out := in
-	for _, repStr := range r.Values {
-		out = strings.ReplaceAll(out, repStr, r.Color+repStr+colors.Off)
+// Replace applies the color replacement to the given text
+func (r *Replacement) Replace(text string) string {
+	for _, val := range r.Values {
+		text = strings.ReplaceAll(text, val, r.Color+val+colors.Off)
 	}
-	return out
+	return text
 }
 
 func (r *Replacement) Validate() error {

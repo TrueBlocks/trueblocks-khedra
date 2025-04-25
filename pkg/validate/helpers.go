@@ -2,7 +2,9 @@ package validate
 
 import (
 	"fmt"
+	"net/url"
 	"reflect"
+	"strings"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 )
@@ -41,4 +43,25 @@ func Failed(fv FieldValidator, errStr, got string) error {
 		c = ""
 	}
 	return fmt.Errorf("\n%s[%-13.13s] FAILED for %s.%s%s %s (got %s)%s", colors.Red, fv.validatorName, fv.typeName, fv.fieldName, c, errStr, got, colors.Off)
+}
+
+// Enum validates that a value is one of the allowed values
+func Enum(value string, allowedValues []string) (bool, error) {
+	for _, allowed := range allowedValues {
+		if value == allowed {
+			return true, nil
+		}
+	}
+	return false, fmt.Errorf("value '%s' not in allowed values: %s", value, strings.Join(allowedValues, ", "))
+}
+
+// IsValidURL checks if a string is a valid URL
+func IsValidURL(urlStr string) bool {
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return false
+	}
+
+	// Check that it has a scheme and host
+	return u.Scheme != "" && u.Host != ""
 }

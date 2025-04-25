@@ -7,7 +7,6 @@
   - [Getting Started](user_manual/getting_started.md)
   - [Understanding Khedra](user_manual/understanding_khedra.md)
   - [Using Khedra](user_manual/using_khedra.md)
-  - [Advanced Operations](user_manual/advanced_operations.md)
   - [Maintenance and Troubleshooting](user_manual/maintenance_and_troubleshooting.md)
   - [Installation Wizard](user_manual/wizard.md)
     - [Welcome Screen](user_manual/wizard/welcome.md)
@@ -27,4 +26,3 @@
   - [Integration Points](tech_spec/integration_points.md)
   - [Testing and Validation](tech_spec/testing_and_validation.md)
   - [Appendices](tech_spec/appendices.md)
-

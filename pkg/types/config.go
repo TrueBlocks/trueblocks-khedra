@@ -13,7 +13,7 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
-	_ "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/env"
+	_ "github.com/TrueBlocks/trueblocks-khedra/v5/pkg/env"
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v5"
 )
 

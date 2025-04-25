@@ -5,15 +5,15 @@ import (
 	"fmt"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/wizard"
+	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
+	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/wizard"
 )
 
 // screen|---------|---------|---------|---------|---------|---------|---|74
 func getServicesScreen() wizard.Screen {
 	sTitle := `Services Settings`
 	sSubtitle := ``
-	sInstructions := `Enter "yes" or "no" and press enter. ("e"=edit, "h"=help)`
+	sInstructions := ``
 	sBody := `
 Khedra provides five services. The first, "control," exposes endpoints to 
 control the other four: "scrape", "monitor", "api", and "ipfs".
