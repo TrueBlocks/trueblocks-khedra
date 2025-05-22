@@ -69,6 +69,7 @@ func createPortQuestion(serviceName string) wizard.Question {
 			serviceName, getDefaultPort(serviceName)),
 		ValidationType: "port", // For real-time port validation
 		PrepareFn: func(input string, q *wizard.Question) (string, error) {
+			_ = input // delint
 			if cfg, ok := q.Screen.Wizard.Backing.(*types.Config); ok {
 				service, exists := cfg.Services[serviceName]
 				if !exists || !service.Enabled {

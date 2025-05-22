@@ -42,15 +42,17 @@ func GetDefaultShortcuts() []KeyboardShortcut {
 
 // GetShortcutBarForScreen returns a shortcut bar appropriate for the current screen
 func GetShortcutBarForScreen(screenTitle string, w *Wizard) string {
+	_ = w           // delint
+	_ = screenTitle // delint
 	shortcuts := GetDefaultShortcuts()
 
 	// Add context-specific shortcuts based on screen title
-	title := strings.ToLower(screenTitle)
+	// title := strings.ToLower(screenTitle)
 
-	if strings.Contains(title, "summary") {
-		// Add summary-specific shortcuts - but remove template functionality
-		// No more "save" shortcut for templates
-	}
+	// if strings.Contains(title, "summary") {
+	// 	// Add summary-specific shortcuts - but remove template functionality
+	// 	// No more "save" shortcut for templates
+	// }
 
 	return GetShortcutBar(shortcuts)
 }

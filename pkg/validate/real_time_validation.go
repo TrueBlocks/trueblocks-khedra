@@ -47,6 +47,7 @@ func ValidateRpcEndpointRT(endpoint string) (string, error) {
 // ValidateFolder performs real-time validation of a folder path,
 // checking for existence, permissions, and disk space.
 func ValidateFolder(path string) (bool, string, string) {
+	_ = path // delint
 	// The actual implementation would check:
 	// 1. If the folder exists or can be created
 	// 2. If we have write permissions
@@ -96,6 +97,7 @@ func isPortAvailable(port int) bool {
 // ValidateWithFeedback provides enhanced validation with color-coded feedback
 // and severity levels. Returns validity, message, and severity (error, warning, info)
 func ValidateWithFeedback(input string, validationType string, extraInfo ...string) (bool, string, string) {
+	_ = extraInfo // delint
 	switch validationType {
 	case "rpc":
 		_, err := ValidateRpcEndpointRT(input)

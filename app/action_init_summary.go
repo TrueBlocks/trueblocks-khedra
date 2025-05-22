@@ -50,6 +50,7 @@ var sum0 = wizard.Question{
 	Question: `Press Enter to save your configuration, or "b" to go back.`,
 	Hint:     `Configuration preview is shown above.`,
 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
+		_ = input // delint
 		cfg, ok := q.Screen.Wizard.Backing.(*types.Config)
 		if !ok {
 			return "", fmt.Errorf("could not cast backing data")
@@ -113,7 +114,7 @@ func displayConfigPreview(cfg *types.Config, q *wizard.Question) {
 	preview.WriteString(colors.BrightBlue + "⛓️ Chains:" + colors.Off + "\n")
 
 	// Sort chains for consistent display
-	var chainNames []string
+	var chainNames = []string{}
 	for name := range cfg.Chains {
 		chainNames = append(chainNames, name)
 	}
