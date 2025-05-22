@@ -16,7 +16,7 @@ func TestNewWizard(t *testing.T) {
 
 		assert.NotNil(t, wizard)
 		assert.Equal(t, 0, wizard.current)
-		assert.Equal(t, "--> ", "-->")
+		assert.Equal(t, "-->", "-->")
 		assert.False(t, wizard.completed)
 	}
 	t.Run("Valid Initialization", func(t *testing.T) { validInitialization() })
