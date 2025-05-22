@@ -2,10 +2,10 @@ package app
 
 import (
 	"os"
-	"reflect"
 	"testing"
 
 	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
+	"github.com/google/go-cmp/cmp"
 )
 
 // Testing status: reviewed
@@ -136,8 +136,8 @@ func TestArgsParseArgsInternal(t *testing.T) {
 			if hasVersion != tt.expVersion {
 				t.Errorf("expected hasVersion=%v, got %v", tt.expVersion, hasVersion)
 			}
-			if !reflect.DeepEqual(commands, tt.expCmds) {
-				t.Errorf("expected commands=%v, got %v", tt.expCmds, commands)
+			if diff := cmp.Diff(tt.expCmds, commands); diff != "" {
+				t.Errorf("commands mismatch (-want +got):\n%s", diff)
 			}
 			if commandCount != tt.expCmdCount {
 				t.Errorf("expected commandCount=%d, got %d", tt.expCmdCount, commandCount)
@@ -224,8 +224,8 @@ func TestArgsCleanArgs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			os.Args = tt.args
 			result := cleanArgs()
-			if !reflect.DeepEqual(result, tt.expected) {
-				t.Errorf("Test %q failed: expected %v, got %v", tt.name, tt.expected, result)
+			if diff := cmp.Diff(tt.expected, result); diff != "" {
+				t.Errorf("Test %q failed, cleanArgs() mismatch (-want +got):\n%s", tt.name, diff)
 			}
 		})
 	}
