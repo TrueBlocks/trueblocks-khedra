@@ -2,6 +2,70 @@
 
 This section details Khedra's primary technical functionalities, explaining how each core feature is implemented and the technical approaches used.
 
+## Control Service
+
+### Service Management Interface
+
+The Control Service provides centralized management capabilities for all other Khedra services through a RESTful API interface.
+
+#### Technical Implementation
+
+The Control Service implements these core management functions:
+
+1. **Service Lifecycle Management**: Start, stop, restart, and pause individual services
+2. **Health Monitoring**: Real-time status monitoring of all services
+3. **Configuration Management**: Runtime configuration updates and validation
+4. **Metrics Collection**: Aggregation of service performance metrics
+
+```go
+// Simplified Control Service interface
+type ControlService struct {
+    serviceManager *ServiceManager
+    httpServer     *http.Server
+    logger         *slog.Logger
+}
+
+type ServiceStatus struct {
+    Name        string
+    State       ServiceState
+    LastStarted time.Time
+    Uptime      time.Duration
+    Metrics     map[string]interface{}
+}
+
+type ServiceState int
+const (
+    StateStopped ServiceState = iota
+    StateStarting
+    StateRunning
+    StatePausing
+    StatePaused
+    StateStopping
+)
+```
+
+#### Management Endpoints
+
+The Control Service exposes these API endpoints:
+
+1. **Service Status**: `GET /api/v1/services` - List all services and their status
+2. **Individual Service Status**: `GET /api/v1/services/{serviceName}` - Get specific service status
+3. **Start Service**: `POST /api/v1/services/{serviceName}/start` - Start a specific service
+4. **Stop Service**: `POST /api/v1/services/{serviceName}/stop` - Stop a specific service
+5. **Restart Service**: `POST /api/v1/services/{serviceName}/restart` - Restart a specific service
+6. **Pause Service**: `POST /api/v1/services/{serviceName}/pause` - Pause a specific service
+7. **Resume Service**: `POST /api/v1/services/{serviceName}/resume` - Resume a paused service
+8. **System Status**: `GET /api/v1/status` - Overall system health and status
+
+#### Service Coordination
+
+The Control Service coordinates service operations through:
+
+- **Dependency Management**: Ensures services start in proper order
+- **Graceful Shutdown**: Coordinates orderly service termination
+- **Error Recovery**: Automatic restart of failed services (if configured)
+- **Resource Monitoring**: Tracks system resource usage across services
+
 ## Blockchain Indexing
 
 ### The Unchained Index

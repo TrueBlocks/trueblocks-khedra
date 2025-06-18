@@ -2,303 +2,600 @@
 
 This section details Khedra's performance characteristics, optimization strategies, and scalability considerations.
 
-## Performance Benchmarks
+## Performance Tuning Guide
 
-### Indexing Performance
+### Optimal Configuration for Different Use Cases
 
-Typical indexing performance metrics on reference hardware (8-core CPU, 16GB RAM, SSD storage):
-
-| Chain     | Block Processing Rate | Trace Processing Rate | Disk Space per 1M Blocks |
-| --------- | --------------------- | --------------------- | ------------------------ |
-| Mainnet   | 15-25 blocks/sec      | 5-15 blocks/sec       | 1.5-2.5 GB               |
-| Testnets  | 20-30 blocks/sec      | 8-20 blocks/sec       | 0.5-1.5 GB               |
-| L2 Chains | 30-50 blocks/sec      | 10-25 blocks/sec      | 1.0-2.0 GB               |
-
-Factors affecting indexing performance:
-
-1. **RPC Endpoint Performance**: Quality and latency of the blockchain RPC connection
-2. **Trace Availability**: Whether traces are locally available or require RPC calls
-3. **Block Complexity**: Number of transactions and traces in each block
-4. **Hardware Specifications**: CPU cores, memory, and disk I/O capacity
-5. **Network Conditions**: Bandwidth and latency for remote RPC endpoints
-
-### Query Performance
-
-Performance metrics for common queries:
-
-| Query Type                | Response Time (cold) | Response Time (warm) |
-| ------------------------- | -------------------- | -------------------- |
-| Address Appearance Lookup | 50-200ms             | 10-50ms              |
-| Block Range Scan          | 100-500ms            | 20-100ms             |
-| Monitor Status Check      | 20-100ms             | 5-20ms               |
-| API Status Endpoints      | 5-20ms               | 1-5ms                |
-
-Factors affecting query performance:
-
-1. **Index Structure**: Organization and optimization of the Unchained Index
-2. **Memory Cache**: Availability of data in memory versus disk access
-3. **Query Complexity**: Number of addresses and block range size
-4. **Hardware Specifications**: Particularly memory and disk speed
-5. **Concurrent Load**: Number of simultaneous queries being processed
-
-## Performance Optimization Strategies
-
-### Memory Management
-
-Khedra implements several memory optimization techniques:
-
-1. **Bloom Filters**: Space-efficient probabilistic data structures to quickly determine if an address might appear in a block
-2. **LRU Caching**: Least Recently Used caching for frequently accessed data
-3. **Memory Pooling**: Reuse of allocated memory for similar operations
-4. **Batch Processing**: Processing multiple items in batches to amortize overhead
-5. **Incremental GC**: Tuned garbage collection to minimize pause times
-
-Implementation example:
-
-```go
-// Bloom filter implementation for quick address lookups
-type AppearanceBloomFilter struct {
-    filter     *bloom.BloomFilter
-    capacity   uint
-    errorRate  float64
-}
-
-func NewAppearanceBloomFilter(expectedItems uint) *AppearanceBloomFilter {
-    return &AppearanceBloomFilter{
-        filter:    bloom.NewWithEstimates(uint(expectedItems), 0.01),
-        capacity:  expectedItems,
-        errorRate: 0.01,
-    }
-}
-
-func (bf *AppearanceBloomFilter) Add(address []byte) {
-    bf.filter.Add(address)
-}
-
-func (bf *AppearanceBloomFilter) MayContain(address []byte) bool {
-    return bf.filter.Test(address)
-}
-```
-
-### Disk I/O Optimization
-
-Strategies for optimizing disk operations:
-
-1. **Sequential Writes**: Organize write patterns for sequential access where possible
-2. **Write Batching**: Combine multiple small writes into larger operations
-3. **Read-Ahead Buffering**: Anticipate and pre-load data likely to be needed
-4. **Cache Warming**: Proactively load frequently accessed data into memory
-5. **Compression**: Reduce storage requirements and I/O bandwidth
-
-Example implementation:
-
-```go
-// Batched write implementation
-type BatchedWriter struct {
-    buffer     []byte
-    maxSize    int
-    flushThreshold int
-    target     io.Writer
-    mutex      sync.Mutex
-}
-
-func (w *BatchedWriter) Write(p []byte) (n int, err error) {
-    w.mutex.Lock()
-    defer w.mutex.Unlock()
-    
-    // Add to buffer
-    w.buffer = append(w.buffer, p...)
-    
-    // Flush if threshold reached
-    if len(w.buffer) >= w.flushThreshold {
-        return w.Flush()
-    }
-    
-    return len(p), nil
-}
-
-func (w *BatchedWriter) Flush() (n int, err error) {
-    if len(w.buffer) == 0 {
-        return 0, nil
-    }
-    
-    n, err = w.target.Write(w.buffer)
-    w.buffer = w.buffer[:0] // Clear buffer
-    return n, err
-}
-```
-
-### Concurrency Management
-
-Techniques for efficient parallel processing:
-
-1. **Worker Pools**: Fixed-size pools of worker goroutines for controlled parallelism
-2. **Pipeline Processing**: Multi-stage processing with each stage running concurrently
-3. **Batched Distribution**: Group work items for efficient parallelization
-4. **Backpressure Mechanisms**: Prevent resource exhaustion during high load
-5. **Adaptive Parallelism**: Adjust concurrency based on system load and resources
-
-Example worker pool implementation:
-
-```go
-// Worker pool for parallel block processing
-type BlockWorkerPool struct {
-    workers     int
-    queue       chan BlockTask
-    results     chan BlockResult
-    wg          sync.WaitGroup
-    ctx         context.Context
-    cancel      context.CancelFunc
-}
-
-func NewBlockWorkerPool(workers int) *BlockWorkerPool {
-    ctx, cancel := context.WithCancel(context.Background())
-    pool := &BlockWorkerPool{
-        workers: workers,
-        queue:   make(chan BlockTask, workers*2),
-        results: make(chan BlockResult, workers*2),
-        ctx:     ctx,
-        cancel:  cancel,
-    }
-    
-    // Start worker goroutines
-    pool.wg.Add(workers)
-    for i = 0; i < workers; i++ {
-        go pool.worker(i)
-    }
-    
-    return pool
-}
-
-func (p *BlockWorkerPool) worker(id int) {
-    defer p.wg.Done()
-    
-    for {
-        select {
-        case <-p.ctx.Done():
-            return
-        case task, ok := <-p.queue:
-            if !ok {
-                return
-            }
-            
-            result := processBlock(task)
-            p.results <- result
-        }
-    }
-}
-```
-
-## Scalability Considerations
-
-### Vertical Scaling
-
-Khedra is designed to efficiently utilize additional resources when available:
-
-1. **CPU Utilization**: Automatic adjustment to use available CPU cores
-2. **Memory Utilization**: Configurable memory limits for caching and processing
-3. **Storage Scaling**: Support for high-performance storage devices
-4. **I/O Optimization**: Tuning based on available I/O capacity
-
-Configuration parameters for vertical scaling:
-
+#### Light Usage (Personal Development/Testing)
 ```yaml
 services:
   scraper:
-    concurrency: 8         # Number of parallel workers
-    memory_limit: "4GB"    # Maximum memory usage
-    batch_size: 1000       # Items per processing batch
+    enabled: true
+    sleep: 30        # Longer sleep for less aggressive indexing
+    batchSize: 100   # Smaller batches to reduce memory usage
+  monitor:
+    enabled: false   # Disable if not needed
+    sleep: 60
+    batchSize: 50
+  api:
+    enabled: true
+    port: 8080       # Standard configuration
+  ipfs:
+    enabled: false   # Disable to reduce resource usage
 ```
 
-### Horizontal Scaling
+**Expected Performance:** 5-10 blocks/sec indexing, minimal resource usage
 
-While Khedra runs as a single process, it supports distributed operation through:
-
-1. **Multi-Instance Deployment**: Running multiple instances focusing on different chains
-2. **Shared Index via IPFS**: Collaborative building and sharing of the index
-3. **Split Processing**: Dividing block ranges between instances
-4. **API Load Balancing**: Distributing API queries across instances
-
-Example multi-instance deployment:
-
+#### Standard Usage (Regular Development/Analysis)
+```yaml
+services:
+  scraper:
+    enabled: true
+    sleep: 12        # Balanced sleep interval
+    batchSize: 500   # Default batch size
+  monitor:
+    enabled: true    # Enable for address tracking
+    sleep: 12
+    batchSize: 100
+  api:
+    enabled: true
+    port: 8080
+  ipfs:
+    enabled: true    # Enable for collaboration
+    port: 8083
 ```
-Instance 1: Mainnet indexing
-Instance 2: L2 chains indexing
-Instance 3: API service
-Instance 4: Monitor service
+
+**Expected Performance:** 15-25 blocks/sec indexing, moderate resource usage
+
+#### High-Performance Usage (Production/Heavy Analysis)
+```yaml
+services:
+  scraper:
+    enabled: true
+    sleep: 5         # Aggressive indexing
+    batchSize: 2000  # Large batches for efficiency
+  monitor:
+    enabled: true
+    sleep: 5         # Fast monitoring
+    batchSize: 500
+  api:
+    enabled: true
+    port: 8080
+  ipfs:
+    enabled: true
+    port: 8083
 ```
 
-### Data Volume Management
+**Expected Performance:** 25-40 blocks/sec indexing, high resource usage
 
-Strategies for handling large data volumes:
+### Batch Size Optimization Guidelines
 
-1. **Selective Indexing**: Configure which data types to index (transactions, logs, traces)
-2. **Retention Policies**: Automatically prune older cache data while preserving the index
-3. **Compression**: Reduce storage requirements through data compression
-4. **Tiered Storage**: Move less frequently accessed data to lower-cost storage
+#### Factors Affecting Optimal Batch Size
 
-Example retention configuration:
+1. **RPC Endpoint Performance:**
+   - Fast/unlimited RPC: 1000-5000 blocks
+   - Standard RPC: 500-1000 blocks  
+   - Rate-limited RPC: 50-200 blocks
+
+2. **Available Memory:**
+   - 8GB+ RAM: 1000-2000 blocks
+   - 4-8GB RAM: 500-1000 blocks
+   - <4GB RAM: 100-500 blocks
+
+3. **Network Latency:**
+   - Local RPC node: 2000-5000 blocks
+   - Same region: 1000-2000 blocks
+   - Remote/high latency: 100-500 blocks
+
+#### Batch Size Tuning Process
+
+1. **Start with defaults** (500 blocks)
+2. **Monitor performance** metrics
+3. **Adjust based on bottlenecks:**
+   - If RPC timeouts: decrease batch size
+   - If memory issues: decrease batch size
+   - If CPU idle time: increase batch size
+   - If slow overall progress: increase batch size
+
+### Sleep Interval Recommendations
+
+#### Based on System Resources
+
+**High-End Systems (8+ cores, 16GB+ RAM):**
+- Scraper: 5-10 seconds
+- Monitor: 5-10 seconds
+
+**Mid-Range Systems (4-8 cores, 8-16GB RAM):**
+- Scraper: 10-15 seconds  
+- Monitor: 10-15 seconds
+
+**Resource-Constrained Systems (<4 cores, <8GB RAM):**
+- Scraper: 20-30 seconds
+- Monitor: 30-60 seconds
+
+#### Based on RPC Provider
+
+**Unlimited/Premium RPC:**
+- Scraper: 5-10 seconds
+- Monitor: 5-10 seconds
+
+**Standard RPC with rate limits:**
+- Scraper: 15-30 seconds
+- Monitor: 30-60 seconds
+
+**Free/heavily limited RPC:**
+- Scraper: 60-120 seconds
+- Monitor: 120-300 seconds
+
+### RPC Endpoint Optimization
+
+#### Choosing RPC Providers
+
+**Recommended for High Performance:**
+1. Local RPC node (best performance)
+2. Premium providers (Alchemy, Infura Pro)
+3. Archive nodes with trace support
+
+**Configuration for Multiple RPC Endpoints:**
+```yaml
+chains:
+  mainnet:
+    rpcs:
+      - "https://eth-mainnet.alchemyapi.io/v2/YOUR_KEY"
+      - "https://mainnet.infura.io/v3/YOUR_KEY"  
+      - "https://rpc.ankr.com/eth"
+    enabled: true
+```
+
+#### RPC Performance Testing
+
+```bash
+# Test RPC response time
+time curl -X POST -H "Content-Type: application/json" \
+  --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
+  https://your-rpc-endpoint
+
+# Test batch request performance  
+time curl -X POST -H "Content-Type: application/json" \
+  --data '[{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params":["0x1000000",false],"id":1}]' \
+  https://your-rpc-endpoint
+```
+
+### System Resource Monitoring
+
+#### Key Metrics to Monitor
+
+1. **CPU Usage:**
+   ```bash
+   top -p $(pgrep khedra)
+   ```
+
+2. **Memory Usage:**
+   ```bash
+   ps -o pid,vsz,rss,comm -p $(pgrep khedra)
+   ```
+
+3. **Disk I/O:**
+   ```bash
+   iotop -p $(pgrep khedra)
+   ```
+
+4. **Network Usage:**
+   ```bash
+   nethogs -p $(pgrep khedra)
+   ```
+
+#### Performance Thresholds
+
+**CPU Usage:**
+- <50%: Can increase batch size or decrease sleep
+- 50-80%: Optimal range
+- >80%: Decrease batch size or increase sleep
+
+**Memory Usage:**
+- <2GB: Can increase batch size
+- 2-4GB: Monitor for memory leaks
+- >4GB: Decrease batch size
+
+**Disk I/O:**
+- High read: Index queries are efficient
+- High write: Indexing in progress (normal)
+- Very high write: May need to reduce batch size
+
+### Scaling Considerations
+
+#### Horizontal Scaling Strategies
+
+1. **Chain Separation:**
+   - Run separate Khedra instances per blockchain
+   - Distribute chains across multiple servers
+   - Use load balancer for API access
+
+2. **Service Separation:**
+   - Run API service on separate instances
+   - Dedicated IPFS nodes for data sharing
+   - Centralized monitoring service
+
+3. **Geographic Distribution:**
+   - Deploy close to RPC providers
+   - Regional API instances for lower latency
+   - IPFS network for global data sharing
+
+#### Vertical Scaling Guidelines
+
+**Memory Scaling:**
+- 8GB: Single chain, moderate usage
+- 16GB: Multiple chains or heavy usage
+- 32GB+: High-performance production usage
+
+**CPU Scaling:**
+- 4 cores: Basic usage
+- 8 cores: Standard production
+- 16+ cores: High-performance or multiple chains
+
+**Storage Scaling:**
+- SSD required for optimal performance
+- 100GB per chain per year (estimate)
+- Consider compression and archival strategies
+
+## Service Metrics and Monitoring
+
+### Available Performance Metrics
+
+Each Khedra service exposes performance metrics that can be accessed through the Control Service API. These metrics provide insight into service health, performance, and resource utilization.
+
+#### Control Service Metrics
+
+**Service Status Metrics:**
+- `uptime`: Service runtime duration since last start
+- `state`: Current service state (running, paused, stopped, etc.)
+- `last_started`: Timestamp of last service start
+- `restart_count`: Number of times service has been restarted
+- `health_score`: Overall service health indicator (0-100)
+
+**System Resource Metrics:**
+- `memory_usage_bytes`: Current memory consumption
+- `cpu_usage_percent`: Current CPU utilization
+- `goroutines_count`: Number of active goroutines
+- `gc_cycles`: Garbage collection statistics
+
+#### Scraper Service Metrics
+
+**Indexing Performance:**
+- `blocks_processed_total`: Total number of blocks indexed
+- `blocks_per_second`: Current indexing throughput
+- `batch_size_current`: Current batch size setting
+- `batch_processing_time_ms`: Average time per batch
+- `index_chunks_created`: Number of index chunks generated
+- `appearances_extracted_total`: Total address appearances found
+
+**RPC Performance:**
+- `rpc_requests_total`: Total RPC requests made
+- `rpc_requests_failed`: Number of failed RPC requests
+- `rpc_response_time_ms`: Average RPC response time
+- `rpc_rate_limit_hits`: Number of rate limit encounters
+- `rpc_endpoint_health`: Status of each configured RPC endpoint
+
+**Processing State:**
+- `current_block_number`: Latest block being processed
+- `target_block_number`: Target block (chain tip)
+- `blocks_behind`: Number of blocks behind chain tip
+- `indexing_progress_percent`: Overall indexing completion percentage
+
+#### Monitor Service Metrics
+
+**Monitoring Performance:**
+- `addresses_monitored`: Number of addresses being tracked
+- `monitoring_checks_total`: Total monitoring checks performed
+- `activity_detected_total`: Number of activities detected
+- `notifications_sent_total`: Number of notifications dispatched
+- `false_positives`: Number of false positive detections
+
+**Detection Metrics:**
+- `detection_latency_ms`: Time from block to activity detection
+- `monitoring_batch_size`: Current batch size for monitoring
+- `monitoring_frequency_seconds`: Current monitoring interval
+
+#### API Service Metrics
+
+**Request Performance:**
+- `api_requests_total`: Total API requests served
+- `api_requests_per_second`: Current request throughput
+- `api_response_time_ms`: Average response time
+- `api_errors_total`: Number of API errors
+- `api_cache_hits`: Number of cache hits
+- `api_cache_misses`: Number of cache misses
+
+**Endpoint Metrics:**
+- `status_endpoint_calls`: Calls to status endpoints
+- `index_endpoint_calls`: Calls to index query endpoints
+- `monitor_endpoint_calls`: Calls to monitor endpoints
+- `admin_endpoint_calls`: Calls to admin endpoints
+
+#### IPFS Service Metrics
+
+**Network Performance:**
+- `ipfs_peers_connected`: Number of connected IPFS peers
+- `ipfs_data_uploaded_bytes`: Total data uploaded to IPFS
+- `ipfs_data_downloaded_bytes`: Total data downloaded from IPFS
+- `ipfs_pin_operations`: Number of pin operations performed
+- `ipfs_chunks_shared`: Number of index chunks shared
+
+**Synchronization Metrics:**
+- `ipfs_sync_operations`: Number of sync operations
+- `ipfs_sync_latency_ms`: Average sync operation time
+- `ipfs_failed_retrievals`: Number of failed chunk retrievals
+
+### Accessing Service Metrics
+
+#### REST API Access
+
+Metrics are available through the Control Service API:
+
+```bash
+# Get metrics for all services
+curl http://localhost:8080/api/v1/metrics
+
+# Get metrics for specific service
+curl http://localhost:8080/api/v1/services/scraper/metrics
+
+# Get detailed metrics with verbose output
+curl http://localhost:8080/api/v1/services/scraper?verbose=true&include=metrics
+
+# Get metrics in different formats
+curl http://localhost:8080/api/v1/metrics?format=json
+curl http://localhost:8080/api/v1/metrics?format=prometheus
+```
+
+#### CLI Access
+
+```bash
+# Show basic service status with key metrics
+khedra status --metrics
+
+# Show detailed metrics for all services
+khedra metrics
+
+# Show metrics for specific service
+khedra metrics --service=scraper
+
+# Export metrics to file
+khedra metrics --output=/path/to/metrics.json
+
+# Watch metrics in real-time
+khedra metrics --watch --interval=5s
+```
+
+#### Programmatic Access
+
+```go
+// Example: Getting service metrics programmatically
+import "github.com/TrueBlocks/trueblocks-khedra/v5/pkg/client"
+
+client := client.NewKhedraClient("http://localhost:8080")
+metrics, err := client.GetServiceMetrics("scraper")
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Blocks per second: %f\n", metrics["blocks_per_second"])
+fmt.Printf("Memory usage: %d bytes\n", metrics["memory_usage_bytes"])
+```
+
+### Interpreting Metrics
+
+#### Performance Health Indicators
+
+**Scraper Service Health:**
+- **Healthy**: `blocks_per_second > 10`, `rpc_response_time_ms < 500`, `memory_usage_bytes` stable
+- **Warning**: `blocks_per_second < 5`, `rpc_response_time_ms > 1000`, `blocks_behind > 1000`
+- **Critical**: `blocks_per_second < 1`, `rpc_requests_failed > 10%`, `memory_usage_bytes` increasing rapidly
+
+**Monitor Service Health:**
+- **Healthy**: `detection_latency_ms < 30000`, `false_positives < 5%`, all monitored addresses active
+- **Warning**: `detection_latency_ms > 60000`, `false_positives > 10%`, some addresses not responding
+- **Critical**: `detection_latency_ms > 300000`, `false_positives > 25%`, monitoring completely behind
+
+**API Service Health:**
+- **Healthy**: `api_response_time_ms < 100`, `api_errors_total < 1%`, `api_cache_hits > 80%`
+- **Warning**: `api_response_time_ms > 500`, `api_errors_total > 5%`, `api_cache_hits < 60%`
+- **Critical**: `api_response_time_ms > 2000`, `api_errors_total > 15%`, service unresponsive
+
+#### Resource Utilization Thresholds
+
+**Memory Usage:**
+- **Normal**: < 2GB per service
+- **High**: 2-4GB per service (monitor for leaks)
+- **Critical**: > 4GB per service (immediate attention required)
+
+**CPU Usage:**
+- **Normal**: < 50% average
+- **High**: 50-80% average (acceptable under load)
+- **Critical**: > 80% sustained (performance degradation likely)
+
+### Metrics-Based Troubleshooting
+
+#### High Resource Usage
+
+**High Memory Usage:**
+```bash
+# Check memory metrics
+curl http://localhost:8080/api/v1/services/scraper/metrics | jq '.memory_usage_bytes'
+
+# If memory usage is high:
+# 1. Reduce batch size
+# 2. Increase sleep interval
+# 3. Check for memory leaks in logs
+# 4. Restart service if memory continues growing
+```
+
+**High CPU Usage:**
+```bash
+# Check CPU metrics and goroutine count
+curl http://localhost:8080/api/v1/metrics | jq '.cpu_usage_percent, .goroutines_count'
+
+# If CPU usage is high:
+# 1. Reduce batch size
+# 2. Increase sleep interval
+# 3. Check for infinite loops in logs
+# 4. Verify RPC endpoint performance
+```
+
+#### Performance Degradation
+
+**Slow Indexing:**
+```bash
+# Check indexing performance
+curl http://localhost:8080/api/v1/services/scraper/metrics | jq '.blocks_per_second, .rpc_response_time_ms'
+
+# Troubleshooting steps:
+# 1. Check RPC response times
+# 2. Verify network connectivity
+# 3. Adjust batch size based on performance
+# 4. Check for rate limiting
+```
+
+**API Response Delays:**
+```bash
+# Check API performance
+curl http://localhost:8080/api/v1/services/api/metrics | jq '.api_response_time_ms, .api_cache_hits'
+
+# Troubleshooting steps:
+# 1. Check cache hit ratio
+# 2. Verify index integrity
+# 3. Monitor concurrent request load
+# 4. Check for slow database queries
+```
+
+#### Service Failures
+
+**RPC Connection Issues:**
+```bash
+# Check RPC health metrics
+curl http://localhost:8080/api/v1/services/scraper/metrics | jq '.rpc_requests_failed, .rpc_rate_limit_hits'
+
+# Troubleshooting steps:
+# 1. Test RPC endpoints directly
+# 2. Increase sleep intervals if rate limited
+# 3. Switch to backup RPC endpoints
+# 4. Check network connectivity
+```
+
+### Alerting and Monitoring Setup
+
+#### Prometheus Integration
+
+Khedra can export metrics in Prometheus format for integration with monitoring systems:
 
 ```yaml
-cache:
-  retention:
-    blocks: "30d"      # Keep block data for 30 days
-    traces: "15d"      # Keep trace data for 15 days
-    receipts: "60d"    # Keep receipt data for 60 days
-  compression: true    # Enable data compression
+# prometheus.yml configuration
+scrape_configs:
+  - job_name: 'khedra'
+    static_configs:
+      - targets: ['localhost:8080']
+    metrics_path: '/api/v1/metrics'
+    params:
+      format: ['prometheus']
+    scrape_interval: 30s
 ```
 
-## Performance Monitoring
+#### Grafana Dashboard
 
-Khedra includes built-in performance monitoring capabilities:
+Key metrics to monitor in Grafana:
 
-1. **Metrics Collection**: Runtime statistics for key operations
-2. **Performance Logging**: Timing information for critical paths
-3. **Resource Monitoring**: Tracking of CPU, memory, and disk usage
-4. **Bottleneck Detection**: Identification of performance limitations
+**Performance Dashboard:**
+- Blocks per second (Scraper)
+- API response times
+- Memory and CPU usage
+- RPC response times
 
-Example metrics available:
+**Health Dashboard:**
+- Service uptime
+- Error rates
+- Detection latency
+- System resource utilization
 
-```json
-{
-  "scraper": {
-    "blocks_processed": 1520489,
-    "blocks_per_second": 18.5,
-    "current_block": 18245367,
-    "last_processed": "2023-06-15T14:23:45Z",
-    "memory_usage_mb": 2458,
-    "rpc_calls": 247896,
-    "processing_latency_ms": 54
-  }
-}
+#### Alerting Rules
+
+Example alerting rules for common issues:
+
+```yaml
+# Slow indexing alert
+- alert: SlowIndexing
+  expr: khedra_blocks_per_second < 5
+  for: 5m
+  labels:
+    severity: warning
+  annotations:
+    summary: "Khedra indexing is slow"
+    description: "Indexing rate is {{ $value }} blocks/sec, below threshold"
+
+# High memory usage alert
+- alert: HighMemoryUsage
+  expr: khedra_memory_usage_bytes > 4000000000
+  for: 2m
+  labels:
+    severity: critical
+  annotations:
+    summary: "High memory usage detected"
+    description: "Memory usage is {{ $value }} bytes, above 4GB threshold"
+
+# API response time alert
+- alert: SlowAPI
+  expr: khedra_api_response_time_ms > 1000
+  for: 3m
+  labels:
+    severity: warning
+  annotations:
+    summary: "API responses are slow"
+    description: "Average response time is {{ $value }}ms"
 ```
 
-## Resource Requirements
+#### Custom Monitoring Scripts
 
-Recommended system specifications based on usage patterns:
+```bash
+#!/bin/bash
+# Simple monitoring script
+METRICS_URL="http://localhost:8080/api/v1/metrics"
 
-### Minimum Requirements
+# Check blocks per second
+BPS=$(curl -s $METRICS_URL | jq -r '.scraper.blocks_per_second // 0')
+if (( $(echo "$BPS < 5" | bc -l) )); then
+    echo "WARNING: Slow indexing detected: $BPS blocks/sec"
+fi
 
-- **CPU**: 4 cores
-- **Memory**: 8GB RAM
-- **Storage**: 250GB SSD
-- **Network**: 10Mbps stable connection
-- **Supported Workload**: Monitoring a few addresses, single chain, limited API usage
+# Check memory usage
+MEMORY=$(curl -s $METRICS_URL | jq -r '.scraper.memory_usage_bytes // 0')
+if (( MEMORY > 4000000000 )); then
+    echo "CRITICAL: High memory usage: $((MEMORY/1024/1024))MB"
+fi
 
-### Recommended Configuration
+# Check API health
+API_TIME=$(curl -s $METRICS_URL | jq -r '.api.api_response_time_ms // 0')
+if (( $(echo "$API_TIME > 1000" | bc -l) )); then
+    echo "WARNING: Slow API responses: ${API_TIME}ms"
+fi
+```
 
-- **CPU**: 8 cores
-- **Memory**: 16GB RAM
-- **Storage**: 1TB NVMe SSD
-- **Network**: 100Mbps stable connection
-- **Supported Workload**: Full indexing of mainnet, multiple monitored addresses, moderate API usage
+### Best Practices for Metrics Monitoring
 
-### High-Performance Configuration
+#### Regular Monitoring
 
-- **CPU**: 16+ cores
-- **Memory**: 32GB+ RAM
-- **Storage**: 2TB+ NVMe SSD with high IOPS
-- **Network**: 1Gbps+ connection
-- **Supported Workload**: Multiple chains, extensive monitoring, heavy API usage, IPFS participation
+1. **Establish Baselines**: Monitor metrics during normal operation to establish performance baselines
+2. **Set Appropriate Thresholds**: Configure alerts based on your specific environment and requirements
+3. **Monitor Trends**: Look for gradual degradation over time, not just immediate issues
+4. **Correlate Metrics**: Use multiple metrics together to diagnose issues accurately
 
-These performance optimizations and scalability considerations enable Khedra to handle the demands of blockchain data processing efficiently across a wide range of hardware configurations and usage scenarios.
+#### Performance Optimization
+
+1. **Use Metrics for Tuning**: Adjust batch sizes and sleep intervals based on actual performance metrics
+2. **Monitor Resource Efficiency**: Track resource usage to optimize system utilization
+3. **Identify Bottlenecks**: Use metrics to identify which component is limiting performance
+4. **Validate Changes**: Use metrics to verify that configuration changes improve performance
+
+#### Operational Excellence
+
+1. **Automate Monitoring**: Set up automated alerts for critical metrics
+2. **Create Dashboards**: Visualize key metrics for easier monitoring
+3. **Document Thresholds**: Maintain documentation of what constitutes healthy vs. problematic metrics
+4. **Regular Reviews**: Periodically review and adjust monitoring thresholds based on operational experience

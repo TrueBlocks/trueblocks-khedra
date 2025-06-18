@@ -1,6 +1,53 @@
 # Getting Started
 
-## Overview
+## Quick Start
+
+Get Khedra running in 3 simple steps:
+
+### 1. Initialize Khedra
+
+Run the configuration wizard to set up your blockchain connections and services:
+
+```bash
+khedra init
+```
+
+This interactive wizard will guide you through:
+- Setting up blockchain RPC connections (Ethereum, Polygon, etc.)
+- Configuring which services to enable (scraper, monitor, API, IPFS)
+- Setting up logging and data storage paths
+
+### 2. Start Khedra
+
+Start all configured services:
+
+```bash
+khedra daemon
+```
+
+This starts the daemon with all enabled services. The Control Service runs automatically and manages other services.
+
+### 3. Control Services via API
+
+Once running, manage services through the REST API:
+
+```bash
+# Check service status
+curl http://localhost:8080/api/v1/services
+
+# Start/stop individual services
+curl -X POST http://localhost:8080/api/v1/services/scraper/start
+curl -X POST http://localhost:8080/api/v1/services/monitor/stop
+
+# Get system status
+curl http://localhost:8080/api/v1/status
+```
+
+That's it! Your Khedra instance is now indexing blockchain data and ready for queries.
+
+---
+
+## Detailed Configuration
 
 **Khedra** runs primarily from a configuration file called `config.yaml`. This file lives at `~/.khedra/config.yaml` by default. If the file is not found, **Khedra** creates a default configuration in this location.
 
@@ -8,9 +55,7 @@ The config file allows you to specify key parameters for running **khedra**, inc
 
 You may use environment variables to override specific options. This document outlines the configuration file structure, validation rules, default values, and environment variable usage.
 
----
-
-## Quick Start
+## Installation
 
 1. **Download, build, and test khedra**:
 
@@ -49,327 +94,359 @@ You may use environment variables to override specific options. This document ou
 
     You may, however, place a `config.yaml` file in the current working folder (the folder from which you run **khedra**). If found locally, this configuration file will dominate. This allows for running multiple instances of the software concurrently.
 
-    If no `config.yaml` file is found, **khedra** creates a default configuration in its default location.
-
-5. **Using Environment Variables**:
-
-   You may override configuration options using environment variables, each of which must take the form `TB_KHEDRA_<section>_<key>`.
-
-   For example, the following overrides the `general.dataFolder` value.
-
-     ```bash
-     export TB_KHEDRA_GENERAL_DATAFOLDER="/path/override"
-     ```
-
-    You'll notice that underbars (`_`) in the `<key>` names are not needed.
-
 ---
 
-## Configuration File Format
+## Advanced Configuration Examples
 
-The `config.yaml` file (shown here with default values) is structured as follows:
+### Production Deployment Configuration
+
+For production environments with high availability and performance requirements:
 
 ```yaml
-# Khedra Configuration File
-# Version: 2.0
-
 general:
-  dataFolder: "~/.khedra/data"  # See note 1
-  strategy: "download"          # How to build the Unchained Index [download* | scrape]
-  detail: "index"               # How detailed to log the processes [index* | blooms]
+  indexPath: "/var/lib/khedra/index"     # Fast SSD storage
+  cachePath: "/var/lib/khedra/cache"     # Local SSD cache
+  dataDir: "/var/lib/khedra"             # Dedicated data directory
 
 chains:
-  mainnet:                       # Blockchain name (see notes 2, 3, and 4)
-    rpcs:                        # A list of RPC endpoints (at least one is required)
-      - "rpc_endpoint_for_mainnet"
-    enabled: true                # `true` if this chain is enabled
-  sepolia:
+  mainnet:
     rpcs:
-      - "rpc_endpoint_for_sepolia"
+      - "https://eth-mainnet.alchemyapi.io/v2/YOUR_PREMIUM_KEY"
+      - "https://mainnet.infura.io/v3/YOUR_PROJECT_ID"
+      - "https://rpc.ankr.com/eth"              # Fallback
+      - "https://ethereum.publicnode.com"       # Additional fallback
     enabled: true
-  gnosis:                         # Add as many chains as your machine can handle
-    rpcs:
-      - "rpc_endpoint_for_gnosis" # must be a reachable URL if the chain is enabled
-    enabled: false                # in this example, this chain is disabled
-  optimism:
-    rpcs:
-      - "rpc_endpoint_for_optimism"
-    enabled: false
 
-services:                          # See note 5
-  scraper:                         # Required. (One of: api, scraper, monitor, ipfs, control)
-    enabled: true                  # `true` if the service is enabled
-    sleep: 12                      # Seconds between scraping batches (see note 6)
-    batchSize: 500                 # Number of blocks to process in a batch (range: 50-10000)
+  polygon:
+    rpcs:
+      - "https://polygon-mainnet.g.alchemy.com/v2/YOUR_KEY"
+      - "https://polygon-rpc.com"
+    enabled: true
+
+  arbitrum:
+    rpcs:
+      - "https://arb-mainnet.g.alchemy.com/v2/YOUR_KEY"
+      - "https://arb1.arbitrum.io/rpc"
+    enabled: true
+
+services:
+  scraper:
+    enabled: true
+    sleep: 5                     # Aggressive indexing
+    batchSize: 2000             # Large batches for efficiency
 
   monitor:
     enabled: true
-    sleep: 12                      # Seconds between scraping batches (see note 6)
-    batchSize: 500                 # Number of blocks processed in a batch (range: 50-10000)
+    sleep: 5                    # Fast monitoring
+    batchSize: 500
 
   api:
     enabled: true
-    port: 8080                     # Port number for API service (the port must be available)
+    port: 8080
 
   ipfs:
     enabled: true
-    port: 5001                     # Port number for IPFS service (the port must be available)
-
-  control:
-    enabled: true                  # Always enabled - false values are invalid
-    port: 5001                     # Port number for IPFS service (the port must be available)
+    port: 8083
 
 logging:
-  folder: "~/.khedra/logs"         # Path to log directory (must exist and be writable)
-  filename: "khedra.log"           # Log file name (must end with .log)
-  toFile: false                    # If true, will write to above file. Screen only otherwise
-  level: "info"                    # One of: debug, info, warn, error
-  maxSize: 10                      # Max log file size in MB
-  maxBackups: 5                    # Number of backup log files to keep
-  maxAge: 30                       # Number of days to retain old logs
-  compress: true                   # Whether to compress backup logs
+  folder: "/var/log/khedra"     # System log directory
+  filename: "khedra.log"
+  toFile: true                  # Always log to file in production
+  level: "info"                 # Balanced logging
+  maxSize: 100                  # Larger log files
+  maxBackups: 10               # More backup files
+  maxAge: 90                   # Longer retention
+  compress: true               # Compress old logs
 ```
 
-**Notes:**
+### Multi-Chain Development Environment
 
-1. The `dataFolder` value must be a valid, existing directory that is writable. You may wish to change this value to a location with suitable disc space. Depending on configuration, the Unchained Index and binary caches may get large (> 200GB in some cases).
+For developers working with multiple blockchain networks:
 
-2. The `chains` section is required. At least one chain must be enabled. An RPC for `mainnet` is required even if `mainnet` is disabled. The software reads `mainnet` smart contracts (such as the *Unchained Index* and *UniSwap*) during normal operation.
+```yaml
+general:
+  indexPath: "~/.khedra/dev/index"
+  cachePath: "~/.khedra/dev/cache"
 
-3. [This repository](https://github.com/ethereum-lists/chains) is used to identify chain names. Using consistent chain names aides in sharing indexes. Use these values in your configuration if you wish to fully participate in sharing the *Unchained Index*.
+chains:
+  mainnet:
+    rpcs:
+      - "https://eth-mainnet.alchemyapi.io/v2/YOUR_DEV_KEY"
+    enabled: true
 
-4. The `services` section is required. At least one service must be enabled.
+  sepolia:
+    rpcs:
+      - "https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY"
+      - "https://sepolia.infura.io/v3/YOUR_PROJECT_ID"
+    enabled: true
 
-5. When a `scraper` or `monitor` is "catching up" to a chain, the `sleep` value is ignored.
+  polygon:
+    rpcs:
+      - "https://polygon-mumbai.g.alchemy.com/v2/YOUR_KEY"
+    enabled: true
 
----
+  optimism:
+    rpcs:
+      - "https://opt-goerli.g.alchemy.com/v2/YOUR_KEY"
+    enabled: true
 
-## Using Environment Variables
+  arbitrum:
+    rpcs:
+      - "https://arb-goerli.g.alchemy.com/v2/YOUR_KEY"
+    enabled: true
 
-**Khedra** allows configuration values to be overridden at runtime using environment variables. The value of an environment variable takes precedence over the defaults and the configuration file.
+  base:
+    rpcs:
+      - "https://base-goerli.g.alchemy.com/v2/YOUR_KEY"
+    enabled: true
 
-### Naming Evirnment Variables
+services:
+  scraper:
+    enabled: true
+    sleep: 15                   # Moderate speed for development
+    batchSize: 500
 
-The environment variable naming convention is:
+  monitor:
+    enabled: true               # Enable for testing monitoring features
+    sleep: 30
+    batchSize: 100
 
-`TB_KHEDRA_<section>_<key>`
+  api:
+    enabled: true
+    port: 8080
 
-For example:
+  ipfs:
+    enabled: false              # Disable to reduce resource usage
 
-- To override the `general.dataFolder` value:
-
-  ```bash
-  export TB_KHEDRA_GENERAL_DATAFOLDER="/path/override"
-  ```
-
-- To override `logging.level`:
-
-  ```bash
-  export TB_KHEDRA_LOGGING_LEVEL="debug"
-  ```
-
-Underbars (`_`) in `<key>` names are not used and should be omitted.
-
-### Overriding Chains and Services
-
-Environment variables can also be used to override values for chains and services settings. The naming convention for these sections is as follows:
-
-`TB_KHEDRA_<section>_<name>_<key>`
-
-Where:
-
-- `<section>` is either `CHAINS` or `SERVICES`.
-- `<name>` is the name of the chain or service (converted to uppercase).
-- `<key>` is the specific field to override.
-
-#### Examples
-
-To override the RPC endpoints for the `mainnet` chain:
-
-```bash
-export TB_KHEDRA_CHAINS_MAINNET_RPCS="http://rpc1.mainnet,http://rpc2.mainnet"
+logging:
+  folder: "~/.khedra/dev/logs"
+  filename: "khedra-dev.log"
+  toFile: true
+  level: "debug"               # Verbose logging for development
+  maxSize: 10
+  maxBackups: 5
+  maxAge: 7                    # Shorter retention for dev
+  compress: false              # No compression for easier reading
 ```
 
-You may list mulitple RPC endpoints by separating them with commas.
+### High-Availability Load-Balanced Setup
 
-To disable the `mainnet` chain:
+Configuration for running multiple Khedra instances behind a load balancer:
 
-```bash
-export TB_KHEDRA_CHAINS_MAINNET_ENABLED="false"
+```yaml
+# Instance 1: Primary indexing node
+general:
+  indexPath: "/shared/khedra/index"      # Shared storage
+  cachePath: "/local/khedra/cache1"      # Local cache per instance
+
+chains:
+  mainnet:
+    rpcs:
+      - "https://eth-mainnet-primary.alchemyapi.io/v2/KEY1"
+      - "https://eth-mainnet-backup.infura.io/v3/PROJECT1"
+    enabled: true
+
+services:
+  scraper:
+    enabled: true              # Primary indexer
+    sleep: 5
+    batchSize: 2000
+
+  monitor:
+    enabled: false             # Disabled on indexing nodes
+
+  api:
+    enabled: false             # Dedicated API nodes
+
+  ipfs:
+    enabled: true              # IPFS on indexing nodes
+    port: 8083
+
+logging:
+  folder: "/var/log/khedra"
+  filename: "khedra-indexer-1.log"
+  toFile: true
+  level: "info"
+---
+
+# Instance 2: API-only node
+general:
+  indexPath: "/shared/khedra/index"      # Same shared storage
+  cachePath: "/local/khedra/cache2"      # Different local cache
+
+chains:
+  mainnet:
+    rpcs:
+      - "https://eth-mainnet-api.alchemyapi.io/v2/KEY2"
+    enabled: true
+
+services:
+  scraper:
+    enabled: false             # No indexing on API nodes
+
+  monitor:
+    enabled: true              # Monitoring on API nodes
+    sleep: 10
+    batchSize: 200
+
+  api:
+    enabled: true              # Primary function
+    port: 8080
+
+  ipfs:
+    enabled: false             # Not needed on API nodes
+
+logging:
+  folder: "/var/log/khedra"
+  filename: "khedra-api-2.log"
+  toFile: true
+  level: "warn"               # Less verbose for API nodes
 ```
 
-To enable the `api` service:
+### Resource-Constrained Environment
 
-```bash
-export TB_KHEDRA_SERVICES_API_ENABLED="true"
+Configuration for running Khedra on limited hardware (VPS, Raspberry Pi, etc.):
+
+```yaml
+general:
+  indexPath: "~/.khedra/index"
+  cachePath: "~/.khedra/cache"
+
+chains:
+  mainnet:
+    rpcs:
+      - "https://ethereum.publicnode.com"    # Free RPC
+      - "https://rpc.ankr.com/eth"           # Backup free RPC
+    enabled: true
+
+  # Only enable additional chains if needed
+  sepolia:
+    rpcs:
+      - "https://ethereum-sepolia.publicnode.com"
+    enabled: false               # Disabled to save resources
+
+services:
+  scraper:
+    enabled: true
+    sleep: 60                   # Very conservative indexing
+    batchSize: 50               # Small batches
+
+  monitor:
+    enabled: false              # Disable to save resources
+    sleep: 300
+    batchSize: 10
+
+  api:
+    enabled: true
+    port: 8080
+
+  ipfs:
+    enabled: false              # Disable to save bandwidth/storage
+
+logging:
+  folder: "~/.khedra/logs"
+  filename: "khedra.log"
+  toFile: false                 # Console only to save disk space
+  level: "warn"                # Minimal logging
+  maxSize: 5                   # Small log files
+  maxBackups: 2                # Minimal retention
+  maxAge: 7
+  compress: true
 ```
 
-To set the port for the `api` service:
+### Security-Focused Configuration
 
-```bash
-export TB_KHEDRA_SERVICES_API_PORT="8088"
+Configuration with enhanced security for sensitive environments:
+
+```yaml
+general:
+  indexPath: "/encrypted/khedra/index"   # Encrypted storage
+  cachePath: "/encrypted/khedra/cache"
+
+chains:
+  mainnet:
+    rpcs:
+      - "https://your-private-node.internal:8545"  # Private RPC node
+    enabled: true
+
+services:
+  scraper:
+    enabled: true
+    sleep: 10
+    batchSize: 1000
+
+  monitor:
+    enabled: true
+    sleep: 15
+    batchSize: 100
+
+  api:
+    enabled: true
+    port: 8080                  # Consider using reverse proxy with TLS
+
+  ipfs:
+    enabled: false              # Disable external data sharing
+
+logging:
+  folder: "/secure/logs/khedra"
+  filename: "khedra.log"
+  toFile: true
+  level: "info"
+  maxSize: 50
+  maxBackups: 20              # Extended retention for audit
+  maxAge: 365                 # Long retention for compliance
+  compress: true
+
+# Environment variables for sensitive data:
+# TB_KHEDRA_CHAINS_MAINNET_RPCS="https://user:pass@private-node:8545"
+# TB_KHEDRA_API_AUTH_TOKEN="your-secure-api-token"
 ```
 
-### Precedence Rules
+### Testing and CI/CD Configuration
 
-1. Default values are loaded first,
-2. Values from `config.yaml` override the defaults,
-3. Environment variables take precedence over both the defaults and the file.
+Configuration optimized for automated testing environments:
 
-The values set by environment variables must conform to the same validation rules as the configuration file.
+```yaml
+general:
+  indexPath: "./test-data/index"
+  cachePath: "./test-data/cache"
 
----
+chains:
+  sepolia:                      # Use testnet for testing
+    rpcs:
+      - "https://ethereum-sepolia.publicnode.com"
+    enabled: true
 
-## Configuration Sections
+  mainnet:
+    rpcs:
+      - "https://ethereum.publicnode.com"
+    enabled: false              # Disabled for testing
 
-### General Settings
+services:
+  scraper:
+    enabled: true
+    sleep: 30                   # Conservative for CI resources
+    batchSize: 100
 
-- **`dataFolder`**: The location where **khedra** stores all of its data. This directory must exist and be writable.
-- **`strategy`**: The strategy used to initialize the *Unchained Index*. With `download` (the default), the Unchained Index smart contract will be consulted the index will be downloaded from IPFS. With `scrape` the entire index will be created from scratch. The former takes a lot less time, but relies on values created by a third party. The later (`scrape`) uses only the RPC as a source which means it takes significantly longer, but is most secure as no third-party trust is required.
-- **`detail`**: The detail level of the dowloaded or scraped index. With `index` both the Bloom filters and the Index chunks are either downloaded or build (depending on `strategy`). With `blooms`, only the Bloom filters are retained. Index chunks are downloaded on an as needed basis through `chifra export`. The former is much larger and takes much longer to `download` (if `strategy` is `scrape` no time savings is seen). The later is much smaller and faster to `download`. Downloading or creating the full `index` is the default.
+  monitor:
+    enabled: true               # Test monitoring functionality
+    sleep: 60
+    batchSize: 50
 
-### Chains (Blockchains)
+  api:
+    enabled: true
+    port: 8080
 
-Defines the blockchain networks to interact with. Each chain must have:
+  ipfs:
+    enabled: false              # Not needed for testing
 
-- **`name`**: Chain name (e.g., `mainnet`).
-- **`rpcs`**: List of RPC endpoints. At least one valid and reachable endpoint is required. `mainnet` RPC is required, but you are not required to index it.
-- **`enabled`**: Whether the chain is being actively indexed.
-
-#### Behavior for Empty RPCs
-
-- If the `RPCs` field is empty in the environment, it is ignored and the configuration file's value is preserved.
-- If the `RPCs` field is empty in the final configuration (after merging), the chain is treated as it would be if it were disabled.
-
----
-
-### Services (API, Scraper, Monitor, IPFS)
-
-Defines various services provided by **Khedra**. Supported services:
-
-- **API**:
-  - An API server for the `chifra` command line interface. See [API Documentation](https://trueblocks.io/api/) for details.
-  - Requires `port` to be specified in the configuration.
-- **Scraper** and **Monitor**:
-  - These two services are used to scrape and monitor the blockchain data respectively. Each runs "periodically" to keep the index or monitor data up to date.
-  - **`sleep`**: Duration (seconds) between operations.
-  - **`batchSize`**: Number of blocks to process in each operation (50-10,000).
-- **IPFS**:
-  - A service for interacting with IPFS (InterPlanetary File System). This service starts an internal IPFS daemon if it's not already running. The scraper service may use IPFS to pin and share the index if so configured.
-  - Requires `port` to be specified.
-
-### Logging Configuration
-
-Controls the application's logging behavior:
-
-- **`folder`**: Directory for storing logs.
-- **`filename`**: Name of the log file.
-- **`toFile`**: If `true`, logs are written to the specified file. If `false`, logs are only printed to the console.
-- **`level`**: Logging level. Possible values: `debug`, `info`, `warn`, `error`.
-- **`maxSize`**: Maximum log file size before rotation.
-- **`maxBackups`**: Number of old log files to retain.
-- **`maxAge`**: Retention period for old logs.
-- **`compress`**: Whether to compress rotated logs.
-
----
-
-## Validation Rules
-
-The configuration file and environment variables are validated when the program starts with the following rules:
-
-### General
-
-- `dataFolder`: Must be a valid, existing directory and writable.
-- `strategy`: Must be either `download` or `scrape`.
-- `detail`: Must be either `index` or `blooms`.
-
-### Chains
-
-- `name`: Required and non-empty.
-- `rpcs`: Must include at least one valid and reachable RPC URL.
-- **Empty RPC Behavior**: Ignored from the environment, but required in the final configuration.
-- `enabled`: Defaults to `false` if not specified.
-
-#### Notes on chains section
-
-1. The `mainnet` RPC is required even if indexing the chain is disabled. The software reads `mainnet` smart contracts (such as the *Unchained Index* and *UniSwap*) during normal operation.
-2. It is always best to have a dedicated RPC endpoint. If you are using a public RPC endpoint, be sure to check the rate limits and usage policies of the provider and set the `sleep` and `batchSize` values for the services appropriately. Some providers (all providers?) will block or throttle requests if they exceed certain limits.
-
-### Services
-
-- `name`: Required and non-empty. Must be one of `api`, `scraper`, `monitor`, `ipfs`.
-- `enabled`: Defaults to `false` if not specified.
-- `port`: For API and IPFS services, must be between 1024 and 65535. Ignored for other services.
-- `sleep`: Must be non-negative. Ignored by API and IPFS services.
-- `batchSize`: Must be between 50 and 10,000. Ignored by API and IPFS services.
-
-### Logging
-
-- `folder`: Must exist and be writable.
-- `filename`: Must end with `.log`.
-- `toFile`: Must be `true` or `false`.
-- `level`: Must be one of `debug`, `info`, `warn`, `error`.
-- `maxSize`: Minimum value of 5.
-- `maxBackups`: Minimum value of 1.
-- `maxAge`: Minimum value of 1.
-
----
-
-## Default Values
-
-If the configuration file is not found or incomplete, **Khedra** uses the following defaults:
-
-- **Data directory**: `~/.khedra/data`
-- **Logging configuration**:
-  - Folder: `~/.khedra/logs`
-  - Filename: `khedra.log`
-  - Max size: 10 MB
-  - Max backups: 3
-  - Max age: 10 days
-  - Compression: Enabled
-  - Log level: `info`
-- **Chains**: Only `mainnet` and `gnosis` enabled by default.
-- **Services**: All services (`api`, `scraper`, `monitor`, `ipfs`) enabled with default configurations.
-
----
-
-## Common Commands
-
-1. **Validate Configuration**:
-   **Khedra** validates the `config.yaml` file and environment variables automatically on startup.
-
-2. **Run Khedra**:
-
-   ```bash
-   ./khedra --version
-   ```
-
-   Ensure that your `config.yaml` file is properly set up.
-
-3. **Override Configuration with Environment Variables**:
-
-   Use environment variables to override specific configurations:
-
-   ```bash
-   export TB_KHEDRA_GENERAL_DATAFOLDER="/new/path"
-   ./khedra
-   ```
-
-For additional details, see the technical specification.
-
-## Implementation Details
-
-The configuration system and initialization described in this section are implemented in these Go files:
-
-- **Configuration Loading**: [`app/config.go`](/Users/jrush/Development/trueblocks-core/khedra/app/config.go) - Contains the `LoadConfig()` function that loads, merges, and validates configuration from files and environment variables
-
-- **Configuration Validation**: 
-  - [`pkg/types/general.go`](/Users/jrush/Development/trueblocks-core/khedra/pkg/types/general.go) - Validates general settings
-  - [`pkg/types/chain.go`](/Users/jrush/Development/trueblocks-core/khedra/pkg/types/chain.go) - Validates chain settings
-  - [`pkg/types/service.go`](/Users/jrush/Development/trueblocks-core/khedra/pkg/types/service.go) - Validates service settings
-
-- **Environment Variables**: [`pkg/types/apply_env.go`](/Users/jrush/Development/trueblocks-core/khedra/pkg/types/apply_env.go) - Contains functions for applying environment variables to the configuration
-
-- **Initialization Command**: [`app/action_init.go`](/Users/jrush/Development/trueblocks-core/khedra/app/action_init.go) - Implements the `init` command to set up the initial configuration
-
-- **Folder and Path Management**: Found in the `initializeFolders()` function in [`app/config.go`](/Users/jrush/Development/trueblocks-core/khedra/app/config.go) which ensures required directories exist
+logging:
+  folder: "./test-logs"
+  filename: "khedra-test.log"
+  toFile: true
+  level: "debug"               # Verbose for troubleshooting tests
+  maxSize: 10
+  maxBackups: 3
+  maxAge: 1                    # Short retention for CI
+  compress: false              # Easier to read in CI logs
+```

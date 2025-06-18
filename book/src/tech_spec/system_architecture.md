@@ -50,10 +50,16 @@ Khedra implements five primary services:
 
 #### 2.1 Control Service
 
-- Provides management endpoints for other services
-- Handles service health monitoring
-- Enables runtime reconfiguration
-- Serves as the primary management interface
+- **Central Management**: Provides unified management interface for all other services
+- **Service Lifecycle**: Handles start, stop, restart, pause, and resume operations
+- **Health Monitoring**: Continuously monitors service status and performance
+- **Runtime Configuration**: Enables dynamic configuration updates without restart
+- **API Gateway**: Serves as primary management interface for external tools
+- **Dependency Coordination**: Manages service startup order and dependencies
+- **Error Recovery**: Implements automatic restart policies for failed services
+- **Metrics Aggregation**: Collects and exposes system-wide performance metrics
+
+The Control Service runs on the same process as other services but provides external API access for management operations. It coordinates all service operations and serves as the single point of control for the Khedra system.
 
 Implementation: `pkg/services/control/service.go`
 

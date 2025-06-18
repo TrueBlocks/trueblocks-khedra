@@ -56,9 +56,12 @@ This creates a hybrid model that preserves privacy while enabling community bene
 Khedra is organized into five core services:
 
 1. **Control Service**
-   - Central management interface
-   - Exposes API endpoints for service control
-   - Handles configuration and coordinating other services
+   - **Central Management Hub**: Provides unified control interface for all Khedra services
+   - **Service Operations**: Start, stop, restart, pause, and resume any service via API
+   - **Health Monitoring**: Real-time status monitoring and health checks for all services
+   - **Configuration Management**: Runtime configuration updates and validation
+   - **External Integration**: Enables external tools to manage Khedra programmatically
+   - **Always Enabled**: The Control Service is always active and cannot be disabled
 
 2. **Scraper Service**
    - Processes blockchain data to build the Unchained Index
@@ -80,76 +83,73 @@ Khedra is organized into five core services:
    - Handles publishing and retrieving chunks via IPFS
    - Enables collaborative index building
 
-### Data Flow
+### Data Flow and Service Interactions
 
-Here's how data flows through the Khedra system:
+Here's how data flows through the Khedra system and how services interact:
 
-1. The Scraper retrieves blockchain data from configured RPC endpoints
-2. Address appearances are extracted and added to the Unchained Index
-3. The Monitor service checks new blocks for appearances of watched addresses
-4. The API service provides query access to the indexed data
-5. Optionally, index chunks are shared via the IPFS service
+```mermaid
+graph TD
+    A[RPC Endpoints] --> B[Scraper Service]
+    B --> C[Unchained Index]
+    B --> D[IPFS Service]
+    C --> E[API Service]
+    C --> F[Monitor Service]
+    G[Control Service] --> B
+    G --> F
+    G --> E
+    G --> D
+    E --> H[External Applications]
+    F --> I[Address Notifications]
+    D --> J[IPFS Network]
 
-### Directory Structure
-
-Khedra organizes its data with this structure:
-
-```bash
-~/.khedra/
-├── config.yaml       # Main configuration file
-├── data/             # Main data directory
-│   ├── mainnet/      # Chain-specific data
-│   │   ├── cache/    # Binary caches
-│   │   ├── monitors/ # Address monitor data
-│   │   └── index/    # Unchained Index chunks
-│   └── [other-chains]/
-└── logs/             # Application logs
+    style G fill:#ff9999
+    style B fill:#99ccff
+    style F fill:#99ffcc
+    style E fill:#ffcc99
+    style D fill:#cc99ff
 ```
 
-The above structure may vary depending on your version and configuration. Each chain has its own subdirectory, allowing Khedra to manage multiple chains simultaneously.
+#### Detailed Service Interactions
 
-## Terminology
+1. **Control Service** (Central Hub)
+   - Manages lifecycle of all other services
+   - Coordinates startup/shutdown sequences
+   - Monitors health and performance of all services
+   - Provides management API accessible to external tools
 
-To help navigate Khedra effectively, here are key terms you'll encounter:
+2. **Data Processing Flow**:
+   - **Scraper** retrieves blockchain data from RPC endpoints
+   - Address appearances are extracted and stored in the **Unchained Index**
+   - **Monitor** service checks new blocks against watched address lists
+   - **API** service provides query access to indexed data
+   - **IPFS** service optionally shares index chunks with the network
 
-- **Appearance**: Any reference to an address in blockchain data
-- **Chunk**: A portion of the Unchained Index covering a range of blocks
-- **Finalized**: Blocks that have reached consensus and won't be reorganized
-- **Monitor**: A configuration to track specific addresses of interest
-- **RPC**: Remote Procedure Call - the method for communicating with blockchain nodes
-- **Trace**: Detailed execution record of a transaction, including internal calls
+3. **Service Dependencies**:
+   - **Monitor** depends on **Scraper** for real-time block data
+   - **API** depends on **Unchained Index** created by **Scraper**
+   - **IPFS** can operate independently but enhances **Scraper** functionality
+   - All services depend on **Control** service for management operations
 
-Understanding these core concepts provides the foundation for effectively using Khedra's capabilities, which we'll explore in the following chapters.
+#### Independent vs Coordinated Services
 
-## Implementation Details
+**Services that can run independently:**
+- **API Service**: Can serve existing index data without other services
+- **IPFS Service**: Can share/retrieve data independently of indexing
+- **Control Service**: Always runs and manages others
 
-The core concepts and system architecture described in this chapter are implemented in the following Go files:
+**Services that work better together:**
+- **Scraper + Monitor**: Monitor gets real-time data from Scraper
+- **Scraper + IPFS**: IPFS can automatically share new index chunks
+- **Scraper + API**: API serves fresh data as Scraper creates it
 
-### The Unchained Index
+#### Service Startup Order
 
-The Unchained Index implementation is handled primarily by the TrueBlocks-core library, with Khedra providing the service framework. The primary code files for index interactions are:
+Services start in this coordinated sequence:
 
-- **Index Management**: The `scraper` service, implemented in the service framework initialized in [`app/action_daemon.go`](/Users/jrush/Development/trueblocks-core/khedra/app/action_daemon.go)
+1. **Control Service** (first - manages others)
+2. **IPFS Service** (if enabled - provides infrastructure)
+3. **Scraper Service** (if enabled - begins indexing)
+4. **API Service** (if enabled - serves data)
+5. **Monitor Service** (last - monitors real-time data)
 
-### Address Monitoring
-
-The monitoring system for tracking address appearances is implemented in:
-
-- **Monitor Service**: Initialized in [`app/action_daemon.go`](/Users/jrush/Development/trueblocks-core/khedra/app/action_daemon.go) with references to the `monitor` service
-- **Monitor Configuration**: Service settings defined in [`pkg/types/service.go`](/Users/jrush/Development/trueblocks-core/khedra/pkg/types/service.go)
-- **Monitor Options**: Monitor-specific options defined and processed in [`app/action_daemon.go`](/Users/jrush/Development/trueblocks-core/khedra/app/action_daemon.go) with the `MonitorsOptions` struct
-
-### Service Components
-
-The five core services are defined and initialized in these files:
-
-- **Service Definitions**: [`pkg/types/service.go`](/Users/jrush/Development/trueblocks-core/khedra/pkg/types/service.go) defines the `Service` struct and validation rules
-- **Service Initialization**: [`app/action_daemon.go`](/Users/jrush/Development/trueblocks-core/khedra/app/action_daemon.go) in the `daemonAction` function initializes each service based on configuration
-- **Service Manager**: The `ServiceManager` is created in the `daemonAction` function to coordinate all services
-
-### Directory Structure
-
-The directory structure described in this chapter is established by:
-
-- **Folder Initialization**: The `initializeFolders` function in [`app/config.go`](/Users/jrush/Development/trueblocks-core/khedra/app/config.go)
-- **Path Resolution**: Path management and expansion functions throughout the codebase handle the directory structure
+This order ensures dependencies are available when each service starts.
