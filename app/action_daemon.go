@@ -28,6 +28,10 @@ func (k *KhedraApp) daemonAction(c *cli.Context) error {
 	}
 	k.logger.Info("Starting khedra daemon...config loaded...")
 
+	if err := k.handleWaitForNode(); err != nil {
+		return err
+	}
+
 	for _, ch := range k.config.Chains {
 		if ch.Enabled {
 			if !HasValidRpc(&ch, 4) {

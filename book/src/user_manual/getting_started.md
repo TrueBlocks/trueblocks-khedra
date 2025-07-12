@@ -400,6 +400,8 @@ logging:
 # Environment variables for sensitive data:
 # TB_KHEDRA_CHAINS_MAINNET_RPCS="https://user:pass@private-node:8545"
 # TB_KHEDRA_API_AUTH_TOKEN="your-secure-api-token"
+# TB_KHEDRA_WAIT_FOR_NODE="erigon"          # (Optional) Wait for node process before starting
+# TB_KHEDRA_WAIT_SECONDS="60"              # (Optional) Wait time for node stabilization (default: 30)
 ```
 
 ### Testing and CI/CD Configuration

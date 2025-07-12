@@ -63,7 +63,8 @@ func sPrepare(key, input string, q *wizard.Question) (string, error) {
 func sValidate(key string, input string, q *wizard.Question) (string, error) {
 	if cfg, ok := q.Screen.Wizard.Backing.(*types.Config); ok {
 		service := cfg.Services[key]
-		if input == "yes" {
+		switch input {
+		case "yes":
 			service.Enabled = true
 			cfg.Services[key] = service
 			err := cfg.WriteToFile(types.GetConfigFnNoCreate())
@@ -71,7 +72,7 @@ func sValidate(key string, input string, q *wizard.Question) (string, error) {
 				fmt.Println(colors.Red+"error writing config file: %v", err, colors.Off)
 			}
 			return input, validOk(`the %s service was enabled`, key)
-		} else if input == "no" {
+		case "no":
 			service.Enabled = false
 			cfg.Services[key] = service
 			err := cfg.WriteToFile(types.GetConfigFnNoCreate())
@@ -79,7 +80,7 @@ func sValidate(key string, input string, q *wizard.Question) (string, error) {
 				fmt.Println(colors.Red+"error writing config file: %v", err, colors.Off)
 			}
 			return input, validOk(`the %s service was disabled`, key)
-		} else {
+		default:
 			return input, fmt.Errorf(`value must be either "yes" or "no" %w`, wizard.ErrValidate)
 		}
 	}

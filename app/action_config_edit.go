@@ -19,9 +19,10 @@ func (k *KhedraApp) configEditAction(c *cli.Context) error {
 	}
 
 	editor := os.Getenv("EDITOR")
-	if editor == "" {
+	switch editor {
+	case "":
 		return fmt.Errorf("EDITOR environment variable not set")
-	} else if editor == "testing" {
+	case "testing":
 		fmt.Println("Would have edited:")
 		return nil
 	}

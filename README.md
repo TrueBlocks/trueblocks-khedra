@@ -50,6 +50,8 @@ Before using `khedra`, you may need to configure it to point at the TrueBlocks i
 - **Environment Variables**:  
   - `KHEDRA_DATA_DIR`: Path to where you want `khedra` to store or read data.  
   - `KHEDRA_LOG_LEVEL`: Adjusts the verbosity of logs (`DEBUG`, `INFO`, `WARN`, `ERROR`).
+  - `TB_KHEDRA_WAIT_FOR_NODE`: (Optional) Name of the node process to wait for before starting (e.g., `erigon`, `geth`). If not set, Khedra starts immediately.
+  - `TB_KHEDRA_WAIT_SECONDS`: (Optional) Number of seconds to wait for node stabilization after detection (default: 30). Only used when `TB_KHEDRA_WAIT_FOR_NODE` is set.
 
 Refer to the sample configuration file (`.conf.example`) in this repo for a template of possible settings.
 
