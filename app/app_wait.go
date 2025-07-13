@@ -49,7 +49,7 @@ func (k *KhedraApp) handleWaitForNode() error {
 	wait := 3
 	k.logger.Info(fmt.Sprintf("\nNode '%s' detected. Waiting %d seconds for stabilization...\n", nodeName, spins*wait))
 	for i := spins; i > 0; i-- {
-		k.logger.Info(fmt.Sprintf("Stabilizing... %2d seconds remaining\n", i*wait))
+		k.logger.Info(fmt.Sprintf("Stabilizing... %2d seconds remaining", i*wait))
 		time.Sleep(time.Duration(wait) * time.Second)
 	}
 	k.logger.Info("Ready to proceed.")
