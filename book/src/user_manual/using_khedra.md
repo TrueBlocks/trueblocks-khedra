@@ -1,10 +1,10 @@
 # Using Khedra
 
-This chapter covers the practical aspects of working with Khedra once it's installed and configured.
+This chapter covers the practical aspects of working with Khedra for blockchain data indexing and monitoring.
 
-## Understanding Khedra's Command Structure
+## Command Overview
 
-Khedra provides a streamlined set of commands designed to index, monitor, serve, and share blockchain data:
+Khedra provides five essential commands:
 
 ```text
 NAME:
@@ -13,175 +13,233 @@ NAME:
 USAGE:
    khedra [global options] command [command options]
 
-VERSION:
-   v5.1.0
-
 COMMANDS:
-   init     Initializes Khedra
-   daemon   Runs Khedras services
+   init     Initializes Khedra configuration
+   daemon   Runs Khedra's services  
    config   Manages Khedra configuration
-   help, h  Shows a list of commands or help for one command
+   pause    Pause services (scraper, monitor, all)
+   unpause  Unpause services (scraper, monitor, all)
+   help, h  Shows help for commands
 
 GLOBAL OPTIONS:
    --help, -h     show help
    --version, -v  print the version
 ```
 
-## Getting Started with Khedra
+## Getting Started
 
-### Initializing Khedra
+### 1. Initialize Configuration
 
-Before using Khedra, you need to initialize it. This sets up the necessary data structures and configurations:
+Set up Khedra's configuration interactively:
 
 ```bash
 khedra init
 ```
 
-During initialization, Khedra will:
+The initialization wizard configures:
+- **General Settings**: Data directories, logging preferences
+- **Chain Configuration**: RPC endpoints for blockchain networks
+- **Service Settings**: Which services to enable (scraper, monitor, API, IPFS)
+- **Port Configuration**: Network ports for HTTP services
 
-- Set up its directory structure
-- Configure initial settings
-- Prepare the system for indexing blockchain data
+### 2. Start Services
 
-### Managing Configuration
-
-To view or modify Khedra's configuration:
-
-```text
-khedra config [show | edit]
-```
-
-The configuration command allows you to:
-
-- View current settings
-- Update connection parameters
-- Adjust service behaviors
-- Configure chain connections
-
-### Running Khedra's Services
-
-To start Khedra's daemon services:
+Launch all configured services:
 
 ```bash
 khedra daemon
 ```
 
-This command:
+This starts:
+- **Scraper**: Blockchain indexing service
+- **Monitor**: Address monitoring service
+- **API**: REST endpoints (if enabled)
+- **Control**: Service management interface
+- **IPFS**: Distributed sharing (if enabled)
 
-- Starts the indexing service
-- Enables the API server if configured
-- Processes monitored addresses
-- Handles data serving capabilities
+The daemon runs until interrupted (Ctrl+C) or receives SIGTERM.
 
-You can use various options with the daemon command to customize its behavior. For detailed options:
+### 3. Manage Configuration
 
-```text
-khedra daemon --help
+View or edit configuration:
+
+```bash
+# Display current configuration
+khedra config show
+
+# Edit configuration in default editor
+khedra config edit
+```
+
+Changes require restarting the daemon to take effect.
+
+## Service Management
+
+Control individual services at runtime without stopping the daemon:
+
+### Pause Services
+
+Temporarily stop service operations:
+
+```bash
+# Pause specific services
+khedra pause scraper    # Stop blockchain indexing
+khedra pause monitor    # Stop address monitoring
+
+# Pause all pausable services
+khedra pause all
+```
+
+### Resume Services
+
+Restart paused services:
+
+```bash
+# Resume specific services
+khedra unpause scraper
+khedra unpause monitor
+
+# Resume all paused services  
+khedra unpause all
+```
+
+### Service Types
+
+**Pausable Services**: 
+- `scraper`: Can be paused to stop indexing
+- `monitor`: Can be paused to stop address monitoring
+
+**Always-On Services**:
+- `control`: Provides service management API
+- `api`: Serves data queries (cannot be paused)
+- `ipfs`: Handles distributed sharing (cannot be paused)
+
+## REST API Control
+
+The Control service (port 8338) provides HTTP endpoints for automation:
+
+### Check Service Status
+
+```bash
+# All service status
+curl "http://localhost:8338/isPaused"
+
+# Specific service status
+curl "http://localhost:8338/isPaused?name=scraper"
+```
+
+Response format:
+```json
+[
+  {"name": "scraper", "status": "running"},
+  {"name": "monitor", "status": "paused"},
+  {"name": "control", "status": "not pausable"}
+]
+```
+
+### Control Operations
+
+```bash
+# Pause services
+curl -X POST "http://localhost:8338/pause?name=scraper"
+curl -X POST "http://localhost:8338/pause?name=all"
+
+# Resume services
+curl -X POST "http://localhost:8338/unpause?name=scraper"
+curl -X POST "http://localhost:8338/unpause?name=all"
 ```
 
 ## Common Workflows
 
-### Basic Setup
+### Initial Setup
 
-1. Install Khedra using the installation instructions
-2. Initialize the system:
+1. **Install**: Build or install Khedra binary
+2. **Initialize**: Run `khedra init` to configure
+3. **Start**: Run `khedra daemon` to begin indexing
+4. **Monitor**: Use pause/unpause for operational control
 
-   ```text
-   khedra init
-   ```
-
-3. Configure as needed:
-
-   ```text
-   khedra config edit
-   ```
-
-4. Start the daemon services:
-
-   ```text
-   khedra daemon
-   ```
-
-### Checking System Status
-
-You can view the current status of Khedra by examining the daemon process:
-
-```text
-curl http://localhost:8338/status | jq
-```
-
-- **Note:** The port for the above command defaults to one of 8338, 8337, 8336 or 8335 in that order whichever one is first available. If none of those ports is available, the daemon will not start.
-
-### Accessing the Data API
-
-If so configured, when the daemon is running, it provides API endpoints for accessing blockchain data. The default configuration typically serves on:
-
-```curl
-curl http://localhost:8080/status
-```
-
-See the [API documentation](https://trueblocks.io/api/) for more details on available endpoints and their usage.
-
-## Getting Help
-
-Each command provides detailed help information. To access help for any command:
+### Operational Management
 
 ```bash
-khedra [command] --help
+# Check what's running
+curl "http://localhost:8338/isPaused"
+
+# Pause indexing during maintenance
+khedra pause scraper
+
+# Resume normal operations
+khedra unpause scraper
+
+# Pause everything for system maintenance
+khedra pause all
+khedra unpause all
 ```
 
-For general help:
+### Configuration Updates
 
 ```bash
+# View current settings
+khedra config show
+
+# Edit configuration
+khedra config edit
+
+# Restart to apply changes
+# (Stop daemon with Ctrl+C, then restart)
+khedra daemon
+```
+
+## Environment Variables
+
+Control behavior with environment variables:
+
+- `TB_KHEDRA_WAIT_FOR_NODE`: Wait for specific node process (e.g., `erigon`, `geth`)
+- `TB_KHEDRA_WAIT_SECONDS`: Seconds to wait after node detection (default: 30)
+- `TB_KHEDRA_LOGGING_LEVEL`: Log verbosity (`debug`, `info`, `warn`, `error`)
+- `EDITOR`: Editor for `config edit` command
+
+Example:
+```bash
+TB_KHEDRA_LOGGING_LEVEL=debug khedra daemon
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Configuration not found**: Run `khedra init` to create initial configuration
+
+**Port conflicts**: Control service automatically finds available ports (8338, 8337, 8336, 8335)
+
+**Service not pausable**: Only `scraper` and `monitor` services can be paused
+
+**Control API unavailable**: Ensure daemon is running and control service is enabled
+
+### Getting Help
+
+```bash
+# Command-specific help
+khedra init --help
+khedra daemon --help
+khedra pause --help
+
+# General help
 khedra --help
-```
 
-### Version Information
-
-To check which version of Khedra you're running:
-
-```bash
+# Version information
 khedra --version
 ```
 
-## Advanced Usage
+### Debug Information
 
-For more detailed information about advanced operations and configurations, please refer to the documentation for each specific command:
-
+Enable verbose logging:
 ```bash
-khedra init --help
-khedra daemon --help
-khedra config --help
+TB_KHEDRA_LOGGING_LEVEL=debug khedra daemon
 ```
 
-The next chapter covers advanced operations for users who want to maximize Khedra's capabilities.
+Check service status via API:
+```bash
+curl "http://localhost:8338/isPaused" | jq
+```
 
-## Implementation Details
-
-The command structure and functionality described in this section are implemented in these Go files:
-
-### Core Command Structure
-
-- **CLI Framework**: [`app/cli.go`](/Users/jrush/Development/trueblocks-core/khedra/app/cli.go) - Defines the top-level command structure using the `urfave/cli` package
-
-### Command Implementations
-
-- **Init Command**: [`app/action_init.go`](/Users/jrush/Development/trueblocks-core/khedra/app/action_init.go) - Handles initialization of Khedra
-  - **Welcome Screen**: [`app/action_init_welcome.go`](/Users/jrush/Development/trueblocks-core/khedra/app/action_init_welcome.go)
-  - **General Settings**: [`app/action_init_general.go`](/Users/jrush/Development/trueblocks-core/khedra/app/action_init_general.go)
-  - **Services Config**: [`app/action_init_services.go`](/Users/jrush/Development/trueblocks-core/khedra/app/action_init_services.go)
-  - **Chain Config**: [`app/action_init_chains.go`](/Users/jrush/Development/trueblocks-core/khedra/app/action_init_chains.go)
-  - **Summary Screen**: [`app/action_init_summary.go`](/Users/jrush/Development/trueblocks-core/khedra/app/action_init_summary.go)
-
-- **Daemon Command**: [`app/action_daemon.go`](/Users/jrush/Development/trueblocks-core/khedra/app/action_daemon.go) - Implements the daemon service that runs the various Khedra services
-
-- **Config Commands**: 
-  - [`app/action_config_show.go`](/Users/jrush/Development/trueblocks-core/khedra/app/action_config_show.go) - Displays current configuration
-  - [`app/action_config_edit.go`](/Users/jrush/Development/trueblocks-core/khedra/app/action_config_edit.go) - Opens configuration in editor
-
-- **Version Command**: [`app/action_version.go`](/Users/jrush/Development/trueblocks-core/khedra/app/action_version.go) - Shows version information
-
-### Helper Functions
-
-- **Command Line Arguments**: [`app/args.go`](/Users/jrush/Development/trueblocks-core/khedra/app/args.go) - Processes command line arguments
-- **Help System**: [`app/help_system.go`](/Users/jrush/Development/trueblocks-core/khedra/app/help_system.go) - Provides help text for commands
+Monitor log output for service-specific issues and configuration problems.

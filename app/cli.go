@@ -94,6 +94,22 @@ func initCli(k *KhedraApp) *cli.App {
 				},
 				OnUsageError: onUsageError,
 			},
+			{
+				Name:         "pause",
+				Usage:        "Pause the given service (one of scraper, monitor, all)",
+				OnUsageError: onUsageError,
+				Action: func(c *cli.Context) error {
+					return k.pauseAction(c)
+				},
+			},
+			{
+				Name:         "unpause",
+				Usage:        "Unpause the given service (one of scraper, monitor, all)",
+				OnUsageError: onUsageError,
+				Action: func(c *cli.Context) error {
+					return k.unpauseAction(c)
+				},
+			},
 		},
 		OnUsageError: onUsageError,
 		CommandNotFound: func(c *cli.Context, command string) {

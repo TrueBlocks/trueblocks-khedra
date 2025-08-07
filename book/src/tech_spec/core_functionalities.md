@@ -48,23 +48,34 @@ const (
 
 The Control Service exposes these API endpoints:
 
-1. **Service Status**: `GET /api/v1/services` - List all services and their status
-2. **Individual Service Status**: `GET /api/v1/services/{serviceName}` - Get specific service status
-3. **Start Service**: `POST /api/v1/services/{serviceName}/start` - Start a specific service
-4. **Stop Service**: `POST /api/v1/services/{serviceName}/stop` - Stop a specific service
-5. **Restart Service**: `POST /api/v1/services/{serviceName}/restart` - Restart a specific service
-6. **Pause Service**: `POST /api/v1/services/{serviceName}/pause` - Pause a specific service
-7. **Resume Service**: `POST /api/v1/services/{serviceName}/resume` - Resume a paused service
-8. **System Status**: `GET /api/v1/status` - Overall system health and status
+1. **Service Status**: `GET /isPaused` - Check pause status of all services
+2. **Individual Service Status**: `GET /isPaused?name={serviceName}` - Check specific service pause status
+3. **Pause Service**: `POST /pause?name={serviceName}` - Pause a specific service
+4. **Unpause Service**: `POST /unpause?name={serviceName}` - Resume a specific service  
+5. **Pause All**: `POST /pause?name=all` or `POST /pause` - Pause all pausable services
+6. **Unpause All**: `POST /unpause?name=all` or `POST /unpause` - Resume all paused services
+7. **System Status**: `GET /` - Basic service endpoint information
+
+#### Pausable Services
+
+Only services implementing the `Pauser` interface can be paused:
+
+- **Scraper**: Blockchain indexing service (pausable)
+- **Monitor**: Address monitoring service (pausable)
+
+Always-on services:
+- **Control**: Service management interface (not pausable)
+- **API**: Data query endpoints (not pausable)  
+- **IPFS**: Distributed sharing (not pausable)
 
 #### Service Coordination
 
 The Control Service coordinates service operations through:
 
-- **Dependency Management**: Ensures services start in proper order
-- **Graceful Shutdown**: Coordinates orderly service termination
-- **Error Recovery**: Automatic restart of failed services (if configured)
-- **Resource Monitoring**: Tracks system resource usage across services
+- **Runtime Control**: Pause/unpause operations without full restart
+- **State Management**: Tracks pause/unpause state of individual services
+- **Graceful Operations**: Ensures clean pause/resume cycles
+- **Error Recovery**: Handles pause/unpause operation failures
 
 ## Blockchain Indexing
 

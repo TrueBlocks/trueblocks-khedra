@@ -27,10 +27,23 @@ khedra daemon
 
 This starts the daemon with all enabled services. The Control Service runs automatically and manages other services.
 
-### 3. Control Services via API
+### 3. Control Services
 
-Once running, manage services through the REST API:
+Once running, manage services through the CLI or REST API:
 
+#### CLI Commands
+```bash
+# Pause/unpause services
+khedra pause scraper
+khedra unpause scraper
+khedra pause all
+khedra unpause all
+
+# View configuration
+khedra config show
+```
+
+#### REST API
 ```bash
 # Check service status
 curl http://localhost:8080/api/v1/services
@@ -38,6 +51,10 @@ curl http://localhost:8080/api/v1/services
 # Start/stop individual services
 curl -X POST http://localhost:8080/api/v1/services/scraper/start
 curl -X POST http://localhost:8080/api/v1/services/monitor/stop
+
+# Pause/unpause services via control API
+curl -X POST "http://localhost:8338/pause?name=scraper"
+curl -X POST "http://localhost:8338/unpause?name=scraper"
 
 # Get system status
 curl http://localhost:8080/api/v1/status

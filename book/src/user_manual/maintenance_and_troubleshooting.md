@@ -97,6 +97,45 @@ chifra status --verbose
    TB_KHEDRA_LOGGING_LEVEL=debug TB_KHEDRA_LOGGING_TOFILE=true khedra start
    ```
 
+#### Service Management Issues
+
+**Symptoms:** Unable to pause/unpause services or service management commands fail.
+
+**Solutions:**
+
+1. **Service Not Found Error:**
+   ```bash
+   # Verify service is enabled and running
+   khedra config show | grep -A5 services
+   
+   # Check which services are actually running
+   curl http://localhost:8338/is-paused
+   ```
+
+2. **Service Not Pausable:**
+   ```bash
+   # Only scraper and monitor can be paused
+   # These services cannot be paused: control, api, ipfs
+   khedra pause scraper   # ✓ Works
+   khedra pause api       # ✗ Not pausable
+   ```
+
+3. **Control Service Not Responding:**
+   ```bash
+   # Check if control service is running on expected port
+   curl http://localhost:8338/status
+   
+   # Verify khedra daemon is running
+   ps aux | grep khedra
+   ```
+
+4. **Pause State Not Persisting:**
+   ```bash
+   # Note: Pause state is not saved to configuration
+   # Services return to unpaused state after restart
+   # This is expected behavior
+   ```
+
 ### Service-Specific Troubleshooting
 
 #### Scraper Service Issues

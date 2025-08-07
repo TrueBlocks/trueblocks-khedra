@@ -38,6 +38,8 @@ func (k *KhedraApp) isRunning() bool {
 		"version":   true,
 		"-v":        true,
 		"--version": true,
+		"pause":     true,
+		"unpause":   true,
 	}
 
 	if len(os.Args) < 2 || len(os.Args) == 2 && os.Args[1] == "config" {
