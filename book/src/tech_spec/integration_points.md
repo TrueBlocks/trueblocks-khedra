@@ -9,15 +9,11 @@ Khedra exposes data through a REST API, making it compatible with external appli
 
 ## Interfacing with IPFS
 
-Data indexed by Khedra can be pinned to IPFS for decentralized storage:
-
-```bash
-./khedra --ipfs on
-```
+If the IPFS service is enabled in `config.yaml` it will be started with the daemon. There is **no** `--ipfs on` CLI flag; previous documentation using that syntax was incorrect.
 
 ## Customizing for Specific Use Cases
 
 Users can tailor the configuration by:
 
-- Adjusting `.env` variables to include specific chains and RPC endpoints.
-- Writing custom scripts to query the REST API and process the data.
+- Editing `config.yaml` (wizard or `khedra config edit`) to set chains, RPC endpoints, and service enablement.
+- Using shell scripts to automate pause/unpause via the control endpoints.

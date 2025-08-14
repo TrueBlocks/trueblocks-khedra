@@ -25,7 +25,7 @@ Khedra's technical design adheres to several foundational principles:
 3. **Modularity**: Clean separation of concerns between services for flexibility and maintainability
 4. **Resource Efficiency**: Careful management of system resources, especially during indexing
 5. **Resilience**: Robust error handling and recovery mechanisms
-6. **Extensibility**: Well-defined interfaces to enable future enhancements
+6. **Extensibility**: Interfaces intended to allow additional components without refactoring core code
 
 ## Technology Stack
 

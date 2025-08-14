@@ -1,10 +1,10 @@
 # Command-Line Interface
 
-Khedra provides a simple, focused command-line interface (CLI) for managing the system. The CLI is designed around essential operations: initialization, daemon management, configuration, and service control.
+Khedra provides a deliberately small command-line interface (CLI) focused on what actually exists today: initialization, daemon startup, configuration viewing/editing, and pausing / unpausing certain services.
 
 ## CLI Architecture
 
-The CLI is built using the `urfave/cli` library, providing a lightweight and user-friendly interface focused on core functionality.
+The CLI is built using the `urfave/cli` library. There are no hidden subcommands beyond those listed below, and no status / metrics / restart commands at present.
 
 ### Design Principles
 
@@ -15,7 +15,7 @@ The CLI is built using the `urfave/cli` library, providing a lightweight and use
 
 ## Command Overview
 
-Khedra implements five core commands:
+Khedra implements these core commands (current implementation):
 
 ### Essential Commands
 
@@ -39,12 +39,12 @@ Start Khedra daemon with all configured services.
 khedra daemon
 ```
 
-Starts all enabled services:
-- **Scraper**: Blockchain indexing service
-- **Monitor**: Address monitoring service  
-- **API**: REST API service (if enabled)
-- **Control**: Service management HTTP interface
-- **IPFS**: Distributed data sharing (if enabled)
+Starts enabled services in a simple order: Control first, then the remaining enabled services in whatever order the configuration map iteration yields (not guaranteed / currently unordered). Services:
+- **Scraper** (pausable)
+- **Monitor** (pausable, disabled by default; functionality limited)
+- **API** (if enabled)
+- **IPFS** (if enabled)
+- **Control** (always started)
 
 The daemon runs until interrupted (Ctrl+C) or receives a termination signal.
 
@@ -80,7 +80,7 @@ khedra pause all
 - `monitor`: Address monitoring service
 - `all`: All pausable services
 
-**Non-Pausable Services**: `control`, `api`, `ipfs` (these provide critical system functionality)
+**Non-Pausable Services**: `control`, `api`, `ipfs`.
 
 #### `khedra unpause <service>`
 Resume paused services.
@@ -94,11 +94,11 @@ khedra unpause monitor
 khedra unpause all
 ```
 
-Same service support as pause command. Services must be paused to be unpaused.
+Same service support as pause command. A service must be paused to unpause it. Only `scraper` and `monitor` are recognized plus the alias `all`.
 
 ### Control Service API
 
-All pause/unpause operations are also available via REST API on the Control Service (default port 8338):
+Pause/unpause operations are available via a minimal HTTP interface on the Control Service (first available of ports 8338, 8337, 8336, 8335). Mutating operations use HTTP GET.
 
 #### Status Queries
 ```bash
@@ -110,31 +110,31 @@ curl "http://localhost:8338/isPaused?name=scraper"
 curl "http://localhost:8338/isPaused?name=monitor"
 ```
 
-#### Pause Operations
+#### Pause Operations (implemented as HTTP GET)
 ```bash
 # Pause specific service
-curl -X POST "http://localhost:8338/pause?name=scraper"
-curl -X POST "http://localhost:8338/pause?name=monitor"
+curl "http://localhost:8338/pause?name=scraper"
+curl "http://localhost:8338/pause?name=monitor"
 
 # Pause all pausable services
-curl -X POST "http://localhost:8338/pause?name=all"
-curl -X POST "http://localhost:8338/pause"    # alternative
+curl "http://localhost:8338/pause?name=all"
+curl "http://localhost:8338/pause"    # alternative
 ```
 
-#### Unpause Operations
+#### Unpause Operations (implemented as HTTP GET)
 ```bash
 # Unpause specific service
-curl -X POST "http://localhost:8338/unpause?name=scraper" 
-curl -X POST "http://localhost:8338/unpause?name=monitor"
+curl "http://localhost:8338/unpause?name=scraper"
+curl "http://localhost:8338/unpause?name=monitor"
 
 # Unpause all services
-curl -X POST "http://localhost:8338/unpause?name=all"
-curl -X POST "http://localhost:8338/unpause"   # alternative
+curl "http://localhost:8338/unpause?name=all"
+curl "http://localhost:8338/unpause"   # alternative
 ```
 
 #### API Responses
 
-Status queries return JSON arrays:
+Status queries return simple JSON arrays like:
 ```json
 [
   {"name": "scraper", "status": "running"},
@@ -144,7 +144,7 @@ Status queries return JSON arrays:
 ]
 ```
 
-Control operations return operation results:
+Control operations return result arrays. Example:
 ```json
 [
   {"name": "scraper", "status": "paused"}
@@ -153,7 +153,7 @@ Control operations return operation results:
 
 #### Error Handling
 
-Invalid service names return HTTP 400:
+Invalid service names return an error JSON body with 400.
 ```json
 {"error": "service 'invalid' not found or is not pausable"}
 ```
@@ -203,14 +203,12 @@ khedra config edit
 khedra daemon
 ```
 
-## Environment Variables
+## Environment Variables (current)
 
-Khedra respects these environment variables:
-
-- `TB_KHEDRA_WAIT_FOR_NODE`: Node process name to wait for before starting (e.g., `erigon`, `geth`)
-- `TB_KHEDRA_WAIT_SECONDS`: Seconds to wait after node detection (default: 30)
-- `TB_KHEDRA_LOGGING_LEVEL`: Log level (`debug`, `info`, `warn`, `error`)
-- `EDITOR`: Editor for `config edit` command
+- `TB_KHEDRA_WAIT_FOR_NODE` (optional): process name to block on before starting
+- `TB_KHEDRA_WAIT_SECONDS` (default 30 if waiting): post-detect delay
+- `TB_KHEDRA_LOGGING_LEVEL`: one of `debug|info|warn|error`
+- `EDITOR`: used by `khedra config edit`
 
 ## Error Handling
 
@@ -222,7 +220,7 @@ Khedra respects these environment variables:
 
 **Permission denied**: Ensure proper file permissions for configuration and data directories
 
-**Port conflicts**: Control service automatically finds available ports (8338, 8337, 8336, 8335)
+**Port conflicts**: Control service scans 8338 → 8335 and uses the first open port
 
 ### Debugging
 

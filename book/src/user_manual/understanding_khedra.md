@@ -56,12 +56,9 @@ This creates a hybrid model that preserves privacy while enabling community bene
 Khedra is organized into five core services:
 
 1. **Control Service**
-   - **Central Management Hub**: Provides unified control interface for all Khedra services
-   - **Service Operations**: Start, stop, restart, pause, and resume any service via API
-   - **Health Monitoring**: Real-time status monitoring and health checks for all services
-   - **Configuration Management**: Runtime configuration updates and validation
-   - **External Integration**: Enables external tools to manage Khedra programmatically
-   - **Always Enabled**: The Control Service is always active and cannot be disabled
+   - Provides minimal pause / unpause endpoints (`/pause`, `/unpause`, `/isPaused`)
+   - Does not (yet) implement start/stop/restart, health metrics, or runtime config changes
+   - Always started and not user‑pausable
 
 2. **Scraper Service**
    - Processes blockchain data to build the Unchained Index
@@ -144,12 +141,4 @@ graph TD
 
 #### Service Startup Order
 
-Services start in this coordinated sequence:
-
-1. **Control Service** (first - manages others)
-2. **IPFS Service** (if enabled - provides infrastructure)
-3. **Scraper Service** (if enabled - begins indexing)
-4. **API Service** (if enabled - serves data)
-5. **Monitor Service** (last - monitors real-time data)
-
-This order ensures dependencies are available when each service starts.
+Current code starts Control first, then iterates over the configured services map (Go map iteration order is not guaranteed). There is no enforced dependency sequence beyond Control being available.

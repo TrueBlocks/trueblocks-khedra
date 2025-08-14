@@ -6,16 +6,17 @@ This section details Khedra's primary technical functionalities, explaining how 
 
 ### Service Management Interface
 
-The Control Service provides centralized management capabilities for all other Khedra services through a RESTful API interface.
+The Control Service exposes a minimal HTTP interface for pausing and unpausing supported services (`scraper`, `monitor`) and for reporting their pause status.
 
 #### Technical Implementation
 
-The Control Service implements these core management functions:
+Implemented functions:
 
-1. **Service Lifecycle Management**: Start, stop, restart, and pause individual services
-2. **Health Monitoring**: Real-time status monitoring of all services
-3. **Configuration Management**: Runtime configuration updates and validation
-4. **Metrics Collection**: Aggregation of service performance metrics
+1. Pause a pausable service
+2. Unpause a pausable service
+3. Report paused / running status
+
+Scope: does not provide start/stop/restart, runtime config mutation, or metrics collection.
 
 ```go
 // Simplified Control Service interface
@@ -44,17 +45,14 @@ const (
 )
 ```
 
-#### Management Endpoints
+#### Management Endpoints (Implemented)
 
-The Control Service exposes these API endpoints:
+1. `GET /isPaused` — status for all services
+2. `GET /isPaused?name={service}` — status for one service
+3. `GET /pause?name={service|all}` — pause service(s)
+4. `GET /unpause?name={service|all}` — unpause service(s)
 
-1. **Service Status**: `GET /isPaused` - Check pause status of all services
-2. **Individual Service Status**: `GET /isPaused?name={serviceName}` - Check specific service pause status
-3. **Pause Service**: `POST /pause?name={serviceName}` - Pause a specific service
-4. **Unpause Service**: `POST /unpause?name={serviceName}` - Resume a specific service  
-5. **Pause All**: `POST /pause?name=all` or `POST /pause` - Pause all pausable services
-6. **Unpause All**: `POST /unpause?name=all` or `POST /unpause` - Resume all paused services
-7. **System Status**: `GET /` - Basic service endpoint information
+Mutating operations currently use GET.
 
 #### Pausable Services
 
@@ -63,25 +61,17 @@ Only services implementing the `Pauser` interface can be paused:
 - **Scraper**: Blockchain indexing service (pausable)
 - **Monitor**: Address monitoring service (pausable)
 
-Always-on services:
-- **Control**: Service management interface (not pausable)
-- **API**: Data query endpoints (not pausable)  
-- **IPFS**: Distributed sharing (not pausable)
+Non‑pausable services: `control`, `api`, `ipfs` (if enabled). The monitor service is disabled by default but is pausable when enabled.
 
 #### Service Coordination
 
-The Control Service coordinates service operations through:
-
-- **Runtime Control**: Pause/unpause operations without full restart
-- **State Management**: Tracks pause/unpause state of individual services
-- **Graceful Operations**: Ensures clean pause/resume cycles
-- **Error Recovery**: Handles pause/unpause operation failures
+Coordination is limited to toggling internal paused state.
 
 ## Blockchain Indexing
 
-### The Unchained Index
+### The Unchained Index (High-Level Overview)
 
-The Unchained Index is the foundational data structure of Khedra, providing a reverse-lookup capability from addresses to their appearances in blockchain data.
+The Unchained Index implementation resides in upstream TrueBlocks libraries. This repository configures and invokes indexing.
 
 #### Technical Implementation
 
@@ -92,40 +82,11 @@ The index is implemented as a specialized data structure with these key characte
 3. **Chunked Storage**: Divides the index into manageable chunks (typically 1,000,000 blocks per chunk)
 4. **Versioned Format**: Includes version metadata to handle format evolution
 
-```go
-// Simplified representation of the index structure
-type UnchainedIndex struct {
-    Version string
-    Chunks  map[uint64]*IndexChunk  // Key is chunk ID
-}
+Internal storage specifics are handled upstream and not duplicated here.
 
-type IndexChunk struct {
-    BloomFilter   *BloomFilter
-    Appearances   map[string][]Appearance  // Key is hex address
-    StartBlock    uint64
-    EndBlock      uint64
-    LastUpdated   time.Time
-}
+#### Indexing Process (Conceptual)
 
-type Appearance struct {
-    BlockNumber    uint64
-    TransactionIndex uint16
-    AppearanceType  uint8
-    LogIndex        uint16
-}
-```
-
-#### Indexing Process
-
-1. **Block Retrieval**: Fetch blocks from the RPC endpoint in configurable batches
-2. **Appearance Extraction**: Process each block to extract address appearances from:
-   - Transaction senders and recipients
-   - Log topics and indexed parameters
-   - Trace calls and results
-   - State changes
-3. **Deduplication**: Remove duplicate appearances within the same transaction
-4. **Storage**: Update the appropriate index chunk with the new appearances
-5. **Bloom Filter Update**: Update the bloom filter for quick future lookups
+High level only: batches of blocks are processed, appearances extracted, and persisted through the underlying TrueBlocks indexing subsystem; batch size and sleep are configured in `config.yaml`.
 
 #### Performance Optimizations
 
@@ -134,11 +95,11 @@ type Appearance struct {
 - **Binary Encoding**: Compact storage format for index data
 - **Caching**: Frequently accessed index portions kept in memory
 
-## Address Monitoring
+## Address Monitoring (Experimental / Limited)
 
 ### Monitor Implementation
 
-The monitoring system tracks specific addresses for on-chain activity and provides notifications when activity is detected.
+The monitoring system currently provides service enablement/disablement and pause control; advanced notification features are outside this repository.
 
 #### Technical Implementation
 
@@ -149,31 +110,7 @@ Monitors are implemented using these components:
 3. **Activity Tracker**: Records and timestamps address activity
 4. **Notification Manager**: Handles alert distribution based on configuration
 
-```go
-// Simplified monitor implementation
-type Monitor struct {
-    Address       string
-    Description   string
-    CreatedAt     time.Time
-    LastActivity  time.Time
-    Config        MonitorConfig
-    ActivityLog   []Activity
-}
-
-type MonitorConfig struct {
-    NotificationChannels []string
-    Filters              *ActivityFilter
-    Thresholds           map[string]interface{}
-}
-
-type Activity struct {
-    BlockNumber      uint64
-    TransactionHash  string
-    Timestamp        time.Time
-    ActivityType     string
-    Details          map[string]interface{}
-}
-```
+Implementation structs are managed upstream.
 
 #### Monitoring Process
 
@@ -185,12 +122,9 @@ type Activity struct {
 
 #### Optimization Approaches
 
-- **Focused Index**: Maintain a separate index for just monitored addresses
-- **Early Detection**: Check monitored addresses early in the processing pipeline
-- **Configurable Sensitivity**: Allow users to set thresholds for notifications
-- **Batched Notifications**: Group notifications to prevent excessive alerts
+Optimizations will be added over time as needed.
 
-## API Service
+## API Service (When Enabled)
 
 ### RESTful Interface
 
@@ -206,28 +140,7 @@ The API is implemented using these components:
 4. **Response Formatter**: Structures data in requested format (JSON, CSV, etc.)
 5. **Documentation**: Auto-generated Swagger documentation
 
-```go
-// Simplified API route implementation
-type APIRoute struct {
-    Path        string
-    Method      string
-    Handler     http.HandlerFunc
-    Description string
-    Params      []Parameter
-    Responses   map[int]Response
-}
-
-// API server initialization
-func NewAPIServer(config Config) *APIServer {
-    server := &APIServer{
-        router: mux.NewRouter(),
-        port:   config.Port,
-        auth:   config.Auth,
-    }
-    server.registerRoutes()
-    return server
-}
-```
+Server implementation is provided by upstream services packages.
 
 #### API Endpoints
 
@@ -247,7 +160,7 @@ The API provides endpoints in several categories:
 - **Query Optimization**: Efficient translation of API queries to index lookups
 - **Rate Limiting**: Prevent resource exhaustion from excessive requests
 
-## IPFS Integration
+## IPFS Integration (Optional)
 
 ### Distributed Index Sharing
 
@@ -263,20 +176,7 @@ The IPFS functionality is implemented with these components:
 4. **Discovery Service**: Finds and retrieves chunks from the network
 5. **Validation**: Verifies the integrity of downloaded chunks
 
-```go
-// Simplified IPFS service implementation
-type IPFSService struct {
-    node        *ipfs.CoreAPI
-    chunkManager *ChunkManager
-    config      IPFSConfig
-}
-
-type ChunkManager struct {
-    chunkSize      uint64
-    validationFunc func([]byte) bool
-    storage        *Storage
-}
-```
+Implementation details are abstracted via the services layer.
 
 #### Distribution Process
 
@@ -295,7 +195,7 @@ type ChunkManager struct {
 - **Background Syncing**: Retrieve chunks in the background without blocking
 - **Compressed Storage**: Minimize bandwidth and storage requirements
 
-## Configuration Management
+## Configuration Management (YAML)
 
 ### Flexible Configuration System
 
@@ -311,37 +211,7 @@ The configuration system is implemented with these components:
 4. **Defaults Manager**: Provides sensible defaults where needed
 5. **Runtime Updater**: Handles configuration changes during operation
 
-```go
-// Simplified configuration structure
-type Config struct {
-    General  GeneralConfig
-    Chains   map[string]ChainConfig
-    Services map[string]ServiceConfig
-    Logging  LoggingConfig
-}
-
-// Configuration loading process
-func LoadConfig(path string) (*Config, error) {
-    config := DefaultConfig()
-    
-    // Load from file if exists
-    if fileExists(path) {
-        if err := loadFromFile(path, config); err != nil {
-            return nil, err
-        }
-    }
-    
-    // Override with environment variables
-    applyEnvironmentOverrides(config)
-    
-    // Validate the final configuration
-    if err := validateConfig(config); err != nil {
-        return nil, err
-    }
-    
-    return config, nil
-}
-```
+Authoritative structure lives in `pkg/types/config.go`.
 
 #### Configuration Sources
 
@@ -361,4 +231,4 @@ The configuration system enforces these kinds of validation:
 4. **Dependency Validation**: Related settings are consistent
 5. **Resource Validation**: Settings are compatible with available resources
 
-These core functionalities form the technical foundation of Khedra, enabling its primary capabilities while providing the flexibility and performance required for blockchain data processing.
+The descriptions above match the repository's current functionality.

@@ -25,9 +25,9 @@
 - **Integration Points**: Section 8, Integration Points
 - **IPFS Integration**: Section 3, Core Functionalities; Section 8, Integration Points
 - **Logging**: Section 4, Technical Design
-- **Performance Benchmarks**: Section 7, Performance and Scalability
+- **Performance Tuning**: Section 7, Performance and Scalability (benchmarks removed; only tuning guidance retained)
 - **REST API**: Section 3, Core Functionalities; Section 8, Integration Points
-- **RPC Requirements**: Section 5, Supported Chains and RPCs
+- **RPC Requirements**: Section 5, Supported Chains
 - **Scalability Strategies**: Section 7, Performance and Scalability
 - **System Components**: Section 2, System Architecture
 - **Testing Guidelines**: Section 9, Testing and Validation

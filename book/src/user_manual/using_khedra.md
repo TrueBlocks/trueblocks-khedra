@@ -50,14 +50,7 @@ Launch all configured services:
 khedra daemon
 ```
 
-This starts:
-- **Scraper**: Blockchain indexing service
-- **Monitor**: Address monitoring service
-- **API**: REST endpoints (if enabled)
-- **Control**: Service management interface
-- **IPFS**: Distributed sharing (if enabled)
-
-The daemon runs until interrupted (Ctrl+C) or receives SIGTERM.
+This starts Control first and then any enabled services (scraper, monitor, api, ipfs) in an internal map iteration order (not guaranteed). The daemon runs until interrupted (Ctrl+C) or SIGTERM.
 
 ### 3. Manage Configuration
 
@@ -116,7 +109,7 @@ khedra unpause all
 
 ## REST API Control
 
-The Control service (port 8338) provides HTTP endpoints for automation:
+The Control service (first open of 8338, 8337, 8336, 8335) provides minimal HTTP endpoints for automation:
 
 ### Check Service Status
 
@@ -140,13 +133,13 @@ Response format:
 ### Control Operations
 
 ```bash
-# Pause services
-curl -X POST "http://localhost:8338/pause?name=scraper"
-curl -X POST "http://localhost:8338/pause?name=all"
+# Pause services (currently implemented as GET requests)
+curl "http://localhost:8338/pause?name=scraper"
+curl "http://localhost:8338/pause?name=all"
 
 # Resume services
-curl -X POST "http://localhost:8338/unpause?name=scraper"
-curl -X POST "http://localhost:8338/unpause?name=all"
+curl "http://localhost:8338/unpause?name=scraper"
+curl "http://localhost:8338/unpause?name=all"
 ```
 
 ## Common Workflows
@@ -209,7 +202,7 @@ TB_KHEDRA_LOGGING_LEVEL=debug khedra daemon
 
 **Configuration not found**: Run `khedra init` to create initial configuration
 
-**Port conflicts**: Control service automatically finds available ports (8338, 8337, 8336, 8335)
+**Port conflicts**: Control service picks first free port from 8338 → 8335
 
 **Service not pausable**: Only `scraper` and `monitor` services can be paused
 

@@ -2,7 +2,7 @@
 
 ## Architectural Overview
 
-Khedra employs a modular, service-oriented architecture designed for flexibility, resilience, and extensibility. The system is structured around a central application core that coordinates multiple specialized services, each with distinct responsibilities.
+Khedra employs a modular, service-oriented architecture. A central application core wires up a set of specialized services, each with a narrow responsibility.
 
 ### High-Level Architecture Diagram
 
@@ -34,15 +34,15 @@ Khedra employs a modular, service-oriented architecture designed for flexibility
 
 ### 1. Khedra Application
 
-The main application container that initializes, configures, and manages the lifecycle of all services. It provides:
+The main application container initializes configuration and wires up the enabled services. Today it provides:
 
-- Service registration and coordination
-- Application startup and shutdown sequences
-- Signal handling for graceful termination
-- Global state management
-- Cross-service communication
+- Basic service instantiation (no dynamic registration at runtime)
+- One–time startup (no hot restart orchestration)
+- OS signal handling for shutdown via the underlying service manager
 
-Implementation: `app/khedra.go`
+There is no cross‑service message bus, restart policy, or runtime dependency graph.
+
+Implementation: `app/app.go`, `app/action_daemon.go`
 
 ### 2. Service Framework
 
@@ -50,70 +50,50 @@ Khedra implements five primary services:
 
 #### 2.1 Control Service
 
-- **Central Management**: Provides unified management interface for all other services
-- **Service Lifecycle**: Handles start, stop, restart, pause, and resume operations
-- **Health Monitoring**: Continuously monitors service status and performance
-- **Runtime Configuration**: Enables dynamic configuration updates without restart
-- **API Gateway**: Serves as primary management interface for external tools
-- **Dependency Coordination**: Manages service startup order and dependencies
-- **Error Recovery**: Implements automatic restart policies for failed services
-- **Metrics Aggregation**: Collects and exposes system-wide performance metrics
+Current (implemented) responsibilities:
 
-The Control Service runs on the same process as other services but provides external API access for management operations. It coordinates all service operations and serves as the single point of control for the Khedra system.
+- Exposes a minimal HTTP interface for pausing / unpausing pausable services
+- Reports simple paused / running / not‑pausable status via `/isPaused`
+- Listens on the first available port in the range 8338–8335
 
-Implementation: `pkg/services/control/service.go`
+Not implemented: start/stop/restart of individual services, runtime configuration mutation, health or metrics aggregation, dependency ordering logic, automatic restarts, or a generalized management API surface.
+
+Implementation entry: constructed in `app/action_daemon.go` (via `services.NewControlService`).
 
 #### 2.2 Scraper Service
 
-- Processes blockchain data to build the Unchained Index
-- Extracts address appearances from transactions, logs, and traces
-- Manages indexing state and progress tracking
-- Handles retry logic for failed operations
-- Implements batch processing with configurable parameters
+Intended role (some functionality provided by the upstream SDK library):
 
-Implementation: `pkg/services/scraper/service.go`
+- Processes blockchain data in batches (batch size & sleep interval configurable in `config.yaml`)
+- Capable of being paused / unpaused through the Control Service endpoints
+
+Detailed index storage, retry semantics, and appearance extraction logic live in the shared TrueBlocks SDK (not in this repository) and are therefore abstracted from this codebase. Paths: created through `services.NewScrapeService` in `app/action_daemon.go`.
 
 #### 2.3 Monitor Service
 
-- Tracks specified addresses for on-chain activity
-- Maintains focused indices for monitored addresses
-- Processes real-time blocks for quick notifications
-- Supports flexible notification configurations
-- Manages monitor definitions and states
+Current state:
 
-Implementation: `pkg/services/monitor/service.go`
+- Instantiated when enabled but disabled by default
+- Supports pause / unpause
+- Advanced notification / registry features are not implemented here.
+
+Implementation entry: created via `services.NewMonitorService` in `app/action_daemon.go`.
 
 #### 2.4 API Service
 
-- Exposes RESTful endpoints for data access
-- Implements query interfaces for the index and monitors
-- Handles authentication and rate limiting
-- Provides structured data responses in multiple formats
-- Includes Swagger documentation for API endpoints
+When enabled it exposes HTTP endpoints (details provided by the SDK). This repository does not implement authentication, rate limiting, Swagger generation, or multi‑format response logic.
 
-Implementation: `pkg/services/api/service.go`
+Implementation entry: `services.NewApiService` in `app/action_daemon.go`.
 
 #### 2.5 IPFS Service
 
-- Manages distributed sharing of index data
-- Handles chunking of index data for efficient distribution
-- Implements publishing and retrieval mechanisms
-- Provides peer discovery and connection management
-- Integrates with the IPFS network protocol
-
-Implementation: `pkg/services/ipfs/service.go`
+Optional. Created only if enabled. Within this codebase we only instantiate via `services.NewIpfsService`.
 
 ### 3. Configuration Manager
 
-A centralized system for managing application settings, including:
+Implemented as a YAML backed configuration (`~/.khedra/config.yaml` by default) created / edited through the init wizard or `khedra config edit`. Runtime (hot) reconfiguration is **not** supported; changes require a daemon restart.
 
-- Configuration file parsing and validation
-- Environment variable integration
-- Runtime configuration updates
-- Defaults management
-- Chain-specific configuration handling
-
-Implementation: `pkg/config/config.go`
+Implementation: `pkg/types/config.go` and related helpers in `app/`.
 
 ### 4. Data Layer
 
@@ -157,41 +137,26 @@ Implementation: `pkg/chains/data.go`
 
 ### 5. Blockchain Connectors
 
-The interface layer between Khedra and blockchain nodes:
-
-- RPC client implementations
-- Connection pooling and management
-- Request rate limiting and backoff strategies
-- Error handling and resilience patterns
-- Chain-specific adaptations
-
-Implementation: `pkg/rpc/client.go`
+Low‑level RPC client logic is handled in upstream TrueBlocks components; this repository primarily validates configured RPC endpoints (see `HasValidRpc` usage in `app/action_daemon.go`).
 
 ## Communication Patterns
 
 Khedra employs several communication patterns between components:
 
-1. **Service-to-Service Communication**: Structured message passing between services using channels
-2. **RPC Communication**: JSON-RPC communication with blockchain nodes
-3. **REST API**: HTTP-based communication for external interfaces
-4. **File-Based Storage**: Persistent data storage using structured files
+1. **RPC Communication**: JSON-RPC communication with blockchain nodes (through upstream SDK)
+2. **Minimal Control HTTP**: `/isPaused`, `/pause`, `/unpause` endpoints for operational control
+3. **File-Based Storage**: Index / cache paths determined by config (actual index logic external)
 
 ## Deployment Architecture
 
 Khedra supports multiple deployment models:
 
-1. **Standalone Application**: Single-process deployment for individual users
-2. **Docker Container**: Containerized deployment for managed environments
-3. **Distributed Deployment**: Multiple instances sharing index data via IPFS
+1. **Standalone Application**: Single-process deployment
+2. **(Removed)** Prior Docker support has been removed (see project README)
 
-## Security Architecture
+## Security Notes (Current Scope)
 
-Security considerations in Khedra's architecture include:
+Current implementation is local‑first and depends on the operator to secure the host machine. Features such as authenticated API access, update integrity verification, and formal resource isolation are not implemented in this repository.
 
-1. **Local-First Processing**: Minimizes exposure of query data
-2. **API Authentication**: Optional key-based authentication for API access
-3. **Configuration Protection**: Secure handling of RPC credentials
-4. **Update Verification**: Integrity checks for application updates
-5. **Resource Isolation**: Service-level resource constraints
+---
 
-The modular design of Khedra allows for individual components to be extended, replaced, or enhanced without affecting the entire system, providing a solid foundation for future development and integration.
