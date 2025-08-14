@@ -308,42 +308,61 @@
     }
 }
 
-/* Right-Side Menu Styling */
-.right-menu {
-    position: fixed; /* Keeps the menu fixed on the right side */
-    top: 10px; /* Adjust to fit below the header */
-    right: 80px; /* Distance from the right edge of the page */
-    width: 200px; /* Width of the menu */
-    max-height: calc(100vh - 100px); /* Limit height to fit within viewport */
-    overflow-y: auto; /* Enable scrolling for large menus */
-    background-color: #f9f9f9; /* Light background for contrast */
-    border: 1px solid #ddd; /* Subtle border around the menu */
-    padding: 10px; /* Space inside the menu */
-    font-size: 14px; /* Adjust text size as needed */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
-    z-index: 100; /* Make sure it appears above other elements */
+/* Right-Side Page Outline (Option 1 subtle style) */
+.right-menu { /* container initially hidden until JS conditions met */
+    position: fixed;
+    top: 84px; /* below the top menu bar */
+    right: 48px;
+    width: 180px;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    background: rgba(255,255,255,0.04); /* subtle translucency */
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.10);
+    padding: 8px 10px 12px 12px;
+    font-size: 12px;
+    line-height: 1.3;
+    border-radius: 6px;
+    box-shadow: none;
+    z-index: 60;
+    color: var(--fg, #ccc);
+}
+
+.right-menu h3 { /* title */
+    margin: 0 0 6px 0;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    opacity: .55;
 }
 
 .right-menu .submenu {
-    list-style-type: none; /* Remove bullet points */
+    list-style: none;
     padding: 0;
     margin: 0;
 }
 
-.right-menu .submenu li {
-    margin-bottom: 10px; /* Space between items */
+.right-menu .submenu li { margin: 4px 0; }
+
+.right-menu .submenu a {
+    color: #7fb5ff;
+    text-decoration: none;
+    display: block;
+    padding: 2px 0 2px 2px;
+    border-left: 2px solid transparent;
+    transition: color .15s, border-color .15s, background .15s;
 }
 
-.right-menu .submenu li a {
-    color: #0366d6; /* Link color */
-    text-decoration: none; /* Remove underline from links */
+.right-menu .submenu a:hover { color: #c4e1ff; }
+
+.right-menu .submenu a.active { /* scrollspy highlight */
+    color: #ffffff;
+    border-left-color: #3d8bff;
+    background: rgba(255,255,255,0.06);
 }
 
-.right-menu .submenu li a:hover {
-    text-decoration: underline; /* Add underline on hover */
-}
-
-.right-menu .submenu li a.active {
-    font-weight: bold; /* Highlight the active link */
-    color: #333; /* Darker color for the active link */
+@media (max-width: 1350px) { /* hide on smaller screens */
+  .right-menu { display: none !important; }
 }
