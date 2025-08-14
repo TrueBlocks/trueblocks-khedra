@@ -318,6 +318,26 @@
         <script src="{{ ../path_to_root }}{{this}}"></script>
         {{/each}}
 
+        <!-- Build info footer -->
+        <script>
+            (function() {
+                try {
+                    var container = document.createElement('div');
+                    container.id = 'build-info';
+                    container.style.fontSize = '.85rem';
+                    container.style.opacity = '0.65';
+                    container.style.margin = '3rem 0 1rem 0';
+                    container.style.lineHeight = '1.3';
+                    var date = (window.MDBOOK_BUILD_DATE || '').replace('T',' ').replace('Z',' UTC');
+                    var commit = window.MDBOOK_GIT_COMMIT || '';
+                    container.textContent = 'Last updated: ' + date + (commit ? ' (commit ' + commit + ')' : '');
+                    // Append inside main content so it's left-aligned with text body
+                    var mainEl = document.querySelector('#content main') || document.querySelector('main') || document.body;
+                    mainEl.appendChild(container);
+                } catch (e) { /* ignore */ }
+            })();
+        </script>
+
         {{#if is_print}}
         {{#if mathjax_support}}
         <script>
