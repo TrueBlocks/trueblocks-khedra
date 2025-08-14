@@ -366,3 +366,45 @@
 @media (max-width: 1350px) { /* hide on smaller screens */
   .right-menu { display: none !important; }
 }
+
+/* Light theme overrides: improve contrast on bright backgrounds */
+.light .right-menu,
+html:not(.js) .right-menu { /* also cover no-js light default */
+    background: rgba(0,0,0,0.03);
+    border: 1px solid rgba(0,0,0,0.15);
+    color: var(--fg, #222);
+}
+.light .right-menu h3,
+html:not(.js) .right-menu h3 { opacity: .65; color: var(--fg, #222); }
+.light .right-menu .submenu a,
+html:not(.js) .right-menu .submenu a {
+    color: #1d4f89;
+}
+.light .right-menu .submenu a:hover,
+html:not(.js) .right-menu .submenu a:hover { color: #0b64c2; }
+.light .right-menu .submenu a.active,
+html:not(.js) .right-menu .submenu a.active {
+    color: #000000;
+    border-left-color: #1f6fff;
+    background: rgba(0,0,0,0.06);
+}
+
+/* Rust (light, warm) theme overrides */
+.rust .right-menu {
+    background: rgba(0,0,0,0.05);
+    border: 1px solid rgba(0,0,0,0.18);
+    color: var(--fg, #262625);
+}
+.rust .right-menu h3 { opacity: .65; color: var(--fg, #262625); }
+.rust .right-menu .submenu a { color: #7a3e13; /* darker than active accent for readability */ }
+.rust .right-menu .submenu a:hover { color: #a75018; }
+.rust .right-menu .submenu a.active {
+    color: #000;
+    border-left-color: var(--sidebar-active, #e69f67);
+    background: rgba(0,0,0,0.07);
+}
+
+/* High-level: allow custom properties in future (fallbacks now) */
+.right-menu {
+    --rightmenu-bg: inherit; /* placeholder so future themes can override via vars */
+}
