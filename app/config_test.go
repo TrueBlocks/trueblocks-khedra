@@ -59,7 +59,9 @@ func TestLoadConfig_InvalidFileConfig(t *testing.T) {
 
 	_, err := LoadConfig()
 	assert.Error(t, err, t.Name())
-	assert.Contains(t, err.Error(), "failed to load file configuration")
+	if err != nil {
+		assert.Contains(t, err.Error(), "failed to load file configuration")
+	}
 
 	os.Remove(types.GetConfigFn())
 }
@@ -177,8 +179,10 @@ func TestChainInvalidBooleanValue(t *testing.T) {
 
 	if cfg, err := LoadConfig(); err != nil {
 		assert.Error(t, err, "loadConfig should return an error for invalid boolean value", t.Name())
-		assert.Contains(t, err.Error(), "failed to apply environment configuration: environment variable has an invalid value", "Error message should indicate the inability to parse the boolean value")
-		assert.Contains(t, err.Error(), "key=[enabled], value=[]", "Error message should point to the problematic field")
+		if err != nil {
+			assert.Contains(t, err.Error(), "failed to apply environment configuration: environment variable has an invalid value", "Error message should indicate the inability to parse the boolean value")
+			assert.Contains(t, err.Error(), "key=[enabled], value=[]", "Error message should point to the problematic field")
+		}
 	} else {
 		t.Error("loadConfig should return an error for invalid boolean value", cfg.Chains["mainnet"].Enabled, t.Name())
 	}
@@ -241,7 +245,9 @@ func TestServiceInvalidPort(t *testing.T) {
 	cfg, err := LoadConfig()
 	if err != nil {
 		assert.Error(t, err, "loadConfig should return an error for invalid port value", t.Name())
-		assert.Contains(t, err.Error(), "failed to apply environment configuration: environment variable has an invalid value: key=[port], value=[]", "Error message should indicate invalid port")
+		if err != nil {
+			assert.Contains(t, err.Error(), "failed to apply environment configuration: environment variable has an invalid value: key=[port], value=[]", "Error message should indicate invalid port")
+		}
 	} else {
 		t.Error("loadConfig should return an error for invalid port", cfg.Services["api"], t.Name())
 	}
