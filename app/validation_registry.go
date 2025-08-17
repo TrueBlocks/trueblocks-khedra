@@ -1,6 +1,8 @@
 package app
 
 import (
+	"strings"
+
 	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
 	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/wizard"
 )
@@ -10,22 +12,18 @@ func registerValidationFunctions() {
 	// Register validation functions for context-based validation
 	wizard.RegisterValidationFunc("rpc", func(input string) wizard.ValidationFeedback {
 		// Create an adapter between the old and new validation function types
+		if _, err := types.ValidateRpcEndpointRT(input); err != nil {
+			return wizard.ValidationFeedback{IsValid: false, Message: err.Error(), Severity: "error"}
+		}
 		result := types.TestRpcEndpoint(input)
-
+		if strings.Contains(strings.ToLower(result.ErrorMessage), "websocket endpoints cannot be fully tested") {
+			return wizard.ValidationFeedback{IsValid: false, Message: "WebSocket RPC endpoints (ws://, wss://) are not supported; use http:// or https://", Severity: "error"}
+		}
 		if !result.Reachable {
-			return wizard.ValidationFeedback{
-				IsValid:  false,
-				Message:  result.ErrorMessage,
-				Severity: "error",
-			}
+			return wizard.ValidationFeedback{IsValid: false, Message: result.ErrorMessage, Severity: "error"}
 		}
-
 		formattedResult := types.FormatRpcTestResult(result)
-		return wizard.ValidationFeedback{
-			IsValid:  true,
-			Message:  formattedResult,
-			Severity: "info",
-		}
+		return wizard.ValidationFeedback{IsValid: true, Message: formattedResult, Severity: "info"}
 	})
 
 	wizard.RegisterValidationFunc("chainid", func(input string) wizard.ValidationFeedback {

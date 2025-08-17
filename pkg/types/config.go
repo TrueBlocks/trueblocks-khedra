@@ -34,7 +34,6 @@ func NewConfig() Config {
 		"api":     NewService("api"),
 		"ipfs":    NewService("ipfs"),
 	}
-
 	return Config{
 		General:  NewGeneral(),
 		Chains:   chains,
@@ -63,23 +62,15 @@ func GetConfigFnNoCreate() string {
 		return testFn
 	}
 	if base.IsTestMode() {
-		tmpDir := os.TempDir()
-		return filepath.Join(tmpDir, "config.yaml")
+		return filepath.Join(os.TempDir(), "config.yaml")
 	}
-
-	// current folder
 	fn := utils.ResolvePath("config.yaml")
 	if coreFile.FileExists(fn) {
 		return fn
 	}
-
-	// expanded default config folder
 	return utils.ResolvePath(filepath.Join(mustGetConfigPath(), "config.yaml"))
 }
 
-// GetConfigFn returns the path to the config file which must
-// be either in the current folder or in the default location. If
-// there is no such file, establish it
 func GetConfigFn() string {
 	if testFn, ok := os.LookupEnv("KHEDRA_TEST_CONFIG_FN"); ok && testFn != "" {
 		if coreFile.FileExists(testFn) {
@@ -92,45 +83,36 @@ func GetConfigFn() string {
 		return testFn
 	}
 	if base.IsTestMode() {
-		tmpDir := os.TempDir()
-		return filepath.Join(tmpDir, "config.yaml")
+		return filepath.Join(os.TempDir(), "config.yaml")
 	}
-
 	fn := GetConfigFnNoCreate()
 	if coreFile.FileExists(fn) {
 		return fn
 	}
-
 	cfg := NewConfig()
-	err := cfg.WriteToFile(fn)
-	if err != nil {
+	if err := cfg.WriteToFile(fn); err != nil {
 		fmt.Println(colors.Red+"error writing config file: %v", err, colors.Off)
 	}
-
 	return fn
 }
 
 func mustGetConfigPath() string {
 	var err error
 	cfgDir := utils.ResolvePath("~/.khedra")
-
 	if !coreFile.FolderExists(cfgDir) {
 		if err = coreFile.EstablishFolder(cfgDir); err != nil {
 			log.Fatalf("error establishing log folder %s: %v", cfgDir, err)
 		}
 	}
-
-	if writable := isWritable(cfgDir); !writable {
+	if !isWritable(cfgDir) {
 		log.Fatalf("log directory %s is not writable: %v", cfgDir, err)
 	}
-
 	return cfgDir
 }
 
 // isWritable checks to see if a folder is writable
 func isWritable(path string) bool {
 	tmpFile := filepath.Join(path, ".test")
-
 	if fil, err := os.Create(tmpFile); err != nil {
 		fmt.Println(fmt.Errorf("folder %s is not writable: %v", path, err))
 		return false
@@ -141,15 +123,14 @@ func isWritable(path string) bool {
 			return false
 		}
 	}
-
 	return true
 }
 
 func (c *Config) EnabledChains() string {
 	var ret []string
-	for key, ch := range c.Chains {
+	for k, ch := range c.Chains {
 		if ch.Enabled {
-			ret = append(ret, key)
+			ret = append(ret, k)
 		}
 	}
 	return strings.Join(ret, ",")
@@ -157,9 +138,9 @@ func (c *Config) EnabledChains() string {
 
 func (c *Config) ServiceList(enabledOnly bool) string {
 	var ret []string
-	for key, svc := range c.Services {
+	for k, svc := range c.Services {
 		if !enabledOnly || svc.Enabled {
-			ret = append(ret, key)
+			ret = append(ret, k)
 		}
 	}
 	return strings.Join(ret, ",")
@@ -192,17 +173,15 @@ func (c *Config) WriteToFile(fn string) error {
 }
 
 func RemoveZeroLines(input string) string {
-	var builder strings.Builder
-	scanner := bufio.NewScanner(strings.NewReader(input))
-
-	for scanner.Scan() {
-		line := scanner.Text()
+	var b strings.Builder
+	sc := bufio.NewScanner(strings.NewReader(input))
+	for sc.Scan() {
+		line := sc.Text()
 		if !strings.HasSuffix(line, ": 0") {
-			builder.WriteString(line + "\n")
+			b.WriteString(line + "\n")
 		}
 	}
-
-	return builder.String()
+	return b.String()
 }
 
 const tmpl = `
