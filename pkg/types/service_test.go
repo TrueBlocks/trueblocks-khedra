@@ -344,3 +344,29 @@ func TestServiceListValidation(t *testing.T) {
 		})
 	}
 }
+
+// Added minimal missing coverage per ai/TestDesign_service.go.md
+func TestService_IsEnabled(t *testing.T) {
+	api := NewService("api")
+	assert.True(t, api.IsEnabled(), "api service should start enabled")
+	api.Enabled = false
+	assert.False(t, api.IsEnabled(), "api service should reflect disabled state")
+
+	monitor := NewService("monitor") // constructor sets Enabled false
+	assert.False(t, monitor.IsEnabled(), "monitor service should start disabled")
+	monitor.Enabled = true
+	assert.True(t, monitor.IsEnabled(), "monitor service should reflect enabled state after change")
+}
+
+func TestServiceValidation_UnknownNameOneOf(t *testing.T) {
+	// Directly construct a Service with an invalid Name to trigger oneof failure
+	s := Service{Name: "random", Enabled: true}
+	err := Validate(&s)
+	assert.Error(t, err, "expected validation error for unknown service name")
+	if err != nil {
+		assert.Contains(t, err.Error(), "service_field", "should include custom validator tag in error")
+		// The struct tag includes both 'required' and 'oneof', ensure at least a hint of the name issue
+		// We expect multiple service_field validator failures referencing unknown service name
+		assert.Contains(t, err.Error(), "unknown service name", "should note unknown service name in custom validator failures")
+	}
+}
