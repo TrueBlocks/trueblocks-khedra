@@ -59,6 +59,9 @@ func (c *Config) CachePath() string {
 }
 
 func GetConfigFnNoCreate() string {
+	if testFn, ok := os.LookupEnv("KHEDRA_TEST_CONFIG_FN"); ok && testFn != "" {
+		return testFn
+	}
 	if base.IsTestMode() {
 		tmpDir := os.TempDir()
 		return filepath.Join(tmpDir, "config.yaml")
@@ -78,6 +81,16 @@ func GetConfigFnNoCreate() string {
 // be either in the current folder or in the default location. If
 // there is no such file, establish it
 func GetConfigFn() string {
+	if testFn, ok := os.LookupEnv("KHEDRA_TEST_CONFIG_FN"); ok && testFn != "" {
+		if coreFile.FileExists(testFn) {
+			return testFn
+		}
+		cfg := NewConfig()
+		if err := cfg.WriteToFile(testFn); err != nil {
+			fmt.Println(colors.Red+"error writing config file: %v", err, colors.Off)
+		}
+		return testFn
+	}
 	if base.IsTestMode() {
 		tmpDir := os.TempDir()
 		return filepath.Join(tmpDir, "config.yaml")

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/validate"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -73,7 +72,7 @@ func TestNewService(t *testing.T) {
 				assert.Equal(t, tt.expected, service)
 
 				// Validate the returned service
-				err := validate.Validate(&service)
+				err := Validate(&service)
 				assert.NoError(t, err, "Validation failed for service: %v", service)
 			}
 		})
@@ -302,7 +301,7 @@ func TestServiceValidationUnified(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validate.Validate(&tt.service)
+			err := Validate(&tt.service)
 			if tt.wantErr {
 				assert.Error(t, err, "Expected an error in test '%s', but got none", tt.name)
 			} else {
@@ -340,7 +339,7 @@ func TestServiceListValidation(t *testing.T) {
 
 	for i, service := range services {
 		t.Run(fmt.Sprintf("Service %d Validation", i+1), func(t *testing.T) {
-			err := validate.Validate(&service)
+			err := Validate(&service)
 			assert.NoError(t, err, "Validation failed for service %d: %v", i+1, err)
 		})
 	}

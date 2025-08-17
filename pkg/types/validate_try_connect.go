@@ -1,4 +1,4 @@
-package validate
+package types
 
 import (
 	"encoding/json"
@@ -19,40 +19,6 @@ type RpcTestResult struct {
 	BlockNumber  string
 	ChainID      string
 	ErrorMessage string
-}
-
-// ValidateRpcEndpoint performs basic validation of an RPC endpoint URL format
-func ValidateRpcEndpoint(endpoint string) (bool, string) {
-	// Basic format validation
-	if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") &&
-		!strings.HasPrefix(endpoint, "ws://") && !strings.HasPrefix(endpoint, "wss://") {
-		return false, "RPC endpoint must start with http://, https://, ws://, or wss://"
-	}
-
-	// For WebSocket endpoints, we only validate format
-	if strings.HasPrefix(endpoint, "ws://") || strings.HasPrefix(endpoint, "wss://") {
-		return true, ""
-	}
-
-	// For HTTP endpoints, attempt to connect
-	client := &http.Client{
-		Timeout: 5 * time.Second,
-	}
-
-	// Prepare a simple JSON-RPC request to check the endpoint
-	payload := strings.NewReader(`{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}`)
-
-	resp, err := client.Post(endpoint, "application/json", payload)
-	if err != nil {
-		return false, fmt.Sprintf("Connection failed: %s", err.Error())
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return false, fmt.Sprintf("Connection returned status code: %d", resp.StatusCode)
-	}
-
-	return true, ""
 }
 
 // TestRpcEndpoint performs comprehensive testing of an RPC endpoint
@@ -175,9 +141,7 @@ func FormatRpcTestResult(result RpcTestResult) string {
 // ParseHexNumber converts a hex string to a decimal string
 func ParseHexNumber(hexString string) (string, error) {
 	// Remove "0x" prefix if present
-	if strings.HasPrefix(hexString, "0x") {
-		hexString = hexString[2:]
-	}
+	hexString = strings.TrimPrefix(hexString, "0x")
 
 	// Parse hex string
 	var number int64

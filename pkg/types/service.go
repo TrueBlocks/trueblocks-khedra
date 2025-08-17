@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
-	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/validate"
 )
 
 type Service struct {
@@ -53,7 +52,7 @@ func (s *Service) IsEnabled() bool {
 }
 
 func init() {
-	serviceFieldValidator := func(fv validate.FieldValidator) error {
+	serviceFieldValidator := func(fv FieldValidator) error {
 		serviceName := utils.RemoveAny(fv.Context(), "[]") // Assuming the context has the service name
 
 		var service *Service
@@ -70,35 +69,35 @@ func init() {
 			// ...or (when testing) a Service type
 			var ok bool
 			if service, ok = fv.Root().(*Service); !ok {
-				return validate.Failed(fv, "invalid root type", fmt.Sprintf("%T", fv.Root()))
+				return Failed(fv, "invalid root type", fmt.Sprintf("%T", fv.Root()))
 			}
 		}
 
 		if service == nil {
-			return validate.Failed(fv, "service not found", serviceName)
+			return Failed(fv, "service not found", serviceName)
 		}
 
 		if !service.Enabled {
-			return validate.Passed(fv, "not-enabled", serviceName)
+			return Passed(fv, "not-enabled", serviceName)
 		}
 
 		switch service.Name {
 		case "api", "ipfs":
 			if service.Port < 1024 || service.Port > 65535 {
-				return validate.Failed(fv, "Port must be between 1024 and 65535 (inclusive)", fmt.Sprintf("Port=%d", service.Port))
+				return Failed(fv, "Port must be between 1024 and 65535 (inclusive)", fmt.Sprintf("Port=%d", service.Port))
 			}
 		case "scraper", "monitor":
 			if service.Sleep <= 0 {
-				return validate.Failed(fv, "Sleep must be a positive integer", fmt.Sprintf("Sleep=%d", service.Sleep))
+				return Failed(fv, "Sleep must be a positive integer", fmt.Sprintf("Sleep=%d", service.Sleep))
 			} else if service.BatchSize < 50 || service.BatchSize > 10000 {
-				return validate.Failed(fv, "BatchSize must be between 50 and 10000 (inclusive)", fmt.Sprintf("Port=%d", service.Port))
+				return Failed(fv, "BatchSize must be between 50 and 10000 (inclusive)", fmt.Sprintf("Port=%d", service.Port))
 			}
 		default:
-			return validate.Failed(fv, "unknown service name", serviceName)
+			return Failed(fv, "unknown service name", serviceName)
 		}
 
-		return validate.Passed(fv, "valid", serviceName)
+		return Passed(fv, "valid", serviceName)
 	}
 
-	_ = validate.RegisterValidator("service_field", serviceFieldValidator)
+	_ = RegisterValidator("service_field", serviceFieldValidator)
 }

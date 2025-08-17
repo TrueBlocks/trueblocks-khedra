@@ -8,7 +8,6 @@ import (
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
 	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
-	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/validate"
 	"github.com/goccy/go-yaml"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
@@ -55,7 +54,7 @@ func finalCleanup(cfg *types.Config) error {
 
 func validateConfig(cfg types.Config) error {
 	// validate with validators...
-	if err := validate.Validate(&cfg); err != nil {
+	if err := types.Validate(&cfg); err != nil {
 		return err
 	}
 

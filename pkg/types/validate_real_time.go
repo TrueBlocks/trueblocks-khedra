@@ -1,4 +1,4 @@
-package validate
+package types
 
 import (
 	"fmt"
@@ -15,12 +15,12 @@ func ValidateRpcEndpointRT(endpoint string) (string, error) {
 	// Basic format validation
 	if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") &&
 		!strings.HasPrefix(endpoint, "ws://") && !strings.HasPrefix(endpoint, "wss://") {
-		return "", fmt.Errorf("RPC endpoint must start with http://, https://, ws://, or wss://")
+		return "", fmt.Errorf("RPC endpoint must start with http:// or https:// (websocket URLs not supported)")
 	}
 
-	// For WebSocket endpoints, we only validate format
-	if strings.HasPrefix(endpoint, "ws://") || strings.HasPrefix(endpoint, "wss://") {
-		return "", nil
+	// Explicitly reject websocket endpoints
+	if strings.HasPrefix(strings.ToLower(endpoint), "ws://") || strings.HasPrefix(strings.ToLower(endpoint), "wss://") {
+		return "", fmt.Errorf("WebSocket RPC endpoints (ws://, wss://) are not supported; use http:// or https://")
 	}
 
 	// For HTTP endpoints, attempt to connect
@@ -33,12 +33,12 @@ func ValidateRpcEndpointRT(endpoint string) (string, error) {
 
 	resp, err := client.Post(endpoint, "application/json", payload)
 	if err != nil {
-		return "", fmt.Errorf("Connection failed: %s", err.Error())
+		return "", fmt.Errorf("connection failed: %s", err.Error())
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("Connection returned status code: %d", resp.StatusCode)
+		return "", fmt.Errorf("connection returned status code: %d", resp.StatusCode)
 	}
 
 	return "", nil

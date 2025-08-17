@@ -1,7 +1,7 @@
 package app
 
 import (
-	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/validate"
+	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
 	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/wizard"
 )
 
@@ -10,7 +10,7 @@ func registerValidationFunctions() {
 	// Register validation functions for context-based validation
 	wizard.RegisterValidationFunc("rpc", func(input string) wizard.ValidationFeedback {
 		// Create an adapter between the old and new validation function types
-		result := validate.TestRpcEndpoint(input)
+		result := types.TestRpcEndpoint(input)
 
 		if !result.Reachable {
 			return wizard.ValidationFeedback{
@@ -20,7 +20,7 @@ func registerValidationFunctions() {
 			}
 		}
 
-		formattedResult := validate.FormatRpcTestResult(result)
+		formattedResult := types.FormatRpcTestResult(result)
 		return wizard.ValidationFeedback{
 			IsValid:  true,
 			Message:  formattedResult,
@@ -29,7 +29,7 @@ func registerValidationFunctions() {
 	})
 
 	wizard.RegisterValidationFunc("chainid", func(input string) wizard.ValidationFeedback {
-		isValid, message, severity := validate.ValidateWithFeedback(input, "chainId")
+		isValid, message, severity := types.ValidateWithFeedback(input, "chainId")
 		return wizard.ValidationFeedback{
 			IsValid:  isValid,
 			Message:  message,
@@ -38,7 +38,7 @@ func registerValidationFunctions() {
 	})
 
 	wizard.RegisterValidationFunc("port", func(input string) wizard.ValidationFeedback {
-		isValid, message, severity := validate.ValidateWithFeedback(input, "port")
+		isValid, message, severity := types.ValidateWithFeedback(input, "port")
 		return wizard.ValidationFeedback{
 			IsValid:  isValid,
 			Message:  message,
@@ -47,7 +47,7 @@ func registerValidationFunctions() {
 	})
 
 	wizard.RegisterValidationFunc("folder", func(input string) wizard.ValidationFeedback {
-		isValid, errorMsg, warningMsg := validate.ValidateFolder(input)
+		isValid, errorMsg, warningMsg := types.ValidateFolder(input)
 		message := errorMsg
 		severity := "error"
 

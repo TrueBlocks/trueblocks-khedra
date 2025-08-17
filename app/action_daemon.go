@@ -287,7 +287,7 @@ func (opts *MonitorsOptions) RunMonitorScraper(wg *sync.WaitGroup, s *Scraper) {
 		} else {
 			monitorList := opts.getMonitorList()
 			if len(monitorList) == 0 {
-				logger.Error(validate.Usage("No monitors found. Use 'chifra list' to initialize a monitor.").Error())
+				logger.Error(types.Usage("No monitors found. Use 'chifra list' to initialize a monitor.").Error())
 				return
 			}
 
@@ -576,35 +576,35 @@ func (opts *MonitorsOptions) getMonitorList() []monitor.Monitor {
 
 			if opts.Watch {
 				if opts.Globals.IsApiMode() {
-					return validate.Usage("The {0} options is not available from the API", "--watch")
+					return types.Usage("The {0} options is not available from the API", "--watch")
 				}
 
 				if len(opts.Globals.File) > 0 {
-					return validate.Usage("The {0} option is not allowed with the {1} option. Use {2} instead.", "--file", "--watch", "--commands")
+					return types.Usage("The {0} option is not allowed with the {1} option. Use {2} instead.", "--file", "--watch", "--commands")
 				}
 
 				if len(opts.Commands) == 0 {
-					return validate.Usage("The {0} option requires {1}.", "--watch", "a --commands file")
+					return types.Usage("The {0} option requires {1}.", "--watch", "a --commands file")
 				} else {
 					cmdFile, err := filepath.Abs(opts.Commands)
 					if err != nil || !file.FileExists(cmdFile) {
-						return validate.Usage("The {0} option requires {1} to exist.", "--watch", opts.Commands)
+						return types.Usage("The {0} option requires {1} to exist.", "--watch", opts.Commands)
 					}
 					if file.FileSize(cmdFile) == 0 {
-						logger.Fatal(validate.Usage("The file you specified ({0}) was found but contained no commands.", cmdFile).Error())
+						logger.Fatal(types.Usage("The file you specified ({0}) was found but contained no commands.", cmdFile).Error())
 					}
 				}
 
 				if len(opts.Watchlist) == 0 {
-					return validate.Usage("The {0} option requires {1}.", "--watch", "a --watchlist file")
+					return types.Usage("The {0} option requires {1}.", "--watch", "a --watchlist file")
 				} else {
 					if opts.Watchlist != "existing" {
 						watchList, err := filepath.Abs(opts.Watchlist)
 						if err != nil || !file.FileExists(watchList) {
-							return validate.Usage("The {0} option requires {1} to exist.", "--watch", opts.Watchlist)
+							return types.Usage("The {0} option requires {1} to exist.", "--watch", opts.Watchlist)
 						}
 						if file.FileSize(watchList) == 0 {
-							logger.Fatal(validate.Usage("The file you specified ({0}) was found but contained no addresses.", watchList).Error())
+							logger.Fatal(types.Usage("The file you specified ({0}) was found but contained no addresses.", watchList).Error())
 						}
 					}
 				}
@@ -617,22 +617,22 @@ func (opts *MonitorsOptions) getMonitorList() []monitor.Monitor {
 				}
 
 				if opts.BatchSize < 1 {
-					return validate.Usage("The {0} option must be greater than zero.", "--batch_size")
+					return types.Usage("The {0} option must be greater than zero.", "--batch_size")
 				}
 			} else {
 
 			if opts.BatchSize != 8 {
-				return validate.Usage("The {0} option is not available{1}.", "--batch_size", " without --watch")
+				return types.Usage("The {0} option is not available{1}.", "--batch_size", " without --watch")
 			} else {
 				opts.BatchSize = 0
 			}
 
 			if opts.RunCount > 0 {
-				return validate.Usage("The {0} option is not available{1}.", "--run_count", " without --watch")
+				return types.Usage("The {0} option is not available{1}.", "--run_count", " without --watch")
 			}
 
 			if opts.Sleep != 14 {
-				return validate.Usage("The {0} option is not available{1}.", "--sleep", " without --watch")
+				return types.Usage("The {0} option is not available{1}.", "--sleep", " without --watch")
 			}
 
 */
