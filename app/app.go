@@ -20,6 +20,31 @@ type KhedraApp struct {
 	serviceManager *services.ServiceManager
 }
 
+// ReloadConfigAndServices reloads the finalized config from disk and restarts all services.
+func (k *KhedraApp) ReloadConfigAndServices() error {
+	cfg, err := LoadConfig()
+	if err != nil {
+		k.logger.Error("Failed to reload config", "error", err)
+		return err
+	}
+	k.config = &cfg
+	k.logger = types.NewLogger(cfg.Logging)
+	slog.SetDefault(k.logger.GetLogger())
+
+	// Re-initialize control service and service manager
+	if err := k.initializeControlSvc(); err != nil {
+		k.logger.Error("Failed to re-initialize control service", "error", err)
+		return err
+	}
+	// Restart all services
+	if err := k.serviceManager.StartAllServices(); err != nil {
+		k.logger.Error("Failed to restart services", "error", err)
+		return err
+	}
+	k.logger.Info("Config and services reloaded successfully")
+	return nil
+}
+
 func NewKhedraApp() *KhedraApp {
 	k := KhedraApp{}
 	if k.isRunning() {

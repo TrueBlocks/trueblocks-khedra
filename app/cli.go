@@ -32,18 +32,6 @@ func initCli(k *KhedraApp) *cli.App {
 		Version: sdk.Version(),
 		Commands: []*cli.Command{
 			{
-				Name:         "init",
-				Usage:        "Initializes Khedra",
-				OnUsageError: onUsageError,
-				Action: func(c *cli.Context) error {
-					if err := validateArgs(1, 1); err != nil {
-						return err
-					}
-					os.Setenv("TB_KHEDRA_INITONLY", "true")
-					return k.daemonAction(c)
-				},
-			},
-			{
 				Name:         "daemon",
 				Usage:        "Runs Khedra's services",
 				OnUsageError: onUsageError,

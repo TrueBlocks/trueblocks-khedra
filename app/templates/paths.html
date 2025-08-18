@@ -19,4 +19,28 @@
 </form>
 <nav style="display:none;"></nav>
 <!-- field focus handled globally -->
+<script>
+/* eslint-disable */
+// @ts-nocheck
+// Disable linting for Go template file with mixed template/JavaScript syntax
+(function(){
+  const form = document.currentScript.previousElementSibling;
+  if(!form || form.tagName !== 'FORM') return;
+  let timer=null;
+  function push(){
+    const fd = new FormData(form);
+    const formData = new FormData();
+    if(fd.get('dataFolder')) formData.set('dataFolder', fd.get('dataFolder'));
+    
+    // Use centralized function
+    if(window.updateConfigAndDebug) window.updateConfigAndDebug(formData);
+  }
+  function schedule(){ if(timer) clearTimeout(timer); timer = setTimeout(push, 300); }
+  const dataFolderInput = form.querySelector('input[name="dataFolder"]');
+  if (dataFolderInput) {
+    dataFolderInput.addEventListener('blur', schedule);
+    dataFolderInput.addEventListener('input', schedule);
+  }
+})();
+</script>
 {{end}}

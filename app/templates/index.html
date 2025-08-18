@@ -1,5 +1,5 @@
 {{define "navright"}}
-  <a class="nav-btn" href="/install/paths" aria-label="Back">Back</a>
+  <a class="nav-btn" href="/install/chains" aria-label="Back">Back</a>
   <button class="nav-btn" form="indexForm" type="submit">Next</button>
 {{end}}
 {{ define "content" }}
@@ -30,6 +30,9 @@
   </div>
   <p style="font-size:0.75em;color:#666;">Estimates vary by hardware / network speed. You can change strategy later.</p>
   <script>
+  /* eslint-disable */
+  // @ts-nocheck
+  // Disable linting for Go template file with mixed template/JavaScript syntax
     (function(){
       const form = document.currentScript.closest('form');
       if(!form) return;
@@ -52,23 +55,22 @@
             if(detailBloom) { detailBloom.disabled = false; detailBloom.parentElement.style.opacity = '1'; }
             if(note) note.style.display = 'none';
         }
-        const body = new URLSearchParams();
-        body.set('strategy', strategy);
-        body.set('detail', detail);
-        if(inflight) inflight.abort();
-        inflight = new AbortController();
-  fetch('/install/index/live', {method:'POST', body, signal: inflight.signal, headers:{'X-Khedra-Session': (window.KHEDRA_SESSION||'')}})
-          .then(r => r.ok ? r.json() : null)
-          .then(j => { if(!j||!j.ok) return; 
+        const formData = new FormData();
+        formData.set('strategy', strategy);
+        formData.set('detail', detail);
+        
+        // Use centralized function with callback for estimation updates
+        if(window.updateConfigAndDebug) {
+          window.updateConfigAndDebug(formData, (j) => {
+            // Update estimation display
             const d = document.getElementById('est-disk');
             const h = document.getElementById('est-hours');
             const hp = document.getElementById('est-hours-plural');
-            if(d) d.textContent = j.disk;
-            if(h) h.textContent = j.hours;
-            if(hp) hp.textContent = (j.hours === 1 ? '' : 's');
-          })
-          .catch(()=>{});
-      }
+            if(d) d.textContent = j.config.Meta?.EstDiskGB || '';
+            if(h) h.textContent = j.config.Meta?.EstHours || '';
+            if(hp) hp.textContent = (j.config.Meta?.EstHours === 1 ? '' : 's');
+          });
+        }
   radios.forEach(r => r.addEventListener('change', update));
   // Initial application of rule and estimates
   update();

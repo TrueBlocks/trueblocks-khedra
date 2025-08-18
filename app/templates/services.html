@@ -1,5 +1,5 @@
 {{define "navright"}}
-  <a class="nav-btn" href="/install/chains" aria-label="Back">Back</a>
+  <a class="nav-btn" href="/install/index" aria-label="Back">Back</a>
   <button class="nav-btn" form="servicesForm" type="submit">Next</button>
 {{end}}
 {{ define "content" }}
@@ -40,4 +40,34 @@
   </table>
 </form>
 <nav style="display:none;"></nav>
+<script>
+/* eslint-disable */
+// @ts-nocheck  
+// Disable linting for Go template file with mixed template/JavaScript syntax
+(function(){
+  const form = document.currentScript.previousElementSibling;
+  if(!form || form.tagName !== 'FORM') return;
+  let timer=null;
+  function push(){
+    const fd = new FormData(form);
+    const formData = new FormData();
+    // Collect all service checkbox states
+    const checkboxes = form.querySelectorAll('input[type="checkbox"][name$="_enabled"]');
+    checkboxes.forEach(cb => {
+      if(cb.checked) {
+        formData.set(cb.name, '1');
+      }
+    });
+    
+    // Use centralized function
+    if(window.updateConfigAndDebug) window.updateConfigAndDebug(formData);
+  }
+  function schedule(){ if(timer) clearTimeout(timer); timer = setTimeout(push, 300); }
+  // Add listeners to all service checkboxes
+  const checkboxes = form.querySelectorAll('input[type="checkbox"][name$="_enabled"]');
+  checkboxes.forEach(cb => {
+    cb.addEventListener('change', schedule);
+  });
+})();
+</script>
 {{ end }}

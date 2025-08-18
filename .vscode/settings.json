@@ -1,0 +1,39 @@
+{
+  // Disable JavaScript/TypeScript validation for Go template files
+  "javascript.validate.enable": true,
+  "typescript.validate.enable": true,
+  
+  // Exclude template files from JS/TS validation
+  "javascript.preferences.includePackageJsonAutoImports": "off",
+  "typescript.preferences.includePackageJsonAutoImports": "off",
+  
+  // Disable validation for template files specifically
+  "files.associations": {
+    "app/templates/*.html": "html"
+  },
+  
+  // Exclude template directory from various language services
+  "javascript.implicitProjectConfig.checkJs": false,
+  "typescript.implicitProjectConfig.checkJs": false,
+  
+  // More targeted exclusion - disable validation for template files
+  "html.validate.scripts": false,
+  "html.validate.styles": false,
+  
+  // Exclude from problem matcher
+  "problems.decorations.enabled": true,
+  
+  // File-specific settings
+  "[html]": {
+    "html.validate.scripts": false,
+    "html.validate.styles": false
+  },
+  
+  // Exclude the templates folder from JS/TS language services
+  "typescript.preferences.exclude": [
+    "**/app/templates/**"
+  ],
+  "javascript.preferences.exclude": [
+    "**/app/templates/**"
+  ]
+}

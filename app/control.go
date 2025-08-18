@@ -32,10 +32,17 @@ func (k *KhedraApp) initializeControlSvc() error {
 		return nil
 	}
 
-	k.controlSvc = services.NewControlService(k.logger.GetLogger())
+	if k.logger == nil {
+		k.logger = types.NewLogger(types.Logging{Level: "info"})
+	}
+	if k.config == nil {
+		cfg := types.NewConfig()
+		k.config = &cfg
+	}
 
 	// ----------------------------------------------------------------------------------
 	// Write initial control metadata (port from config); ignore errors (best-effort)
+	k.controlSvc = services.NewControlService(k.logger.GetLogger())
 	meta := control.NewMetadata(k.controlSvc.Port(), k.config.Version())
 	_ = control.Write(meta)
 
@@ -46,6 +53,11 @@ func (k *KhedraApp) initializeControlSvc() error {
 	for _, svc := range k.config.Services {
 		switch svc.Name {
 		case "scraper":
+			// TODO: BOGUS - DO WE REALLY WANT THIS? NO!!
+			if os.Getenv("TB_KHEDRA_SCRAPER_ENABLED") != "true" {
+				slog.Info("Scraper service disabled by environment variable", "TB_KHEDRA_SCRAPER_ENABLED", os.Getenv("TB_KHEDRA_SCRAPER_ENABLED"))
+				break
+			}
 			chains := strings.Split(strings.ReplaceAll(k.config.EnabledChains(), " ", ""), ",")
 			scraperSvc := services.NewScrapeService(
 				k.logger.GetLogger(),
@@ -80,8 +92,7 @@ func (k *KhedraApp) initializeControlSvc() error {
 	k.serviceManager = services.NewServiceManager(activeServices, k.logger.GetLogger())
 	k.controlSvc.AttachServiceManager(k.serviceManager)
 
-	slog.Info("Starting khedra daemon", "services", len(activeServices))
-
+	k.logger.Info("Control service initialized", "services", len(activeServices))
 	return nil
 }
 
@@ -449,7 +460,15 @@ func (k *KhedraApp) addHandlers() error {
 			w.Write([]byte(`{"ok":false,"error":"save failed"}`))
 			return
 		}
-		b, _ := json.Marshal(map[string]any{"ok": true, "chain": ch, "probe": res})
+		// Create response with RPC validity
+		chainWithStatus := map[string]any{
+			"name":     ch.Name,
+			"chainId":  ch.ChainID,
+			"rpcs":     ch.RPCs,
+			"enabled":  ch.Enabled,
+			"rpcValid": true, // If we got here, probe was successful so RPC is valid
+		}
+		b, _ := json.Marshal(map[string]any{"ok": true, "chain": chainWithStatus, "probe": res})
 		w.Write(b)
 	})
 
@@ -475,122 +494,87 @@ func (k *KhedraApp) addHandlers() error {
 	k.controlSvc.AddHandler("/install/ping", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("pong")) })
 
 	// ----------------------------------------------------------------------------------
-	// Live draft endpoint (read-only) for debug panel polling
-	k.controlSvc.AddHandler("/install/draft.json", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		d, err := install.LoadDraft()
-		if err != nil || d == nil {
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("{}"))
-			return
-		}
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		payload := map[string]any{"file": install.DraftFilePath(), "config": d.Config}
-		if b, err := json.MarshalIndent(payload, "", "  "); err == nil {
-			w.Write(b)
-			return
-		}
-		w.Write([]byte("{}"))
-	})
 
-	// ----------------------------------------------------------------------------------
-	// Live update for index strategy/detail (AJAX). Returns updated estimates.
-	k.controlSvc.AddHandler("/install/index/live", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		if err := r.ParseForm(); err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"ok":false,"error":"bad form"}`))
-			return
-		}
-		strategy := r.FormValue("strategy")
-		if strategy == "" {
-			strategy = "download"
-		}
-		detail := r.FormValue("detail")
-		if detail == "" {
-			detail = "index"
-		}
-		if detail == "blooms" { // normalize legacy plural
-			detail = "bloom"
-		}
-		validStrat := strategy == "download" || strategy == "scratch"
-		validDetail := detail == "index" || detail == "bloom"
-		if !validStrat || !validDetail {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"ok":false,"error":"invalid value"}`))
-			return
-		}
-		d, _ := install.LoadDraft()
-		if d == nil {
-			d = install.NewDraftFromConfig("")
-		}
-		install.UpdateIndexStrategy(d, strategy, detail)
-		_ = install.SaveDraftAtomic(d)
+	// Unified live-update endpoint for config feedback (draft or real)
+	k.controlSvc.AddHandler("/live-update/config", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		resp := map[string]any{"ok": true, "disk": d.Meta.EstDiskGB, "hours": d.Meta.EstHours}
-		b, _ := json.Marshal(resp)
+
+		// Handle POST requests to update draft config
+		if r.Method == http.MethodPost {
+			// Load current draft
+			draft, err := install.LoadDraft()
+			if err != nil || draft == nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(`{"error":"failed to load draft config"}`))
+				return
+			}
+
+			// Parse form data and update draft
+			if err := r.ParseForm(); err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(`{"error":"invalid form data"}`))
+				return
+			}
+
+			// Apply form updates to draft config
+			install.ApplyFormToDraft(draft, r.Form)
+
+			// Save draft to disk immediately
+			if err := install.SaveDraft(draft); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(`{"error":"failed to save draft config"}`))
+				return
+			}
+		}
+
+		// Return current config (GET or after POST update)
+		var cfg any
+		var source string
+
+		// Check if we're in wizard mode by looking at the request path or headers
+		// During wizard steps, ALWAYS show draft; only on dashboard show real config
+		isWizardStep := false
+		if referer := r.Header.Get("Referer"); referer != "" {
+			isWizardStep = strings.Contains(referer, "/install/") && !strings.Contains(referer, "/dashboard")
+		}
+		// Also check current path from request context if available
+		if !isWizardStep && r.URL.Path != "" {
+			isWizardStep = strings.HasPrefix(r.URL.Path, "/install/") && !strings.Contains(r.URL.Path, "/dashboard")
+		}
+
+		draft, _ := install.LoadDraft()
+		if isWizardStep && draft != nil {
+			// During wizard steps, always show draft
+			cfg = draft.Config
+			source = "draft"
+		} else if !isWizardStep && install.Configured() {
+			// On dashboard, show real config if it exists
+			loaded, err := LoadConfig()
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(`{"error":"failed to load config"}`))
+				return
+			}
+			cfg = loaded
+			source = "real"
+		} else if draft != nil {
+			// Fallback: if draft exists, show it
+			cfg = draft.Config
+			source = "draft"
+		} else {
+			// No config available
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"error":"no config available"}`))
+			return
+		}
+		payload := map[string]any{"source": source, "config": cfg}
+		b, err := json.MarshalIndent(payload, "", "  ")
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"error":"failed to marshal config"}`))
+			return
+		}
 		w.Write(b)
-	})
-
-	// ----------------------------------------------------------------------------------
-	// Live update for logging settings (AJAX) to reflect immediately in debug panel
-	k.controlSvc.AddHandler("/install/logging/live", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		if err := r.ParseForm(); err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"ok":false,"error":"bad form"}`))
-			return
-		}
-		lvl := r.FormValue("level")
-		if lvl == "" {
-			lvl = "info"
-		}
-		folder := r.FormValue("folder")
-		filename := r.FormValue("filename")
-		maxSize, _ := strconv.Atoi(r.FormValue("maxSize"))
-		maxBackups, _ := strconv.Atoi(r.FormValue("maxBackups"))
-		maxAge, _ := strconv.Atoi(r.FormValue("maxAge"))
-		compress := r.FormValue("compress") == "1"
-		toFile := r.FormValue("toFile") == "1"
-		if maxSize <= 0 {
-			maxSize = 10
-		}
-		if maxBackups <= 0 {
-			maxBackups = 3
-		}
-		if maxAge <= 0 {
-			maxAge = 10
-		}
-		d, _ := install.LoadDraft()
-		if d == nil {
-			d = install.NewDraftFromConfig("")
-		}
-		lg := d.Config.Logging
-		lg.Level = lvl
-		if folder != "" {
-			lg.Folder = folder
-		}
-		if filename != "" {
-			lg.Filename = filename
-		}
-		lg.MaxSize = maxSize
-		lg.MaxBackups = maxBackups
-		lg.MaxAge = maxAge
-		lg.Compress = compress
-		lg.ToFile = toFile
-		d.Config.Logging = lg
-		_ = install.SaveDraftAtomic(d)
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Write([]byte(`{"ok":true}`))
 	})
 
 	// ----------------------------------------------------------------------------------
@@ -607,7 +591,7 @@ func (k *KhedraApp) addHandlers() error {
 		}
 
 		// Allowed wizard steps (in order) and quick lookup map.
-		var allowedWizardSteps = []string{"welcome", "paths", "index", "chains", "services", "logging", "summary"}
+		var allowedWizardSteps = []string{"welcome", "paths", "chains", "index", "services", "logging", "summary"}
 		allowedWizardStepSet := map[string]struct{}{}
 		for _, s := range allowedWizardSteps {
 			allowedWizardStepSet[s] = struct{}{}
@@ -834,7 +818,7 @@ func (k *KhedraApp) addHandlers() error {
 						serveStep(1, "paths.html", map[string]any{"DataFolder": draft.Config.General.DataFolder, "Errors": ferrs})
 						return
 					}
-					http.Redirect(w, r, "/install/index", http.StatusSeeOther)
+					http.Redirect(w, r, "/install/chains", http.StatusSeeOther)
 					return
 				}
 				draft, _ := install.LoadDraft()
@@ -851,7 +835,7 @@ func (k *KhedraApp) addHandlers() error {
 			if r.URL.Path == "/install/index" {
 				if r.Method == http.MethodPost {
 					if err := r.ParseForm(); err != nil {
-						serveStep(2, "index.html", map[string]any{"Errors": []install.FieldError{{Field: "general.strategy", Code: "bad_form", Message: "Invalid form submission"}}})
+						serveStep(3, "index.html", map[string]any{"Errors": []install.FieldError{{Field: "general.strategy", Code: "bad_form", Message: "Invalid form submission"}}})
 						return
 					}
 					strategy := r.FormValue("strategy")
@@ -875,10 +859,10 @@ func (k *KhedraApp) addHandlers() error {
 					}
 					ferrs := install.ValidateDraftPhase(draft, "step:index")
 					if len(ferrs) > 0 {
-						serveStep(2, "index.html", map[string]any{"Strategy": strategy, "Detail": detail, "Disk": draft.Meta.EstDiskGB, "Hours": draft.Meta.EstHours, "Errors": ferrs})
+						serveStep(3, "index.html", map[string]any{"Strategy": strategy, "Detail": detail, "Disk": draft.Meta.EstDiskGB, "Hours": draft.Meta.EstHours, "Errors": ferrs})
 						return
 					}
-					http.Redirect(w, r, "/install/chains", http.StatusSeeOther)
+					http.Redirect(w, r, "/install/services", http.StatusSeeOther)
 					return
 				}
 				draft, _ := install.LoadDraft()
@@ -898,7 +882,7 @@ func (k *KhedraApp) addHandlers() error {
 				} else {
 					disk, hours = install.EstimateIndex(strat, detail)
 				}
-				serveStep(2, "index.html", map[string]any{"Strategy": strat, "Detail": detail, "Disk": disk, "Hours": hours})
+				serveStep(3, "index.html", map[string]any{"Strategy": strat, "Detail": detail, "Disk": disk, "Hours": hours})
 				return
 			}
 
@@ -907,7 +891,7 @@ func (k *KhedraApp) addHandlers() error {
 			if r.URL.Path == "/install/chains" {
 				if r.Method == http.MethodPost {
 					if err := r.ParseForm(); err != nil {
-						serveStep(3, "chains.html", map[string]any{"Errors": []install.FieldError{{Field: "chains.mainnet.rpc", Code: "bad_form", Message: "Invalid form submission"}}})
+						serveStep(2, "chains.html", map[string]any{"Errors": []install.FieldError{{Field: "chains.mainnet.rpc", Code: "bad_form", Message: "Invalid form submission"}}})
 						return
 					}
 					action := r.FormValue("action")
@@ -946,7 +930,7 @@ func (k *KhedraApp) addHandlers() error {
 						if err := install.SaveDraftAtomic(draft); err == nil {
 							install.ClearCorruptionFlag()
 						}
-					} else { // update existing
+					} else { // update existing (Next button pressed)
 						for name, ch := range draft.Config.Chains {
 							enField := "chain_enabled_" + name
 							rpcField := "chain_rpc_" + name
@@ -963,12 +947,13 @@ func (k *KhedraApp) addHandlers() error {
 						if err := install.SaveDraftAtomic(draft); err == nil {
 							install.ClearCorruptionFlag()
 						}
+						// ONLY validate when trying to proceed to next step (Next button)
 						ferrs := install.ValidateDraftPhase(draft, "step:chains")
 						if len(ferrs) == 0 {
-							http.Redirect(w, r, "/install/services", http.StatusSeeOther)
+							http.Redirect(w, r, "/install/index", http.StatusSeeOther)
 							return
 						}
-						// if errors, re-render below
+						// If validation fails, re-render with errors to block progression
 					}
 					// Render with potential errors (draft already loaded/modified above)
 				}
@@ -1001,8 +986,21 @@ func (k *KhedraApp) addHandlers() error {
 						}
 					}
 				}
-				ferrs := install.ValidateDraftPhase(draft, "step:chains")
-				serveStep(3, "chains.html", map[string]any{"Chains": ordered, "Addable": addable, "Errors": ferrs})
+				// Add RPC validity information to each chain
+				type ChainWithStatus struct {
+					types.Chain
+					RpcValid bool `json:"rpcValid"`
+				}
+				var orderedWithStatus []ChainWithStatus
+				for _, ch := range ordered {
+					chainWithStatus := ChainWithStatus{
+						Chain:    ch,
+						RpcValid: HasValidRpc(&ch, 2), // Quick check with 2 tries
+					}
+					orderedWithStatus = append(orderedWithStatus, chainWithStatus)
+				}
+				// No validation on entry - allow users to fix invalid RPCs
+				serveStep(2, "chains.html", map[string]any{"Chains": orderedWithStatus, "Addable": addable, "Errors": []install.FieldError{}})
 				return
 			}
 
@@ -1133,13 +1131,14 @@ func (k *KhedraApp) addHandlers() error {
 			if r.URL.Path == "/install/summary" {
 				if r.Method == http.MethodPost {
 					if err := install.ApplyDraft(); err != nil {
-						// Render summary page again with error info (HTML) instead of JSON
 						draft, _ := install.LoadDraft()
 						ferrs := install.ValidateDraftPhase(draft, "final")
 						serveStep(6, "summary.html", map[string]any{"Draft": draft, "Errors": ferrs, "Error": err.Error()})
 						return
 					}
-					// Success -> set cookie then redirect user to dashboard (HTML UX)
+					if err := k.ReloadConfigAndServices(); err != nil {
+						k.logger.Error("Live reload failed after wizard finish", "error", err)
+					}
 					setWizardStepCookie("dashboard", 30*24*time.Hour)
 					http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 					return
@@ -1214,6 +1213,9 @@ func (k *KhedraApp) addHandlers() error {
 			targets = payload.Services
 		}
 		changed := runtimePause.Pause(targets...)
+		if err := k.ReloadConfigAndServices(); err != nil {
+			k.logger.Error("Live reload failed after pause", "error", err)
+		}
 		var results []map[string]any
 		for _, name := range targets {
 			results = append(results, map[string]any{
@@ -1248,6 +1250,9 @@ func (k *KhedraApp) addHandlers() error {
 			targets = payload.Services
 		}
 		changed := runtimePause.Unpause(targets...)
+		if err := k.ReloadConfigAndServices(); err != nil {
+			k.logger.Error("Live reload failed after unpause", "error", err)
+		}
 		var results []map[string]any
 		for _, name := range targets {
 			results = append(results, map[string]any{

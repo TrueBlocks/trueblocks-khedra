@@ -17,26 +17,53 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
 	_ "github.com/TrueBlocks/trueblocks-khedra/v5/pkg/env"
+	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/install"
+	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
 	"github.com/urfave/cli/v2"
 )
 
 func (k *KhedraApp) daemonAction(c *cli.Context) error {
 	_ = c // linter
-	if err := k.loadConfigIfInitialized(); err != nil {
-		return err
+	// Ensure logger is initialized for first-run case
+	if k.logger == nil {
+		k.logger = types.NewLogger(types.Logging{Level: "info"})
 	}
-	k.logger.Info("Starting khedra daemon...config loaded...")
+
+	// On first run, start control service immediately for wizard access
+	if !install.Configured() {
+		if err := k.initializeControlSvc(); err != nil {
+			return err
+		}
+		if os.Getenv("KHEDRA_EMBED") != "1" {
+			fmt.Printf("Khedra is not configured. Please complete setup in your browser: http://localhost:%d\n", k.controlSvc.Port())
+			utils.System("open http://localhost:" + fmt.Sprintf("%d", k.controlSvc.Port()))
+		}
+		// Let daemon continue to blocking loop - live-reload will handle config changes
+	}
+
+	// Only load config if we're now configured (either was already, or just completed setup)
+	if install.Configured() {
+		if err := k.loadConfigIfInitialized(); err != nil {
+			return err
+		}
+		k.logger.Info("Starting khedra daemon...config loaded...")
+	}
 
 	if err := k.handleWaitForNode(); err != nil {
 		return err
 	}
 
-	for _, ch := range k.config.Chains {
-		if ch.Enabled {
-			if !HasValidRpc(&ch, 4) {
-				return fmt.Errorf("chain %s has no valid RPC", ch.Name)
+	// Only validate RPCs if we have a complete, finalized configuration
+	// Skip validation if wizard is still in progress (draft exists) or config is incomplete
+	draft, _ := install.LoadDraft()
+	if install.Configured() && draft == nil {
+		for _, ch := range k.config.Chains {
+			if ch.Enabled {
+				if !HasValidRpc(&ch, 4) {
+					return fmt.Errorf("chain %s has no valid RPC", ch.Name)
+				}
+				k.logger.Progress("Connected to", "chain", ch.Name)
 			}
-			k.logger.Progress("Connected to", "chain", ch.Name)
 		}
 	}
 	k.logger.Info("Processing chains...", "chainList", k.config.EnabledChains())

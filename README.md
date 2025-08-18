@@ -117,9 +117,12 @@ Khedra uses YAML configuration managed through the `init` wizard or direct editi
 
 ### Environment Variables
 
-- `TB_KHEDRA_WAIT_FOR_NODE`: Node process to wait for before starting (e.g., `erigon`, `geth`)
-- `TB_KHEDRA_WAIT_SECONDS`: Seconds to wait after node detection -- allows node to initialize (default: 30)
-- `TB_KHEDRA_LOGGING_LEVEL`: Log level (`debug`, `info`, `warn`, `error`)
+## Environment Variables
+
+- `TB_KHEDRA_INITONLY`: Set to `"true"` to skip starting services after initialization (useful for testing)
+- `TB_KHEDRA_SCRAPER_ENABLED`: Set to `"true"` to enable the scraper service (disabled by default)
+- `KHEDRA_EMBED`: Set to `"1"` to disable browser auto-opening during setup
+- `XDG_CONFIG_HOME`: Override config directory location
 
 ### Configuration Sections
 

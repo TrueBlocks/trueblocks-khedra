@@ -10,7 +10,7 @@ import (
 
 // StepOrder defines the linear installation steps used for derivation and UI progress.
 // Exported so other packages (templates / progress rendering) may rely on a single source.
-var StepOrder = []string{"welcome", "paths", "index", "chains", "services", "logging", "summary"}
+var StepOrder = []string{"welcome", "paths", "chains", "index", "services", "logging", "summary"}
 
 type State struct {
 	Configured  bool   `json:"configured"`

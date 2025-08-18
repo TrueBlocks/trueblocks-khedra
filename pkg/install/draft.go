@@ -7,6 +7,8 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -208,4 +210,115 @@ func RemoveDraft() error {
 		return os.Remove(draftPath)
 	}
 	return nil
+}
+
+// SaveDraft is an alias for SaveDraftAtomic for consistency
+func SaveDraft(d *Draft) error {
+	return SaveDraftAtomic(d)
+}
+
+// ApplyFormToDraft updates a draft config with form values
+func ApplyFormToDraft(d *Draft, form map[string][]string) {
+	if d == nil {
+		return
+	}
+
+	// Helper to get single form value
+	getValue := func(key string) string {
+		if vals, ok := form[key]; ok && len(vals) > 0 {
+			return strings.TrimSpace(vals[0])
+		}
+		return ""
+	}
+
+	// Helper to check if form key is present (for checkboxes)
+	hasKey := func(key string) bool {
+		_, exists := form[key]
+		return exists
+	}
+
+	// Update General settings
+	if v := getValue("dataFolder"); v != "" {
+		d.Config.General.DataFolder = v
+	}
+
+	// Handle strategy and detail changes with estimation updates
+	strategy := getValue("strategy")
+	detail := getValue("detail")
+	if strategy != "" || detail != "" {
+		// Use current values if not provided in form
+		if strategy == "" {
+			strategy = d.Config.General.Strategy
+		}
+		if detail == "" {
+			detail = d.Config.General.Detail
+		}
+		// This updates both the config and the estimates
+		UpdateIndexStrategy(d, strategy, detail)
+	}
+
+	// Update Chains - handle enable/disable checkboxes and RPC URLs
+	for name, chain := range d.Config.Chains {
+		enableKey := name + "_enabled"
+		rpcKey := "chain_rpc_" + name
+
+		// Update enabled state if checkbox is present in form
+		if hasKey(enableKey) {
+			chain.Enabled = getValue(enableKey) != ""
+		}
+
+		// Update RPC URL if present
+		if rpcUrl := getValue(rpcKey); rpcUrl != "" {
+			if len(chain.RPCs) == 0 {
+				chain.RPCs = []string{rpcUrl}
+			} else {
+				chain.RPCs[0] = rpcUrl
+			}
+		}
+
+		d.Config.Chains[name] = chain
+	}
+
+	// Update Services
+	if d.Config.Services == nil {
+		d.Config.Services = make(map[string]types.Service)
+	}
+	for _, serviceName := range []string{"scraper", "monitor", "api", "ipfs"} {
+		key := serviceName + "_enabled"
+		if hasKey(key) {
+			// Get existing service or create new one
+			service := d.Config.Services[serviceName]
+			service.Name = serviceName
+			service.Enabled = getValue(key) != ""
+			d.Config.Services[serviceName] = service
+		}
+	}
+
+	// Update Logging
+	if v := getValue("level"); v != "" {
+		d.Config.Logging.Level = v
+	}
+	if v := getValue("folder"); v != "" {
+		d.Config.Logging.Folder = v
+	}
+	if v := getValue("filename"); v != "" {
+		d.Config.Logging.Filename = v
+	}
+	if v := getValue("maxSize"); v != "" {
+		if size, err := strconv.Atoi(v); err == nil {
+			d.Config.Logging.MaxSize = size
+		}
+	}
+	if v := getValue("maxBackups"); v != "" {
+		if backups, err := strconv.Atoi(v); err == nil {
+			d.Config.Logging.MaxBackups = backups
+		}
+	}
+	if v := getValue("maxAge"); v != "" {
+		if age, err := strconv.Atoi(v); err == nil {
+			d.Config.Logging.MaxAge = age
+		}
+	}
+	d.Config.Logging.ToFile = hasKey("toFile")
+	d.Config.Logging.Compress = hasKey("compress")
 }

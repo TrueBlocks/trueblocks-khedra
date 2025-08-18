@@ -1,5 +1,5 @@
 {{define "navright"}}
-  <a class="nav-btn" href="/install/index" aria-label="Back">Back</a>
+  <a class="nav-btn" href="/install/paths" aria-label="Back">Back</a>
   <button class="nav-btn" id="continueBtn" form="chainsForm" type="submit" disabled>Next</button>
 {{end}}
 {{ define "content" }}
@@ -41,6 +41,9 @@
 </div>
 <nav style="display:none;"></nav>
 <script>
+/* eslint-disable */
+// @ts-nocheck
+// Disable linting for Go template file with mixed template/JavaScript syntax
 (function start(){
   if(!document.querySelectorAll || !document.body){ return setTimeout(start,50); }
   const input = document.getElementById('rpcInput');
@@ -52,6 +55,30 @@
   const recentList = document.getElementById('recentRpcs');
   const remoteWarning = document.getElementById('remoteWarning');
 
+  // Debug panel updates for all chain modifications
+  let debugTimer=null, debugInflight=null;
+  function updateDebugPanel(){
+    if(debugInflight){ debugInflight.abort(); }
+    // Collect all chain data
+    const rows = chainsBody.querySelectorAll('tr');
+    const body = new URLSearchParams();
+    rows.forEach(row => {
+      const name = row.id?.replace('row_', '');
+      if(!name) return;
+      const checkbox = row.querySelector('input[type="checkbox"]');
+      const rpcInput = row.querySelector(`input[name="chain_rpc_${name}"]`);
+      if(checkbox && checkbox.checked) {
+        body.set(`chain_enabled_${name}`, '1');
+      }
+      if(rpcInput && rpcInput.value) {
+        body.set(`chain_rpc_${name}`, rpcInput.value);
+      }
+    });
+    debugInflight = new AbortController();
+    fetch('/live-update/config', {method:'POST', body, signal: debugInflight.signal, headers:{'X-Khedra-Session': (window.KHEDRA_SESSION||'')}})
+      .catch(()=>{});
+  }
+  
   function loadRecent() {
     let arr=[]; try { arr=JSON.parse(localStorage.getItem('khedra_recent_rpcs')||'[]'); if(!Array.isArray(arr)) arr=[]; } catch(e){ arr=[]; }
     recentList.innerHTML='';
@@ -65,6 +92,7 @@
   }
   loadRecent();
   const probe = async ()=>{
+    console.log('[khedra] probe function called, URL:', input.value);
     const url = input.value.trim();
     if(!url){ out.textContent='enter RPC URL'; out.style.color='#b00'; continueBtn.disabled=true; return; }
     // Early rejection for unsupported websocket schemes
@@ -107,6 +135,10 @@
           input.value='';
           out.textContent = msg + ' (added)';
           evaluateContinue();
+          // UPDATE DEBUG PANEL IMMEDIATELY after chain addition - use setTimeout to ensure save completes
+          setTimeout(() => {
+            if(window.updateDebugPanel) window.updateDebugPanel();
+          }, 50);
         } else {
           const errMsg = (addJ && (addJ.error||addJ.message)) || ('failed to save'+(addR.status===422?' (unknown chain)':''));
           out.textContent = errMsg; out.style.color='#b00';
@@ -116,6 +148,19 @@
       }
     } catch(e){ out.textContent='error'; out.style.color='#b00'; }
   };
+  function getLocalStatusHtml(chain) {
+    const url = chain.rpcs[0];
+    const isLocalUrl = /^https?:\/\/localhost/i.test(url);
+    const isValid = chain.rpcValid !== false; // Default to valid if not specified
+    
+    if (!isValid) {
+      return '<span style="color:#b00; font-weight:600; font-size:.55em;">Invalid</span>';
+    } else if (isLocalUrl) {
+      return '<span style="color:#138a36;">✔</span>';
+    } else {
+      return '<span style="color:#ff8c00; font-weight:600; font-size:.55em;">Remote</span>';
+    }
+  }
   function isLocal(url){ return /^https?:\/\/localhost/i.test(url); }
   function addOrUpdateRow(chain){
     const id = 'row_'+chain.name;
@@ -130,7 +175,7 @@
   tr.innerHTML = `
         <td style="padding:4px;"><input type="checkbox" name="chain_enabled_${chain.name}" checked></td>
         <td style="padding:4px; font-weight:600;">${displayName}</td>
-        <td style="padding:4px;">${isLocal(chain.rpcs[0])?'<span style=\"color:#138a36;\">✔</span>':'<span style=\"color:#b00; font-weight:600; font-size:.55em;\">NO</span>'}</td>
+        <td style="padding:4px;">${getLocalStatusHtml(chain)}</td>
         <td style="padding:4px;"><input data-field="chains.${chain.name}.rpc" type="text" name="chain_rpc_${chain.name}" value="${chain.rpcs[0]}" style="width:240px;"></td>
         <td style="padding:4px;"><button type="button" data-probe="${chain.name}">Test</button><div style="font-size:0.65em; color:#555;" id="probe_${chain.name}"></div></td>
         <td style="padding:4px;">${chain.name==='mainnet'?'':'<button type="button" data-remove="'+chain.name+'">✕</button>'}</td>`;
@@ -153,7 +198,7 @@
       if(nameCell) nameCell.textContent = displayName;
       tr.dataset.chainId = chain.chainId;
       const localCell = tr.querySelector('td:nth-child(3)');
-      if(localCell) localCell.innerHTML = isLocal(chain.rpcs[0])?'<span style="color:#138a36;">✔</span>':'<span style="color:#b00; font-weight:600; font-size:.55em;">NO</span>';
+      if(localCell) localCell.innerHTML = getLocalStatusHtml(chain);
     }
     // Mark dataset.local for quick remote detection
     tr.dataset.local = isLocal(chain.rpcs[0]) ? '1' : '0';
@@ -164,6 +209,36 @@
     const probeBtn = tr.querySelector(`[data-probe="${name}"]`);
     const removeBtn = tr.querySelector(`[data-remove="${name}"]`);
     const statusDiv = tr.querySelector(`#probe_${name}`);
+    const checkbox = tr.querySelector('input[type="checkbox"]');
+    const rpcInput = tr.querySelector(`input[name="chain_rpc_${name}"]`);
+    
+    // Add debug panel updates for value changes
+    if(checkbox) {
+      checkbox.addEventListener('change', () => {
+        // Chain enable/disable changes need to update server config
+        const enabled = checkbox.checked ? '1' : '0';
+        const formData = new FormData();
+        formData.set(`${name}_enabled`, enabled);
+        if(window.updateConfigAndDebug) window.updateConfigAndDebug(formData);
+        // Update continue button and remote warning
+        evaluateContinue();
+      });
+    }
+    if(rpcInput) {
+      rpcInput.addEventListener('blur', () => {
+        // RPC URL changes need to update server config
+        const formData = new FormData();
+        formData.set(`chain_rpc_${name}`, rpcInput.value.trim());
+        if(window.updateConfigAndDebug) window.updateConfigAndDebug(formData);
+      });
+      rpcInput.addEventListener('input', () => {
+        // RPC URL changes need to update server config (debounced)
+        const formData = new FormData();
+        formData.set(`chain_rpc_${name}`, rpcInput.value.trim());
+        if(window.updateConfigAndDebug) window.updateConfigAndDebug(formData);
+      });
+    }
+    
     if(probeBtn && statusDiv){
       probeBtn.onclick = async ()=>{
         statusDiv.textContent='probing...';
@@ -184,16 +259,78 @@
             statusDiv.style.color='#b00'; return; }
           const jsonR = await fetch('/install/rpc_probe?mode=json&url='+encodeURIComponent(rpc)+'&chain='+encodeURIComponent(name), {headers:{'X-Khedra-Session':(window.KHEDRA_SESSION||'')}});
           const jsonJ = await jsonR.json();
-          if(jsonJ.ok){ statusDiv.textContent='ok '+(jsonJ.chainId||''); statusDiv.style.color='#138a36'; evaluateContinue(); }
-          else { statusDiv.textContent=jsonJ.error||'error'; statusDiv.style.color='#b00'; }
-        } catch(e){ statusDiv.textContent='error'; statusDiv.style.color='#b00'; }
+          if(jsonJ.ok){ 
+            statusDiv.textContent='ok '+(jsonJ.chainId||''); 
+            statusDiv.style.color='#138a36'; 
+            evaluateContinue(); 
+            
+            // Update the chain status display (Invalid -> ✔ or Remote)
+            const row = document.getElementById(`row_${name}`);
+            if(row) {
+              const rpcInput = row.querySelector(`input[name="chain_rpc_${name}"]`);
+              const rpcUrl = rpcInput ? rpcInput.value : rpc;
+              const mockChain = {
+                name: name,
+                rpcs: [rpcUrl],
+                rpcValid: true // Mark as valid after successful probe
+              };
+              const localCell = row.querySelector('td:nth-child(3)');
+              if(localCell) localCell.innerHTML = getLocalStatusHtml(mockChain);
+            }
+            
+            // UPDATE DEBUG PANEL IMMEDIATELY - probe doesn't change server config, just status
+            if(window.updateDebugPanel) window.updateDebugPanel();
+          }
+          else { 
+            statusDiv.textContent=jsonJ.error||'error'; 
+            statusDiv.style.color='#b00'; 
+            
+            // Update the chain status display to Invalid on probe failure  
+            const row = document.getElementById(`row_${name}`);
+            if(row) {
+              const rpcInput = row.querySelector(`input[name="chain_rpc_${name}"]`);
+              const rpcUrl = rpcInput ? rpcInput.value : rpc;
+              const mockChain = {
+                name: name,
+                rpcs: [rpcUrl],
+                rpcValid: false // Mark as invalid after failed probe
+              };
+              const localCell = row.querySelector('td:nth-child(3)');
+              if(localCell) localCell.innerHTML = getLocalStatusHtml(mockChain);
+            }
+          }
+        } catch(e){ 
+          statusDiv.textContent='error'; 
+          statusDiv.style.color='#b00'; 
+          
+          // Update the chain status display to Invalid on exception
+          const row = document.getElementById(`row_${name}`);
+          if(row) {
+            const rpcInput = row.querySelector(`input[name="chain_rpc_${name}"]`);
+            const rpcUrl = rpcInput ? rpcInput.value : rpc;
+            const mockChain = {
+              name: name,
+              rpcs: [rpcUrl], 
+              rpcValid: false // Mark as invalid on exception
+            };
+            const localCell = row.querySelector('td:nth-child(3)');
+            if(localCell) localCell.innerHTML = getLocalStatusHtml(mockChain);
+          }
+        }
       };
     }
     if(removeBtn){
       removeBtn.onclick = async ()=>{
   const resp = await fetch('/install/chain_remove?name='+encodeURIComponent(name), {headers:{'X-Khedra-Session':(window.KHEDRA_SESSION||'')}});
         const j = await resp.json();
-        if(j.ok){ tr.remove(); evaluateContinue(); }
+        if(j.ok){ 
+          tr.remove(); 
+          evaluateContinue(); 
+          // UPDATE DEBUG PANEL IMMEDIATELY after chain removal - use setTimeout to ensure save completes
+          setTimeout(() => {
+            if(window.updateDebugPanel) window.updateDebugPanel();
+          }, 50);
+        }
       };
     }
   }
@@ -221,12 +358,12 @@
   }
   // Pre-populate from server-rendered .Chains (if present)
   {{ range .Chains }}
-    addOrUpdateRow({ name: "{{ .Name }}", chainId: "{{ .ChainID }}", rpcs: ["{{ index .RPCs 0 }}"] });
+    addOrUpdateRow({ name: "{{ .Name }}", chainId: "{{ .ChainID }}", rpcs: ["{{ index .RPCs 0 }}"], rpcValid: {{ if .RpcValid }}true{{ else }}false{{ end }} });
   {{ end }}
   evaluateContinue();
   probeBtn.addEventListener('click', probe);
-  input.addEventListener('blur', ()=>{ const v=input.value.trim(); if(v) saveRecent(v); probe(); });
-  input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); probe(); }});
+  input.addEventListener('blur', ()=>{ const v=input.value.trim(); if(v) saveRecent(v); probe(); scheduleDebugUpdate(); });
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); probe(); scheduleDebugUpdate(); }});
   console.log('[khedra] RPC probe UI ready');
   // Highlight server-side validation errors
   try {

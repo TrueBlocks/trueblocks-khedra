@@ -41,6 +41,9 @@
 </head>
 <body {{if .Embed}}data-embed="1"{{else}}data-embed="0"{{end}}>
   <script>
+  /* eslint-disable */
+  // @ts-nocheck
+  // Disable linting for Go template file with mixed template/JavaScript syntax
   // Fallback: enforce embed data attribute from URL or cookie if server-render missed it
   (function(){
     const qs = new URLSearchParams(window.location.search);
@@ -124,20 +127,69 @@
     const pre = document.getElementById('debug-config');
     if(!pre) return;
     const step = document.querySelector('.container')?.getAttribute('data-step')||'';
-    // Only poll during install steps; dashboard shows final applied config already.
+    // Only show during install steps; dashboard shows final applied config already.
     if(step === 'dashboard') return;
-    async function tick(){
+    
+    async function updateConfig(){
       try {
-        const r = await fetch('/install/draft.json',{cache:'no-store'});
+        // FORCE fresh data - no caching whatsoever
+        const timestamp = Date.now();
+        const r = await fetch(`/live-update/config?_t=${timestamp}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        });
         if(r.ok){
           const txt = await r.text();
-          // Avoid thrash: update only if changed
-          if(pre.textContent !== txt){ pre.textContent = txt; }
+          pre.textContent = txt;
         }
       } catch(e) { /* ignore */ }
-  setTimeout(tick, 700);
     }
-    tick();
+    
+    // Update immediately
+    updateConfig();
+    
+    // CENTRALIZED CONFIG UPDATE FUNCTION - used by ALL screens
+    window.updateConfigAndDebug = function(formData, callback) {
+      if (!formData) return;
+      
+      const body = new URLSearchParams(formData);
+      fetch('/live-update/config', {
+        method: 'POST', 
+        body: body, 
+        headers: {'X-Khedra-Session': (window.KHEDRA_SESSION || '')}
+      })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => {
+        // Always update debug panel
+        updateConfig();
+        
+        // Call screen-specific callback if provided
+        if (callback && data) callback(data);
+      })
+      .catch(err => {
+        console.error('Config update failed:', err);
+      });
+    };
+
+    // IMMEDIATE DEBUG PANEL UPDATE - for operations that already updated backend
+    window.updateDebugPanel = updateConfig;
+    
+    // INTERCEPT ALL FORM SUBMISSIONS to update debug panel after POST
+    document.addEventListener('DOMContentLoaded', function() {
+      const forms = document.querySelectorAll('form[method="POST"], form[method="post"]');
+      forms.forEach(form => {
+        form.addEventListener('submit', function() {
+          // After form submission completes, update debug panel
+          setTimeout(() => {
+            if(window.updateDebugPanel) window.updateDebugPanel();
+          }, 100); // Slightly longer delay for form submission
+        });
+      });
+    });
   })();
   // Global field error highlighter (runs after content scripts)
   (function highlightErrors(){

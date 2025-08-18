@@ -52,21 +52,42 @@
 </form>
 <!-- field focus handled globally -->
 <script>
+/* eslint-disable */
+// @ts-nocheck
+// Disable linting for Go template file with mixed template/JavaScript syntax
 (function(){
   const form = document.currentScript.previousElementSibling;
   if(!form || form.tagName !== 'FORM') return;
-  let timer=null, inflight=null;
+  let timer=null;
   function push(){
-    if(inflight){ inflight.abort(); }
     const fd = new FormData(form);
-    const body = new URLSearchParams();
-    ['level','folder','filename','maxSize','maxBackups','maxAge'].forEach(k=>{ if(fd.get(k)!==null) body.set(k, fd.get(k)); });
-    if(fd.get('compress')==='1' || form.querySelector('input[name=compress]')?.checked) body.set('compress','1');
-    if(fd.get('toFile')==='1' || form.querySelector('input[name=toFile]')?.checked) body.set('toFile','1');
-    inflight = new AbortController();
-  fetch('/install/logging/live',{method:'POST',body,signal:inflight.signal,headers:{'X-Khedra-Session':(window.KHEDRA_SESSION||'')}}).catch(()=>{});
+    const formData = new FormData();
+    ['level','folder','filename','maxSize','maxBackups','maxAge'].forEach(k=>{ if(fd.get(k)!==null) formData.set(k, fd.get(k)); });
+    if(fd.get('compress')==='1' || form.querySelector('input[name=compress]')?.checked) formData.set('compress','1');
+    if(fd.get('toFile')==='1' || form.querySelector('input[name=toFile]')?.checked) formData.set('toFile','1');
+    
+    // Use centralized function
+    if(window.updateConfigAndDebug) window.updateConfigAndDebug(formData);
   }
   function schedule(){ if(timer) clearTimeout(timer); timer = setTimeout(push, 300); }
+  function updateFileControls(){
+    const toFileCheckbox = form.querySelector('input[name="toFile"]');
+    const fileControls = form.querySelectorAll('input[name="folder"], input[name="filename"], input[name="maxSize"], input[name="maxBackups"], input[name="maxAge"], input[name="compress"]');
+    const isEnabled = toFileCheckbox && toFileCheckbox.checked;
+    fileControls.forEach(control => {
+      control.disabled = !isEnabled;
+      if (control.parentElement) {
+        control.parentElement.style.opacity = isEnabled ? '1' : '0.5';
+      }
+    });
+  }
+  // Initial state
+  updateFileControls();
+  // Update on change
+  const toFileCheckbox = form.querySelector('input[name="toFile"]');
+  if (toFileCheckbox) {
+    toFileCheckbox.addEventListener('change', updateFileControls);
+  }
   form.addEventListener('change', schedule);
   form.addEventListener('input', schedule);
 })();

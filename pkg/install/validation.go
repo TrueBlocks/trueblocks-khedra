@@ -169,28 +169,23 @@ func ValidateLogging(d *Draft) []FieldError {
 func ValidateDraftPhase(d *Draft, phase string) []FieldError {
 	normalizeDraft(d)
 	var all []FieldError
-	// Minimal phases selection matrix
+	// Simple validation - only validate current screen when moving forward
 	switch phase {
 	case "step:paths":
 		all = append(all, ValidatePaths(d)...)
-	case "step:index":
-		all = append(all, ValidatePaths(d)...)
-		all = append(all, ValidateIndex(d)...)
 	case "step:chains":
-		all = append(all, ValidatePaths(d)...)
-		all = append(all, ValidateIndex(d)...)
 		all = append(all, ValidateChains(d)...)
+	case "step:index":
+		all = append(all, ValidateIndex(d)...)
 	case "step:services":
-		all = append(all, ValidatePaths(d)...)
-		all = append(all, ValidateIndex(d)...)
-		all = append(all, ValidateChains(d)...)
 		all = append(all, ValidateServices(d)...)
 	case "step:logging":
 		all = append(all, ValidateLogging(d)...)
 	case "final":
+		// Final validation - check EVERYTHING before writing real config
 		all = append(all, ValidatePaths(d)...)
-		all = append(all, ValidateIndex(d)...)
 		all = append(all, ValidateChains(d)...)
+		all = append(all, ValidateIndex(d)...)
 		all = append(all, ValidateServices(d)...)
 		all = append(all, ValidateLogging(d)...)
 	default:
