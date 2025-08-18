@@ -1,0 +1,43 @@
+{{define "navright"}}
+  <a class="nav-btn" href="/install/chains" aria-label="Back">Back</a>
+  <button class="nav-btn" form="servicesForm" type="submit">Next</button>
+{{end}}
+{{ define "content" }}
+<h2>Services</h2>
+<p>Select which services to enable. You can change these later.</p>
+{{ if .Errors }}<div role="alert" class="err-banner">
+  <strong>Issues:</strong>
+  <ul>
+    {{ range .Errors }}<li data-err-field="{{ .Field }}">{{ .Message }}</li>{{ end }}
+  </ul>
+</div>{{ end }}
+<form id="servicesForm" method="POST" action="/install/services">
+  <input type="hidden" name="session" value="{{ .SessionID }}" />
+  <table class="services-table">
+    <colgroup>
+      <col style="width:10%;">
+      <col style="width:10%;">
+      <col style="width:80%;">
+    </colgroup>
+    <thead>
+      <tr>
+        <th scope="col">Enabled</th>
+        <th scope="col">Service</th>
+        <th scope="col">Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ range $name, $enabled := .Services }}
+      <tr>
+        <td><input type="checkbox" id="{{$name}}_enabled" name="{{$name}}_enabled" {{ if $enabled }}checked{{ end }} aria-label="Enable {{$name}} service"></td>
+        <td><label for="{{$name}}_enabled">{{$name}}</label></td>
+        <td>
+          {{ if eq $name "scraper" }}Continuously indexes new blocks into the Unchained Index{{ else if eq $name "monitor" }}Watches addresses for chain activity (feature pending){{ else if eq $name "api" }}Serves TrueBlocks API endpoints over HTTP{{ else if eq $name "ipfs" }}Allows for pinning chunks and Bloom filters to IPFS{{ else }}Service description{{ end }}
+        </td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+</form>
+<nav style="display:none;"></nav>
+{{ end }}

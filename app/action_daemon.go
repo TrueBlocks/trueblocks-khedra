@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -16,8 +15,8 @@ import (
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/config"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
 	_ "github.com/TrueBlocks/trueblocks-khedra/v5/pkg/env"
-	"github.com/TrueBlocks/trueblocks-sdk/v5/services"
 	"github.com/urfave/cli/v2"
 )
 
@@ -85,61 +84,22 @@ func (k *KhedraApp) daemonAction(c *cli.Context) error {
 		}
 	}
 
-	var activeServices []services.Servicer
-	controlService := services.NewControlService(k.logger.GetLogger())
-	activeServices = append(activeServices, controlService)
-	for _, svc := range k.config.Services {
-		switch svc.Name {
-		case "scraper":
-			chains := strings.Split(strings.ReplaceAll(k.config.EnabledChains(), " ", ""), ",")
-			scraperSvc := services.NewScrapeService(
-				k.logger.GetLogger(),
-				"all",
-				chains,
-				k.config.Services["scraper"].Sleep,
-				k.config.Services["scraper"].BatchSize,
-			)
-			activeServices = append(activeServices, scraperSvc)
-			if !svc.Enabled {
-				scraperSvc.Pause()
-			}
-		case "monitor":
-			monitorSvc := services.NewMonitorService(nil)
-			activeServices = append(activeServices, monitorSvc)
-			if !svc.Enabled {
-				monitorSvc.Pause()
-			}
-		case "api":
-			if svc.Enabled {
-				apiSvc := services.NewApiService(k.logger.GetLogger())
-				activeServices = append(activeServices, apiSvc)
-			}
-		case "ipfs":
-			if svc.Enabled {
-				ipfsSvc := services.NewIpfsService(k.logger.GetLogger())
-				activeServices = append(activeServices, ipfsSvc)
-			}
+	// Initialize the control service -- we need it for daemon
+	k.initializeControlSvc()
+
+	if os.Getenv("TB_KHEDRA_INITONLY") != "true" {
+		if err := k.serviceManager.StartAllServices(); err != nil {
+			k.logger.Fatal(err.Error())
 		}
+	} else {
+		utils.System("open http://localhost:" + fmt.Sprintf("%d", k.controlSvc.Port()))
+		// logger.Info("Open you browser to http://localhost:" + fmt.Sprintf("%d", k.controlSvc.Port()))
 	}
 
-	slog.Info("Starting khedra daemon", "services", len(activeServices))
-	serviceManager := services.NewServiceManager(activeServices, k.logger.GetLogger())
-	for _, svc := range activeServices {
-		if controlSvc, ok := svc.(*services.ControlService); ok {
-			controlSvc.AttachServiceManager(serviceManager)
-		}
-	}
-	if err := serviceManager.StartAllServices(); err != nil {
-		k.logger.Fatal(err.Error())
-	}
-
-	serviceManager.HandleSignals()
-
-	if true {
-		select {}
-	}
-
-	return nil
+	// Delegate signal handling & graceful cleanup to the ServiceManager implementation.
+	k.serviceManager.HandleSignals()
+	k.logger.Info("daemon running; press Ctrl+C to initiate graceful shutdown (managed by ServiceManager)")
+	select {} // block until ServiceManager handles signal and exits process
 }
 
 func (k *KhedraApp) chainsConfigured(configFn string) bool {

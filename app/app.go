@@ -8,13 +8,16 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
 	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
+	"github.com/TrueBlocks/trueblocks-sdk/v5/services"
 	"github.com/urfave/cli/v2"
 )
 
 type KhedraApp struct {
-	cli    *cli.App
-	config *types.Config
-	logger *types.CustomLogger
+	cli            *cli.App
+	config         *types.Config
+	logger         *types.CustomLogger
+	controlSvc     *services.ControlService
+	serviceManager *services.ServiceManager
 }
 
 func NewKhedraApp() *KhedraApp {

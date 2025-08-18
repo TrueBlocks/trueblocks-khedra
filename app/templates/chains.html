@@ -1,0 +1,249 @@
+{{define "navright"}}
+  <a class="nav-btn" href="/install/index" aria-label="Back">Back</a>
+  <button class="nav-btn" id="continueBtn" form="chainsForm" type="submit" disabled>Next</button>
+{{end}}
+{{ define "content" }}
+<h2>Chain RPC</h2>
+<p>Enter any Ethereum-compatible RPC endpoint. We will probe it and adopt its reported chain id automatically.</p>
+<p style="font-size:0.8em; margin-top:-0.4em;">Browse <a href="https://chainlist.org/" target="_blank" rel="noopener noreferrer">chainlist.org</a> for public RPCs (we strongly prefer local nodes for production).</p>
+{{ if .Errors }}<div role="alert" class="err-banner">
+  <strong>Issues:</strong>
+  <ul>
+    {{ range .Errors }}<li data-err-field="{{ .Field }}">{{ .Message }}</li>{{ end }}
+  </ul>
+</div>{{ end }}
+<div style="max-width:820px;">
+  <div style="display:flex; gap:8px; align-items:center;">
+    <input id="rpcInput" type="text" placeholder="https://rpc.your-chain.example" style="flex:1; padding:6px;" autocomplete="off" list="recentRpcs" />
+    <button id="probeBtn" type="button">Add</button>
+  </div>
+  <datalist id="recentRpcs"></datalist>
+  <div id="probeStatus" style="font-size:0.8em; margin-top:4px; min-height:1.2em; color:#555;"></div>
+  <h3 style="margin-top:1.2em;">Configured Chains</h3>
+  <form id="chainsForm" method="POST" action="/install/chains">
+    <input type="hidden" name="session" value="{{ .SessionID }}" />
+    <input type="hidden" name="action" value="update" />
+    <table id="chainsTable" style="border-collapse:collapse; width:100%;">
+      <thead>
+        <tr style="text-align:left; border-bottom:1px solid #ccc;">
+          <th style="padding:4px;"></th>
+          <th style="padding:4px;">Name (Id)</th>
+          <th style="padding:4px;">Local</th>
+          <th style="padding:4px;">RPC</th>
+          <th style="padding:4px;"></th>
+          <th style="padding:4px;"></th>
+        </tr>
+      </thead>
+      <tbody id="chainsBody"></tbody>
+    </table>
+  <div id="remoteWarning" style="display:none;color:#b00;font-size:0.65rem;margin-top:.75rem;"></div>
+  </form>
+</div>
+<nav style="display:none;"></nav>
+<script>
+(function start(){
+  if(!document.querySelectorAll || !document.body){ return setTimeout(start,50); }
+  const input = document.getElementById('rpcInput');
+  const out = document.getElementById('probeStatus');
+  const probeBtn = document.getElementById('probeBtn');
+  const continueBtn = document.getElementById('continueBtn');
+  const chainsBody = document.getElementById('chainsBody');
+  const form = document.getElementById('chainsForm');
+  const recentList = document.getElementById('recentRpcs');
+  const remoteWarning = document.getElementById('remoteWarning');
+
+  function loadRecent() {
+    let arr=[]; try { arr=JSON.parse(localStorage.getItem('khedra_recent_rpcs')||'[]'); if(!Array.isArray(arr)) arr=[]; } catch(e){ arr=[]; }
+    recentList.innerHTML='';
+    arr.forEach(u=>{ const opt=document.createElement('option'); opt.value=u; recentList.appendChild(opt); });
+    return arr;
+  }
+  function saveRecent(url){
+    if(!/^https?:\/\//i.test(url)) return; // basic sanity
+    const arr = loadRecent();
+    if(!arr.includes(url)) { arr.unshift(url); if(arr.length>15) arr.pop(); localStorage.setItem('khedra_recent_rpcs', JSON.stringify(arr)); }
+  }
+  loadRecent();
+  const probe = async ()=>{
+    const url = input.value.trim();
+    if(!url){ out.textContent='enter RPC URL'; out.style.color='#b00'; continueBtn.disabled=true; return; }
+    // Early rejection for unsupported websocket schemes
+    if(/^wss?:\/\//i.test(url)){
+      out.textContent='WebSocket RPC endpoints (ws://, wss://) are not supported. Please enter an HTTP or HTTPS JSON-RPC URL.';
+      out.style.color='#b00';
+      continueBtn.disabled=true;
+      return;
+    }
+    out.textContent='probing...'; out.style.color='#555'; continueBtn.disabled=true;
+    try {
+  const headR = await fetch('/install/rpc_probe?mode=head&url='+encodeURIComponent(url), {headers:{'X-Khedra-Session':(window.KHEDRA_SESSION||'')}});
+      const headJ = await headR.json();
+      if(!headJ.ok){
+        // Provide clearer message if scheme unsupported
+        if(headJ.error && /scheme must be http or https/i.test(headJ.error)){
+          out.textContent='Unsupported protocol. Use http:// or https:// (WebSocket URLs not supported).';
+        } else {
+          out.textContent='unreachable';
+        }
+        out.style.color='#b00';
+        return;
+      }
+  const jsonR = await fetch('/install/rpc_probe?mode=json&url='+encodeURIComponent(url), {headers:{'X-Khedra-Session':(window.KHEDRA_SESSION||'')}});
+      const jsonJ = await jsonR.json();
+      if(jsonJ.ok){
+        let msg = '';
+        if(jsonJ.chainName){ msg += jsonJ.chainName+' · '; }
+        msg += 'Chain ID '+(jsonJ.chainId||'?');
+        if(jsonJ.clientVersion){ msg += ' · '+jsonJ.clientVersion.split('/')[0]; }
+        if(jsonJ.updated){ msg += ' (saved)'; }
+        out.textContent = msg; out.style.color='#138a36';
+        // Add chain via backend (will persist)
+  const addR = await fetch('/install/chain_add?rpc='+encodeURIComponent(url), {headers:{'X-Khedra-Session':(window.KHEDRA_SESSION||'')}});
+        let addJ = null; let addText='';
+        try { addJ = await addR.json(); } catch(e){}
+        if(addR.ok && addJ && addJ.ok){
+          addOrUpdateRow(addJ.chain);
+          saveRecent(url);
+          input.value='';
+          out.textContent = msg + ' (added)';
+          evaluateContinue();
+        } else {
+          const errMsg = (addJ && (addJ.error||addJ.message)) || ('failed to save'+(addR.status===422?' (unknown chain)':''));
+          out.textContent = errMsg; out.style.color='#b00';
+        }
+      } else {
+        out.textContent = jsonJ.error || 'RPC error'; out.style.color='#b00';
+      }
+    } catch(e){ out.textContent='error'; out.style.color='#b00'; }
+  };
+  function isLocal(url){ return /^https?:\/\/localhost/i.test(url); }
+  function addOrUpdateRow(chain){
+    const id = 'row_'+chain.name;
+    let tr = document.getElementById(id);
+    const baseName = (chain.name && chain.name.length) ? chain.name : `chain-${chain.chainId}`;
+    const displayName = /^chain-\d+$/.test(baseName) ? baseName : `${baseName} (${chain.chainId})`;
+    if(!tr){
+      tr = document.createElement('tr');
+      tr.id = id;
+      tr.style.borderBottom='1px solid #eee';
+      tr.dataset.chainId = chain.chainId;
+  tr.innerHTML = `
+        <td style="padding:4px;"><input type="checkbox" name="chain_enabled_${chain.name}" checked></td>
+        <td style="padding:4px; font-weight:600;">${displayName}</td>
+        <td style="padding:4px;">${isLocal(chain.rpcs[0])?'<span style=\"color:#138a36;\">✔</span>':'<span style=\"color:#b00; font-weight:600; font-size:.55em;\">NO</span>'}</td>
+        <td style="padding:4px;"><input data-field="chains.${chain.name}.rpc" type="text" name="chain_rpc_${chain.name}" value="${chain.rpcs[0]}" style="width:240px;"></td>
+        <td style="padding:4px;"><button type="button" data-probe="${chain.name}">Test</button><div style="font-size:0.65em; color:#555;" id="probe_${chain.name}"></div></td>
+        <td style="padding:4px;">${chain.name==='mainnet'?'':'<button type="button" data-remove="'+chain.name+'">✕</button>'}</td>`;
+      if(chain.name==='mainnet') {
+        chainsBody.prepend(tr);
+      } else {
+        // Insert maintaining ascending chainId after mainnet
+        const others = Array.from(chainsBody.querySelectorAll('tr')).filter(r=>r.id!=='row_mainnet');
+        let inserted=false; const newCid=parseInt(chain.chainId,10)||0;
+        for(let i=0;i<others.length;i++){
+          const existingCid = parseInt(others[i].dataset.chainId||'0',10);
+          if(newCid < existingCid){ chainsBody.insertBefore(tr, others[i]); inserted=true; break; }
+        }
+        if(!inserted) chainsBody.appendChild(tr);
+      }
+    } else {
+      const rpcInput = tr.querySelector(`input[name="chain_rpc_${chain.name}"]`);
+      if(rpcInput) rpcInput.value = chain.rpcs[0];
+      const nameCell = tr.querySelector('td:nth-child(2)');
+      if(nameCell) nameCell.textContent = displayName;
+      tr.dataset.chainId = chain.chainId;
+      const localCell = tr.querySelector('td:nth-child(3)');
+      if(localCell) localCell.innerHTML = isLocal(chain.rpcs[0])?'<span style="color:#138a36;">✔</span>':'<span style="color:#b00; font-weight:600; font-size:.55em;">NO</span>';
+    }
+    // Mark dataset.local for quick remote detection
+    tr.dataset.local = isLocal(chain.rpcs[0]) ? '1' : '0';
+    attachRowHandlers(tr, chain.name);
+    updateRemoteWarning();
+  }
+  function attachRowHandlers(tr, name){
+    const probeBtn = tr.querySelector(`[data-probe="${name}"]`);
+    const removeBtn = tr.querySelector(`[data-remove="${name}"]`);
+    const statusDiv = tr.querySelector(`#probe_${name}`);
+    if(probeBtn && statusDiv){
+      probeBtn.onclick = async ()=>{
+        statusDiv.textContent='probing...';
+        const rpc = tr.querySelector(`input[name="chain_rpc_${name}"]`).value.trim();
+        if(/^wss?:\/\//i.test(rpc)){
+          statusDiv.textContent='WebSocket RPC endpoints not supported (use http:// or https://)';
+          statusDiv.style.color='#b00';
+          return;
+        }
+        try {
+    const headR = await fetch('/install/rpc_probe?mode=head&url='+encodeURIComponent(rpc), {headers:{'X-Khedra-Session':(window.KHEDRA_SESSION||'')}});
+          const headJ = await headR.json(); if(!headJ.ok){
+            if(headJ.error && /scheme must be http or https/i.test(headJ.error)){
+              statusDiv.textContent='Unsupported protocol (need http:// or https://)';
+            } else {
+              statusDiv.textContent='unreachable';
+            }
+            statusDiv.style.color='#b00'; return; }
+          const jsonR = await fetch('/install/rpc_probe?mode=json&url='+encodeURIComponent(rpc)+'&chain='+encodeURIComponent(name), {headers:{'X-Khedra-Session':(window.KHEDRA_SESSION||'')}});
+          const jsonJ = await jsonR.json();
+          if(jsonJ.ok){ statusDiv.textContent='ok '+(jsonJ.chainId||''); statusDiv.style.color='#138a36'; evaluateContinue(); }
+          else { statusDiv.textContent=jsonJ.error||'error'; statusDiv.style.color='#b00'; }
+        } catch(e){ statusDiv.textContent='error'; statusDiv.style.color='#b00'; }
+      };
+    }
+    if(removeBtn){
+      removeBtn.onclick = async ()=>{
+  const resp = await fetch('/install/chain_remove?name='+encodeURIComponent(name), {headers:{'X-Khedra-Session':(window.KHEDRA_SESSION||'')}});
+        const j = await resp.json();
+        if(j.ok){ tr.remove(); evaluateContinue(); }
+      };
+    }
+  }
+  function updateRemoteWarning(){
+    const rows = chainsBody.querySelectorAll('tr');
+    const anyRemote = Array.from(rows).some(r=>r.dataset.local==='0');
+    if(anyRemote){
+      remoteWarning.style.display='block';
+      // list remote chain names
+      const remotes = Array.from(rows).filter(r=>r.dataset.local==='0').map(r=>{
+        const nameCell=r.querySelector('td:nth-child(2)'); return nameCell?nameCell.textContent.split(' ')[0]:'';
+      }).filter(Boolean);
+      remoteWarning.textContent = 'Warning: Remote RPCs ('+remotes.join(', ')+') are likely rate-limited and may make full indexing impractical. Consider running a local node.';
+    } else {
+      remoteWarning.style.display='none';
+    }
+  }
+  function evaluateContinue(){
+    // Enable continue if at least one row exists and mainnet present & enabled
+    const rows = chainsBody.querySelectorAll('tr');
+    let hasMainnet=false;
+    rows.forEach(r=>{ if(r.id==='row_mainnet'){ const cb=r.querySelector('input[type=checkbox]'); if(cb && cb.checked) hasMainnet=true; }});
+    continueBtn.disabled = !(rows.length>0 && hasMainnet);
+    updateRemoteWarning();
+  }
+  // Pre-populate from server-rendered .Chains (if present)
+  {{ range .Chains }}
+    addOrUpdateRow({ name: "{{ .Name }}", chainId: "{{ .ChainID }}", rpcs: ["{{ index .RPCs 0 }}"] });
+  {{ end }}
+  evaluateContinue();
+  probeBtn.addEventListener('click', probe);
+  input.addEventListener('blur', ()=>{ const v=input.value.trim(); if(v) saveRecent(v); probe(); });
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); probe(); }});
+  console.log('[khedra] RPC probe UI ready');
+  // Highlight server-side validation errors
+  try {
+    const errEls = document.querySelectorAll('[data-err-field]');
+    if(errEls && errEls.length){
+      const first = errEls[0].getAttribute('data-err-field');
+      if(first){
+        const fld = document.querySelector('[data-field="'+first+'"]');
+        if(fld){ fld.style.borderColor='#e00'; fld.scrollIntoView({block:'center'}); fld.focus(); }
+      }
+      errEls.forEach(li=>{
+        const f = li.getAttribute('data-err-field');
+        const inp = document.querySelector('[data-field="'+f+'"]');
+        if(inp){ inp.style.borderColor='#e00'; }
+      });
+    }
+  } catch(e){}
+})();
+</script>
+{{ end }}

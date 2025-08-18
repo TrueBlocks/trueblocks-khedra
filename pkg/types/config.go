@@ -235,3 +235,8 @@ logging:
   compress: {{ .Logging.Compress }}
   level: "{{ .Logging.Level }}"
 `
+
+// ConfigTemplate returns the YAML template for the config file.
+func ConfigTemplate() string {
+	return tmpl
+}

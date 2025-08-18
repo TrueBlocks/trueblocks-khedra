@@ -39,7 +39,8 @@ func initCli(k *KhedraApp) *cli.App {
 					if err := validateArgs(1, 1); err != nil {
 						return err
 					}
-					return k.initAction(c)
+					os.Setenv("TB_KHEDRA_INITONLY", "true")
+					return k.daemonAction(c)
 				},
 			},
 			{

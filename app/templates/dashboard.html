@@ -1,0 +1,132 @@
+{{ define "content" }}
+<div id="dashboard" data-view="dashboard" style="font-size:14px;">
+  <header style="display:flex;gap:.5rem;align-items:baseline;margin:0 0 1rem 0;">
+    <h2 style="margin:0;font-size:1.25rem;">Khedra</h2>
+    <span id="db-version" style="opacity:.7;">...</span>
+  </header>
+  <main style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:.75rem;align-items:start;">
+    <section style="border:1px solid #ccc;padding:.5rem;">
+      <h3 style="margin:.25rem 0;font-size:1rem;">Services</h3>
+      <table id="services" style="width:100%;font-size:.7rem;border-collapse:collapse;">
+        <thead><tr><th align="left">Name</th><th align="left">State</th><th align="left">Port</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+    <section style="border:1px solid #ccc;padding:.5rem;">
+      <h3 style="margin:.25rem 0;font-size:1rem;">Chains</h3>
+      <ul id="chains" style="list-style:disc;padding-left:1.1rem;margin:0;font-size:.7rem;"></ul>
+    </section>
+    <!-- Actions panel now always shown even in embed mode -->
+  <aside class="actions-panel" style="border:1px solid #ccc;padding:.5rem;">
+      <h3 style="margin:.25rem 0;font-size:1rem;">Actions</h3>
+      <button class="dashboard-btn" data-action="rerun-setup">Rerun Wizard</button>
+      <button class="dashboard-btn" data-action="download-config">Download Config</button>
+      <div style="display:flex; gap:.5rem;">
+        <button class="dashboard-btn half-width" data-action="pause-all">Pause</button>
+        <button class="dashboard-btn half-width" data-action="unpause-all">Unpause</button>
+      </div>
+    </aside>
+    <section style="border:1px solid #ccc;padding:.5rem;grid-column: span 2;">
+      <h3 style="margin:.25rem 0;font-size:1rem;">Paths & Storage</h3>
+      <dl style="display:grid;grid-template-columns:max-content 1fr;gap:.25rem .5rem;font-size:.6rem;margin:0;">
+        <dt>Data</dt><dd id="path-data">...</dd>
+        <dt>Cache</dt><dd id="path-cache">...</dd>
+        <dt>Logs</dt><dd id="path-logs">...</dd>
+      </dl>
+    </section>
+    {{ if not .Embed }}
+    <section style="border:1px solid #ccc;padding:.5rem;">
+      <h3 style="margin:.25rem 0;font-size:1rem;">About</h3>
+      <p style="font-size:.6rem;margin:0;">Local-first. No telemetry.</p>
+    </section>
+    {{ end }}
+    <section style="border:1px solid #ccc;padding:.5rem;grid-column: span 3;">
+      <h3 style="margin:.25rem 0;font-size:1rem;">Log Tail</h3>
+      <pre id="log-tail" style="background:#111;color:#0f0;padding:.5rem;font-size:.55rem;max-height:10rem;overflow:hidden;margin:0;">(loading)</pre>
+      <div id="log-footer" style="font-size:.5rem;opacity:.7;margin-top:.25rem;"></div>
+    </section>
+  </main>
+</div>
+<script>
+async function fetchState() {
+  try {
+    const res = await fetch('/dashboard/state');
+    if(!res.ok) throw new Error('bad status '+res.status);
+    const data = await res.json();
+    document.getElementById('db-version').textContent = data.version;
+    // Services
+    const tbody = document.querySelector('#services tbody');
+    tbody.innerHTML='';
+    (data.services||[]).forEach(s => {
+      const tr = document.createElement('tr');
+  const stateClass = s.state==='running'?'svc-running':'svc-paused';
+  tr.innerHTML = `<td>${s.name}</td><td><span class="${stateClass}">${s.state}</span></td><td>${s.port||'-'}</td><td>${s.pausable?serviceButton(s):''}</td>`;
+      tbody.appendChild(tr);
+    });
+    // Chains
+    const clu = document.getElementById('chains');
+    clu.innerHTML='';
+    (data.chains||[]).forEach(c => {
+      const li=document.createElement('li');
+      li.textContent = `${c.name} ${c.height?(' '+c.height):''}`;
+      clu.appendChild(li);
+    });
+    // Paths
+    document.getElementById('path-data').textContent = data.paths?.data||'';
+    document.getElementById('path-cache').textContent = data.paths?.cache||'';
+    document.getElementById('path-logs').textContent = data.paths?.logs||'';
+    // Log tail handling
+    const lt = document.getElementById('log-tail');
+    const lf = document.getElementById('log-footer');
+    if(data.logToFile===false){
+      lt.textContent = 'Logs are not being written to file';
+      lf.textContent = '';
+    } else {
+      const lines = (data.logTail||[]);
+      lt.textContent = lines.length?lines.join('\n'):'(no recent log lines)';
+      const logPath = (data.paths?.logs? (data.paths.logs + '/' + (data.loggingFilename||'khedra.log')) : '');
+      lf.textContent = logPath?('file: '+logPath):'';
+    }
+  } catch(e){
+    console.error(e);
+  }
+}
+function serviceButton(s){
+  const action = s.state==='running'?'pause':'unpause';
+  // Fixed width so the column doesn't shift between pause/unpause states
+  return `<button class='dashboard-btn' data-svc="${s.name}" data-action="${action}" style="width:1.6rem;">${action==='pause'?'⏸':'▶'}</button>`;
+}
+document.addEventListener('click', async (e)=>{
+  const btn = e.target.closest('button[data-action]');
+  if(!btn) return;
+  const act = btn.getAttribute('data-action');
+  if(act==='rerun-setup') { 
+    fetch('/install/reset',{method:'POST'}).finally(()=>{ window.location='/install/welcome'; });
+    return; 
+  }
+  if(act==='download-config') { window.location='/config.yaml'; return; }
+  if(act==='pause-all' || act==='unpause-all') {
+    const endpoint = act==='pause-all'?'/control/pause?all=true':'/control/unpause?all=true';
+    await fetch(endpoint,{method:'POST'}); fetchState(); return;
+  }
+  const svc = btn.getAttribute('data-svc');
+  if(svc) {
+    const endpoint = act==='pause'?'/control/pause':'/control/unpause';
+    await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({services:[svc]})});
+    fetchState();
+  }
+});
+fetchState();
+setInterval(fetchState,2000);
+</script>
+<style>
+  .svc-running { color:#138a36; font-weight:600; }
+  .svc-paused { color:#b00; font-weight:600; }
+  #dashboard .actions-panel { width:140px; display:flex; flex-direction:column; gap:.4rem; }
+  #dashboard .actions-panel .dashboard-btn { width:100%; display:block; box-sizing:border-box; text-align:center; }
+  #dashboard .actions-panel .half-width { width:50%; display:inline-block; }
+  #dashboard .actions-panel .action-btn { background:#eee; border:1px solid #bbb; border-radius:4px; cursor:pointer; font-size:.7rem; }
+  #dashboard .actions-panel .action-btn:hover { background:#ddd; }
+  .half-width { width: calc(50% - .25rem); }
+</style>
+{{ end }}

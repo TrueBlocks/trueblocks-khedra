@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Khedra Install Wizard</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 0; background: #f8f9fa; }
+    .header { background: #0d3b66; color: #fff; padding: 1em; }
+    .progress { display: flex; gap: 4px; margin: 1em 0; }
+    .progress-step { flex: 1; height: 8px; background: #d3d3d3; border-radius: 4px; }
+    .progress-step.done { background: #138a36; }
+    .progress-step.current { background: #0d3b66; }
+  .error { color: #c00; margin: 1em 0; }
+  /* Unified validation styles */
+  .err-banner { background:#ffeceb; border:1px solid #e59; padding:0.75em 0.9em; border-radius:6px; margin:0 0 1em 0; }
+  .err-banner ul { margin:4px 0 0 1em; padding:0; }
+  .err-banner li { margin:2px 0; }
+  .err-field { border-color:#e00 !important; outline:none; }
+  .err-focus-outline { outline:2px solid #e00; }
+  .container { max-width: 600px; margin: 2em auto; background: #fff; padding: 3.2rem 2rem 2rem 2rem; border-radius: 8px; box-shadow: 0 2px 8px #0001; position:relative; }
+  /* Nav row: left debug toggle, right back/continue */
+  .nav-row { position:absolute; top:.55rem; left:.75rem; right:.75rem; display:flex; justify-content:space-between; align-items:center; z-index:30; }
+  .nav-right { display:flex; gap:.45rem; }
+  .nav-btn { background:#0d3b66; color:#fff !important; border:1px solid #062441; border-radius:6px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 4px #0003; transition:background .12s, transform .12s; font-weight:600; font-family:inherit; font-size:.7rem; line-height:1; width:3.6ch; height:1.875em; padding:0; }
+  .nav-right .nav-btn { width:7.5ch; }
+  .nav-btn[disabled] { opacity:.45; cursor:not-allowed; }
+  .nav-btn:hover:not([disabled]) { background:#0b3358; }
+  .nav-btn:active:not([disabled]) { transform:translateY(1px); }
+  .primary-btn { background:#0d3b66; color:#fff; border:1px solid #062441; padding:.65rem 1.2rem; border-radius:6px; font-size:.85rem; font-weight:600; cursor:pointer; }
+    .begin-wizard-btn, .dashboard-btn { height:2.0625em; /* 1.1 * 1.875em (nav-btn height) */ padding:0 0.7rem; font-size:.7rem; background:#0d3b66; color:#fff; border:1px solid #062441; border-radius:6px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; box-shadow:0 2px 4px #0003; transition:background .12s, transform .12s; }
+    .begin-wizard-btn:hover, .dashboard-btn:hover { background:#0b3358; }
+  .primary-btn:hover { background:#0b3358; }
+  /* Services table */
+  .services-table { width:100%; border-collapse:collapse; margin-top:1rem; font-size:.8rem; }
+  .services-table th, .services-table td { padding:.4rem .5rem; text-align:left; border-bottom:1px solid #e1e4e8; }
+  .services-table thead th { background:#0d3b66; color:#fff; font-weight:600; font-size:.7rem; letter-spacing:.5px; }
+  .services-table tbody tr:hover { background:#f1f5f9; }
+  .services-table input[type=checkbox] { transform:scale(1.1); cursor:pointer; }
+  .services-table td:nth-child(3) { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  </style>
+</head>
+<body {{if .Embed}}data-embed="1"{{else}}data-embed="0"{{end}}>
+  <script>
+  // Fallback: enforce embed data attribute from URL or cookie if server-render missed it
+  (function(){
+    const qs = new URLSearchParams(window.location.search);
+    const urlEmbed = qs.get('embed');
+    const cookieMatch = document.cookie.match(/(?:^|; )KHEDRA_EMBED=(\d)/);
+    const cookieEmbed = cookieMatch ? cookieMatch[1] : null;
+    let desired = null;
+    if(urlEmbed === '1' || urlEmbed === '0') desired = urlEmbed;
+    else if(cookieEmbed === '1' || cookieEmbed === '0') desired = cookieEmbed;
+    if(desired !== null) {
+      const cur = document.body.getAttribute('data-embed');
+      if(cur !== desired) document.body.setAttribute('data-embed', desired);
+    }
+  })();
+  </script>
+  <script>
+  // Expose session id globally for JS fetch headers (set after forms render)
+  (function(){
+    function extract(){
+      var el=document.querySelector('input[name="session"]');
+      return el?el.value:'';
+    }
+    window.KHEDRA_SESSION = extract();
+    // Mutation observer to catch later step navigation replacements (if any client-side in future)
+    const mo = new MutationObserver(()=>{ window.KHEDRA_SESSION = extract(); });
+    mo.observe(document.documentElement,{subtree:true,childList:true});
+  })();
+  </script>
+  <div class="layout-frame">
+    <div class="header">
+      <div>
+        <h1 style="margin:.2rem 0 .1rem 0;">Khedra Local Setup</h1>
+        <small>All processing is local. Nothing leaves your machine.</small>
+      </div>
+    </div>
+    <div class="main-band" style="display:flex;align-items:stretch;position:relative;">
+    {{if .Debug}}
+    <aside style="width:320px;max-height:calc(100vh - 2rem);overflow:auto;background:#222;color:#eee;font-size:.6rem;padding:.5rem  .75rem 1rem .75rem;border-right:4px solid #0d3b66;">
+      <h3 style="margin:.25rem 0 .5rem 0;font-size:.8rem;">Debug Config</h3>
+      <pre id="debug-config" style="white-space:pre-wrap;word-break:break-word;margin:0;background:#111;padding:.5rem;border-radius:4px;">{{.DebugConfig}}</pre>
+    </aside>
+    {{end}}
+    <div class="container" data-step="{{.StepName}}" style="flex:1;">
+      <div class="nav-row">
+  <button id="toggle-debug" type="button" class="nav-btn" aria-label="Toggle debug">{{if .Debug}}&gt;&gt;{{else}}&lt;&lt;{{end}}</button>
+        <div class="nav-right">{{block "navright" .}}{{end}}</div>
+      </div>
+    {{ if .DraftCorrupt }}
+      <div role="alert" style="background:#fff6e5;border:1px solid #f2c166;color:#4d3000;padding:.75em .9em;border-radius:6px;margin:0 0 1em 0;font-size:.8rem;">
+        <strong>Recovered from a corrupted draft.</strong> Previous draft was archived. Review your entries and continue.
+      </div>
+    {{ end }}
+  <div id="session-conflict-banner" style="display:none;background:#ffeceb;border:1px solid #e59;color:#4d0000;padding:.6em .75em;border-radius:6px;margin:0 0 1em 0;font-size:.75rem;"></div>
+    {{if not .Embed}}{{template "progress" .}}{{end}}
+      {{if .Error}}
+        <div class="error">{{.Error}}</div>
+      {{end}}
+      {{block "content" .}}{{end}}
+    </div>
+    </div>
+  </div>
+  
+  <style>
+    [data-embed="1"] .header { display:none; }
+    [data-embed="1"] .container { margin:0; max-width:100%; border-radius:0; box-shadow:none; padding:1rem; }
+  .header { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+    /* Grid layout for wide screens: 15% blank / 60% content / 15% blank. Remaining 10% effectively unused for visual balance */
+    .layout-frame { width:100%; }
+    @media (min-width: 1100px) {
+      body:not([data-embed="1"]) .layout-frame { display:grid; grid-template-columns:15% 60% 15%; }
+      body:not([data-embed="1"]) .layout-frame > .header { grid-column:2; }
+      body:not([data-embed="1"]) .layout-frame > .main-band { grid-column:2; }
+    }
+    @media (max-width: 1099px) {
+      body:not([data-embed="1"]) .layout-frame { display:block; }
+    }
+  </style>
+  {{if .Debug}}
+  <script>
+  (function(){
+    const pre = document.getElementById('debug-config');
+    if(!pre) return;
+    const step = document.querySelector('.container')?.getAttribute('data-step')||'';
+    // Only poll during install steps; dashboard shows final applied config already.
+    if(step === 'dashboard') return;
+    async function tick(){
+      try {
+        const r = await fetch('/install/draft.json',{cache:'no-store'});
+        if(r.ok){
+          const txt = await r.text();
+          // Avoid thrash: update only if changed
+          if(pre.textContent !== txt){ pre.textContent = txt; }
+        }
+      } catch(e) { /* ignore */ }
+  setTimeout(tick, 700);
+    }
+    tick();
+  })();
+  // Global field error highlighter (runs after content scripts)
+  (function highlightErrors(){
+    try {
+      const errLis = document.querySelectorAll('[data-err-field]');
+      if(!errLis.length) return;
+      let firstFieldPath = null;
+      errLis.forEach(li=>{
+        const fp = li.getAttribute('data-err-field');
+        if(!fp) return;
+        const el = document.querySelector('[data-field="'+fp+'"]');
+        if(el){
+          el.classList.add('err-field');
+          if(!firstFieldPath){ firstFieldPath = fp; }
+          if(el.type === 'radio'){
+            const lbl = el.closest('label');
+            if(lbl) lbl.classList.add('err-focus-outline');
+          }
+        }
+      });
+      if(firstFieldPath){
+        const firstEl = document.querySelector('[data-field="'+firstFieldPath+'"]');
+        if(firstEl){ try{ firstEl.focus({preventScroll:false}); firstEl.scrollIntoView({block:'center'});}catch(e){} }
+      }
+    } catch(e){}
+  })();
+  </script>
+  <script>
+  // Session conflict detection for AJAX POSTs (intercepts fetch) and shows banner
+  (function(){
+    const banner = document.getElementById('session-conflict-banner');
+    if(!banner) return;
+    const origFetch = window.fetch;
+    function showBanner(msg){
+      banner.textContent = msg; banner.style.display = 'block';
+    }
+    window.fetch = async function(input, init){
+      init = init || {}; init.headers = init.headers || {};
+      if(window.KHEDRA_SESSION){ init.headers['X-Khedra-Session'] = window.KHEDRA_SESSION; }
+      const resp = await origFetch(input, init);
+      if(resp.status === 409){
+        try { const data = await resp.clone().json(); if(data && data.error === 'session_conflict'){ showBanner('Another active session is editing this install. Wait for inactivity or reload later.'); } else if(data && data.error === 'session_required'){ showBanner('Session token missing. Reload page.'); } } catch(e){ showBanner('Session conflict detected.'); }
+      } else if(resp.headers.get('X-Khedra-Session-Takeover') === '1') {
+        showBanner('You have taken over an inactive session. Continue carefully.');
+        setTimeout(()=>{ banner.style.display='none'; }, 6000);
+      }
+      return resp;
+    };
+  })();
+  </script>
+  {{end}}
+  <script>
+  // Debug panel toggle (persists via existing cookie) lives inside the nav-row
+  (function(){
+    const btn = document.getElementById('toggle-debug');
+    if(!btn) return;
+    btn.addEventListener('click', ()=>{
+      // With reversed symbols: when panel is open we show '>>'; when closed we show '<<'
+      const isOpen = btn.textContent.trim() === '>>';
+      const url = new URL(window.location.href);
+      // If currently open, clicking will close (debug=0); if closed, clicking will open (debug=1)
+      url.searchParams.set('debug', isOpen ? '0' : '1');
+      window.location = url.toString();
+    });
+  })();
+  // Global Enter-to-advance for wizard steps
+  (function(){
+    const container = document.querySelector('.container');
+    if(!container) return;
+    const step = container.getAttribute('data-step');
+    function findAdvanceForm(){
+      // First POST form inside container (wizard pages all use one)
+      const form = container.querySelector('form[method="POST"]');
+      if(!form) return null;
+      const submitBtn = form.querySelector('button[type="submit"],input[type="submit"]');
+      if(submitBtn && submitBtn.disabled) return null;
+      return form;
+    }
+    document.addEventListener('keydown', function(e){
+      if(e.key !== 'Enter' || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      const target = e.target;
+      const tag = target.tagName;
+      if(tag === 'TEXTAREA') return; // allow multiline inputs
+      // On chains step, defer to probe handler when in RPC input
+      if(step === 'chains' && target.id === 'rpcInput') return; 
+      // Avoid triggering while a button already focused (browser default fine)
+      if(tag === 'BUTTON') return;
+      const form = findAdvanceForm();
+      if(!form) return;
+      // Prevent accidental submits when user is editing plain text inputs that already auto-submit on Enter
+      // (We still intercept to ensure radios / checkboxes pages advance.)
+      e.preventDefault();
+      if(form.requestSubmit) form.requestSubmit(); else form.submit();
+    });
+  })();
+  </script>
+</body>
+</html>

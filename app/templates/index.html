@@ -1,0 +1,80 @@
+{{define "navright"}}
+  <a class="nav-btn" href="/install/paths" aria-label="Back">Back</a>
+  <button class="nav-btn" form="indexForm" type="submit">Next</button>
+{{end}}
+{{ define "content" }}
+<h2>Index Acquisition</h2>
+<p>Select how you'd like to obtain the Unchained Index for Mainnet.</p>
+{{ if .Errors }}<div role="alert" class="err-banner">
+  <strong>Issues:</strong>
+  <ul>
+    {{ range .Errors }}<li data-err-field="{{ .Field }}">{{ .Message }}</li>{{ end }}
+  </ul>
+</div>{{ end }}
+<form id="indexForm" method="POST" action="/install/index" style="margin-top:1em;">
+  <input type="hidden" name="session" value="{{ .SessionID }}" />
+  <fieldset style="border:1px solid #ddd; padding:1em; margin-bottom:1em;">
+    <legend style="padding:0 6px;">Strategy</legend>
+  <label><input data-field="general.strategy" type="radio" name="strategy" value="download" {{ if eq .Strategy "download" }}checked{{ end }}> Download snapshots (fastest start, bandwidth use)</label><br>
+  <label><input data-field="general.strategy" type="radio" name="strategy" value="scratch" {{ if eq .Strategy "scratch" }}checked{{ end }}> Build locally (slow initial build, lowest external trust)</label>
+  </fieldset>
+  <fieldset style="border:1px solid #ddd; padding:1em; margin-bottom:1em;">
+    <legend style="padding:0 6px; display:flex; align-items:center; gap:.5rem;">Detail <span id="detail-note" style="display:none;font-size:.65em;color:#c30;font-weight:600;">Building locally requires full index; Bloom-only not available.</span></legend>
+  <label><input id="detail-index" data-field="general.detail" type="radio" name="detail" value="index" {{ if eq .Detail "index" }}checked{{ end }}> Index + Bloom filters (faster history, more disk space, slower download)</label><br>
+  <label><input id="detail-bloom" data-field="general.detail" type="radio" name="detail" value="bloom" {{ if eq .Detail "bloom" }}checked{{ end }}> Bloom filters only (slower history, less disk space, faster download)</label>
+  </fieldset>
+  <div style="background:#f4f4f4; padding:0.75em; border-radius:6px; font-size:0.9em; margin-bottom:1em;">
+    <strong>Estimated requirements</strong> (rough):<br>
+    Disk: ~<span id="est-disk">{{ .Disk }}</span> GB<br>
+    Time to usable index: ~<span id="est-hours">{{ .Hours }}</span> hour<span id="est-hours-plural">{{ if ne .Hours 1 }}s{{ end }}</span>
+  </div>
+  <p style="font-size:0.75em;color:#666;">Estimates vary by hardware / network speed. You can change strategy later.</p>
+  <script>
+    (function(){
+      const form = document.currentScript.closest('form');
+      if(!form) return;
+      const radios = form.querySelectorAll('input[type=radio][name=strategy], input[type=radio][name=detail]');
+      let inflight = null;
+      function update(){
+        const fd = new FormData(form);
+        const strategy = fd.get('strategy');
+        // Enforce 'index' detail when strategy is 'scratch'
+        const detailIndex = form.querySelector('#detail-index');
+        const detailBloom = form.querySelector('#detail-bloom');
+        const note = document.getElementById('detail-note');
+        let detail = fd.get('detail');
+        if(strategy === 'scratch') {
+          // Force selection to index
+            if(detailBloom) { detailBloom.checked = false; detailBloom.disabled = true; detailBloom.parentElement.style.opacity = '.5'; }
+            if(detailIndex) { detailIndex.checked = true; detailIndex.disabled = false; detailIndex.parentElement.style.opacity = '1'; detail = 'index'; }
+            if(note) note.style.display = 'inline';
+        } else {
+            if(detailBloom) { detailBloom.disabled = false; detailBloom.parentElement.style.opacity = '1'; }
+            if(note) note.style.display = 'none';
+        }
+        const body = new URLSearchParams();
+        body.set('strategy', strategy);
+        body.set('detail', detail);
+        if(inflight) inflight.abort();
+        inflight = new AbortController();
+  fetch('/install/index/live', {method:'POST', body, signal: inflight.signal, headers:{'X-Khedra-Session': (window.KHEDRA_SESSION||'')}})
+          .then(r => r.ok ? r.json() : null)
+          .then(j => { if(!j||!j.ok) return; 
+            const d = document.getElementById('est-disk');
+            const h = document.getElementById('est-hours');
+            const hp = document.getElementById('est-hours-plural');
+            if(d) d.textContent = j.disk;
+            if(h) h.textContent = j.hours;
+            if(hp) hp.textContent = (j.hours === 1 ? '' : 's');
+          })
+          .catch(()=>{});
+      }
+  radios.forEach(r => r.addEventListener('change', update));
+  // Initial application of rule and estimates
+  update();
+    })();
+  </script>
+<!-- field focus handled globally -->
+</form>
+<nav style="display:none;"></nav>
+{{ end }}

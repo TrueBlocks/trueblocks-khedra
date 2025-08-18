@@ -1,0 +1,12 @@
+{{define "navright"}}
+  <button class="nav-btn" form="welcomeForm" type="submit" aria-label="Next" style="display:none;">Next</button>
+{{end}}
+{{define "content"}}
+<h2>Welcome to Khedra Setup</h2>
+<p>This wizard will guide you through configuring your local Khedra installation. All processing is local; nothing leaves your machine.</p>
+{{ if eq .Reset "1" }}<p style="background:#eef;border-left:4px solid #0d3b66;padding:.5rem .75rem;font-size:.85em;">Previous setup cleared. Starting fresh.</p>{{ end }}
+<form id="welcomeForm" method="POST" action="/install/welcome" style="margin-top:1.5rem;">
+  <input type="hidden" name="session" value="{{ .SessionID }}" />
+  <button class="begin-wizard-btn" type="submit">Begin Wizard</button>
+</form>
+{{end}}

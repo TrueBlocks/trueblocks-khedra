@@ -3,7 +3,7 @@ package app
 import (
 	"fmt"
 
-	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
+	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/install"
 	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
 )
 
@@ -33,8 +33,7 @@ func LoadConfig() (types.Config, error) {
 }
 
 func (k *KhedraApp) loadConfigIfInitialized() error {
-	fn := types.GetConfigFnNoCreate()
-	if !coreFile.FileExists(fn) {
+	if !install.Configured() {
 		return fmt.Errorf("not initialized you must run `khedra init` first")
 	}
 

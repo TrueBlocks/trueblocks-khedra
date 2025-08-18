@@ -4,37 +4,44 @@
 
 Khedra is TrueBlocks' service management system that provides specialized blockchain data indexing, monitoring, and serving capabilities. It operates as a collection of microservices managed through a unified CLI and REST API interface.
 
-## Key Features
+## Prerequisites
 
-- **Blockchain Indexing**: High-performance scraping and indexing of Ethereum transaction data
-- **Address Monitoring**: Real-time monitoring of specific Ethereum addresses
-- **REST API**: HTTP interface for querying indexed data
-- **Service Management**: Runtime control over individual services (pause/unpause)
-- **Multi-Chain Support**: Configurable support for various Ethereum-compatible networks
-- **IPFS Integration**: Distributed data sharing capabilities
+Before installing or running Khedra, you must have [chifra](https://github.com/TrueBlocks/trueblocks-core) (command line tools) installed and running.
+
+```bash
+git clone --depth 1 --no-single-branch --recurse-submodules --branch develop https://github.com/TrueBlocks/trueblocks-core
+cd trueblocks-core
+mkdir build && cd build
+../scripts/go-work-sync.sh
+cmake ../src
+make -j 4
+```
+
+Add `./bin` to your `$PATH`.
+
+`Khedra` will not run without `chifra` being installed and working. You'll know `chifra` is working when you can run this command without error:
+
+```
+chifra status
+```
+
+You will have to provide a valid "mainnet" RPC endpoint (preferrably locally run).
+
+See the [chifra book](https://chifra.trueblocks.io) for more information.
 
 ## Quick Start
 
-### Prerequisites
-
-- [TrueBlocks Core](https://github.com/TrueBlocks/trueblocks-core) installed
-- Go 1.23+ for building from source (Go Version)
-- Running Ethereum node (Erigon, Geth, etc.) or RPC endpoint access
-
-### Installation
+To initialize and start khedra (assumes $PATH is updated):
 
 ```bash
-# Clone and build
-git clone https://github.com/TrueBlocks/trueblocks-core.git
-cd trueblocks-core
-make
-
 # Initialize configuration
-./bin/khedra init
+khedra init # runs a web-based Wizard to configure khedra
 
 # Start services
-./bin/khedra daemon
+khedra daemon # runs the daemon to index/monitor chains (requires `init`)
 ```
+
+> **Note:** If you run `khedra daemon` before initialization, you will be guided to open the browser-based setup wizard at `http://localhost:<control_port>`. Follow the instructions in your terminal to complete setup in your browser before services will start.
 
 ## Usage
 
@@ -87,6 +94,23 @@ curl -X POST "http://localhost:8338/unpause?name=scraper"
 curl -X POST "http://localhost:8338/pause?name=all"
 ```
 
+### Control Service Discovery
+
+The daemon writes a small metadata file `control.json` containing `{schema,pid,port,version,started}` under `~/.khedra/run/` (override with `KHEDRA_RUN_DIR`).
+
+`GET /control/info` returns:
+
+```json
+{
+  "ok": true,
+  "metadata": {"schema":1,"pid":12345,"port":8338,"version":"vX.Y.Z","started":"2025-01-01T12:00:00Z"},
+  "regenerated": false,
+  "runtime": {"paused": {"scraper": false, "monitor": true}, "schema":1}
+}
+```
+
+If the stored PID no longer corresponds to a running process, the file is regenerated transparently and `regenerated` is `true` in that first response.
+
 ## Configuration
 
 Khedra uses YAML configuration managed through the `init` wizard or direct editing.
@@ -111,8 +135,8 @@ Khedra consists of five core services:
 1. **Scraper**: Indexes blockchain transactions and builds the Unchained Index
 2. **Monitor**: Tracks specific addresses and detects relevant transactions
 3. **API**: Provides REST endpoints for querying indexed data
-4. **Control**: HTTP interface for service management (pause/unpause)
-5. **IPFS**: Distributed data sharing and chunk distribution
+4. **IPFS**: Distributed data sharing and chunk distribution
+5. **Control**: HTTP interface for service management (pause/unpause)
 
 Services communicate through shared data structures and can be independently controlled.
 

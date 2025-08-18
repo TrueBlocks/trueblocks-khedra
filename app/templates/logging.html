@@ -1,0 +1,74 @@
+{{define "navright"}}
+  <a class="nav-btn" href="/install/services" aria-label="Back">Back</a>
+  <button class="nav-btn" form="loggingForm" type="submit">Next</button>
+{{end}}
+{{ define "content" }}
+<h2>Logging</h2>
+<p>Configure logging verbosity and (optional) file output.</p>
+{{ if .Errors }}<div role="alert" class="err-banner">
+  <strong>Issues:</strong>
+  <ul>
+    {{ range .Errors }}<li data-err-field="{{ .Field }}">{{ .Message }}</li>{{ end }}
+  </ul>
+</div>{{ end }}
+<form id="loggingForm" method="POST" action="/install/logging" style="display:grid; gap:1rem; max-width:520px;">
+  <input type="hidden" name="session" value="{{ .SessionID }}" />
+  <label>Level
+  <select data-field="logging.level" name="level" aria-label="Log level">
+      {{ $lvl := .Level }}
+      <option value="debug" {{ if eq $lvl "debug" }}selected{{ end }}>debug</option>
+      <option value="info"  {{ if eq $lvl "info" }}selected{{ end }}>info</option>
+      <option value="warn"  {{ if eq $lvl "warn" }}selected{{ end }}>warn</option>
+      <option value="error" {{ if eq $lvl "error" }}selected{{ end }}>error</option>
+    </select>
+  </label>
+  <fieldset style="border:1px solid #ccc; padding:0.75rem;">
+    <legend>File Output (optional)</legend>
+    <label style="display:block; margin-bottom:0.5rem;">
+      <input type="checkbox" name="toFile" value="1" {{ if .ToFile }}checked{{ end }} /> Enable file logging
+    </label>
+    <div style="display:grid; gap:0.5rem; grid-template-columns:1fr 1fr;">
+      <label style="display:flex; flex-direction:column; font-size:0.9rem;">Folder
+  <input data-field="logging.folder" type="text" name="folder" value="{{ .Folder }}" placeholder="/path/to/logs" />
+      </label>
+      <label style="display:flex; flex-direction:column; font-size:0.9rem;">Filename
+  <input data-field="logging.filename" type="text" name="filename" value="{{ .Filename }}" placeholder="khedra.log" />
+      </label>
+      <label style="display:flex; flex-direction:column; font-size:0.9rem;">Max Size (MB)
+        <input type="number" name="maxSize" min="5" value="{{ .MaxSize }}" />
+      </label>
+      <label style="display:flex; flex-direction:column; font-size:0.9rem;">Max Backups
+        <input type="number" name="maxBackups" min="1" value="{{ .MaxBackups }}" />
+      </label>
+      <label style="display:flex; flex-direction:column; font-size:0.9rem;">Max Age (days)
+        <input type="number" name="maxAge" min="1" value="{{ .MaxAge }}" />
+      </label>
+      <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.9rem; margin-top:0.9rem;">
+        <input type="checkbox" name="compress" value="1" {{ if .Compress }}checked{{ end }} /> Compress
+      </label>
+    </div>
+  </fieldset>
+  <!-- per-field error highlighting handled globally -->
+</form>
+<!-- field focus handled globally -->
+<script>
+(function(){
+  const form = document.currentScript.previousElementSibling;
+  if(!form || form.tagName !== 'FORM') return;
+  let timer=null, inflight=null;
+  function push(){
+    if(inflight){ inflight.abort(); }
+    const fd = new FormData(form);
+    const body = new URLSearchParams();
+    ['level','folder','filename','maxSize','maxBackups','maxAge'].forEach(k=>{ if(fd.get(k)!==null) body.set(k, fd.get(k)); });
+    if(fd.get('compress')==='1' || form.querySelector('input[name=compress]')?.checked) body.set('compress','1');
+    if(fd.get('toFile')==='1' || form.querySelector('input[name=toFile]')?.checked) body.set('toFile','1');
+    inflight = new AbortController();
+  fetch('/install/logging/live',{method:'POST',body,signal:inflight.signal,headers:{'X-Khedra-Session':(window.KHEDRA_SESSION||'')}}).catch(()=>{});
+  }
+  function schedule(){ if(timer) clearTimeout(timer); timer = setTimeout(push, 300); }
+  form.addEventListener('change', schedule);
+  form.addEventListener('input', schedule);
+})();
+</script>
+{{ end }}

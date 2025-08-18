@@ -1,166 +1,153 @@
 package app
 
-import (
-	"fmt"
-	"sort"
-	"strings"
+// // screen|---------|---------|---------|---------|---------|---------|---|74
+// func getSummaryScreen() wizard.Screen {
+// 	sTitle := `Configuration Summary`
+// 	sSubtitle := ``
+// 	sInstructions := `Review your configuration and press enter to finish.`
+// 	sBody := `
+// Please review your configuration settings. If everything looks correct,
+// press enter to save your configuration and exit the wizard.
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
-	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/boxes"
-	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
-	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/wizard"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
-)
+// If you need to make changes, use "b" or "back" to return to previous screens.
+// `
+// 	sReplacements := []wizard.Replacement{
+// 		{Color: colors.Yellow, Values: []string{sTitle}},
+// 		{Color: colors.Green, Values: []string{
+// 			"\"b\"", "\"back\"",
+// 		}},
+// 	}
+// 	sQuestions := []wizard.Questioner{&sum0}
+// 	sStyle := wizard.NewStyle()
 
-// screen|---------|---------|---------|---------|---------|---------|---|74
-func getSummaryScreen() wizard.Screen {
-	sTitle := `Configuration Summary`
-	sSubtitle := ``
-	sInstructions := `Review your configuration and press enter to finish.`
-	sBody := `
-Please review your configuration settings. If everything looks correct,
-press enter to save your configuration and exit the wizard.
+// 	return wizard.Screen{
+// 		Title:        sTitle,
+// 		Subtitle:     sSubtitle,
+// 		Body:         sBody,
+// 		Instructions: sInstructions,
+// 		Replacements: sReplacements,
+// 		Questions:    sQuestions,
+// 		Style:        sStyle,
+// 	}
+// }
 
-If you need to make changes, use "b" or "back" to return to previous screens.
-`
-	sReplacements := []wizard.Replacement{
-		{Color: colors.Yellow, Values: []string{sTitle}},
-		{Color: colors.Green, Values: []string{
-			"\"b\"", "\"back\"",
-		}},
-	}
-	sQuestions := []wizard.Questioner{&sum0}
-	sStyle := wizard.NewStyle()
+// // --------------------------------------------------------
+// var sum0 = wizard.Question{
+// 	//.....question-|---------|---------|---------|---------|---------|----|65
+// 	Question: `Press Enter to save your configuration, or "b" to go back.`,
+// 	Hint:     `Configuration preview is shown above.`,
+// 	PrepareFn: func(input string, q *wizard.Question) (string, error) {
+// 		_ = input // delint
+// 		cfg, ok := q.Screen.Wizard.Backing.(*types.Config)
+// 		if !ok {
+// 			return "", fmt.Errorf("could not cast backing data")
+// 		}
 
-	return wizard.Screen{
-		Title:        sTitle,
-		Subtitle:     sSubtitle,
-		Body:         sBody,
-		Instructions: sInstructions,
-		Replacements: sReplacements,
-		Questions:    sQuestions,
-		Style:        sStyle,
-	}
-}
+// 		// Display configuration preview
+// 		displayConfigPreview(cfg, q)
 
-// --------------------------------------------------------
-var sum0 = wizard.Question{
-	//.....question-|---------|---------|---------|---------|---------|----|65
-	Question: `Press Enter to save your configuration, or "b" to go back.`,
-	Hint:     `Configuration preview is shown above.`,
-	PrepareFn: func(input string, q *wizard.Question) (string, error) {
-		_ = input // delint
-		cfg, ok := q.Screen.Wizard.Backing.(*types.Config)
-		if !ok {
-			return "", fmt.Errorf("could not cast backing data")
-		}
+// 		return "", nil
+// 	},
+// 	Validate: func(input string, q *wizard.Question) (string, error) {
+// 		// Only accept empty input or "b"/"back" otherwise
+// 		if input != "" && input != "b" && input != "back" {
+// 			return input, fmt.Errorf(`press Enter to continue or "b" to go back %w`, wizard.ErrValidate)
+// 		}
 
-		// Display configuration preview
-		displayConfigPreview(cfg, q)
+// 		// Write the configuration to file when the user confirms
+// 		if input == "" {
+// 			cfg, ok := q.Screen.Wizard.Backing.(*types.Config)
+// 			if !ok {
+// 				return input, fmt.Errorf("could not access configuration %w", wizard.ErrValidate)
+// 			}
 
-		return "", nil
-	},
-	Validate: func(input string, q *wizard.Question) (string, error) {
-		// Only accept empty input or "b"/"back" otherwise
-		if input != "" && input != "b" && input != "back" {
-			return input, fmt.Errorf(`press Enter to continue or "b" to go back %w`, wizard.ErrValidate)
-		}
+// 			if err := cfg.WriteToFile(types.GetConfigFn()); err != nil {
+// 				return input, fmt.Errorf("failed to save configuration: %s %w", err.Error(), wizard.ErrValidate)
+// 			}
 
-		// Write the configuration to file when the user confirms
-		if input == "" {
-			cfg, ok := q.Screen.Wizard.Backing.(*types.Config)
-			if !ok {
-				return input, fmt.Errorf("could not access configuration %w", wizard.ErrValidate)
-			}
+// 			return input, validOk("Configuration saved successfully", "")
+// 		}
 
-			if err := cfg.WriteToFile(types.GetConfigFn()); err != nil {
-				return input, fmt.Errorf("failed to save configuration: %s %w", err.Error(), wizard.ErrValidate)
-			}
+// 		return input, nil
+// 	},
+// }
 
-			return input, validOk("Configuration saved successfully", "")
-		}
+// // displayConfigPreview shows a preview of the configuration
+// func displayConfigPreview(cfg *types.Config, q *wizard.Question) {
+// 	preview := strings.Builder{}
 
-		return input, nil
-	},
-}
+// 	// Add header
+// 	preview.WriteString(colors.Yellow + "🔍 Configuration Preview:" + colors.Off + "\n\n")
 
-// displayConfigPreview shows a preview of the configuration
-func displayConfigPreview(cfg *types.Config, q *wizard.Question) {
-	preview := strings.Builder{}
+// 	// General section
+// 	preview.WriteString(colors.BrightBlue + "📂 General Settings:" + colors.Off + "\n")
+// 	preview.WriteString(fmt.Sprintf("  Data Folder: %s\n", cfg.General.DataFolder))
+// 	preview.WriteString(fmt.Sprintf("  Strategy: %s\n", cfg.General.Strategy))
+// 	preview.WriteString(fmt.Sprintf("  Detail: %s\n\n", cfg.General.Detail))
 
-	// Add header
-	preview.WriteString(colors.Yellow + "🔍 Configuration Preview:" + colors.Off + "\n\n")
+// 	// Services section
+// 	preview.WriteString(colors.BrightBlue + "🔧 Services:" + colors.Off + "\n")
+// 	titleCase := cases.Title(language.English)
+// 	for name, service := range cfg.Services {
+// 		status := "Disabled"
+// 		if service.Enabled {
+// 			status = fmt.Sprintf("Enabled (Port: %d)", service.Port)
+// 		}
+// 		preview.WriteString(fmt.Sprintf("  %s: %s\n", titleCase.String(name), status))
+// 	}
+// 	preview.WriteString("\n")
 
-	// General section
-	preview.WriteString(colors.BrightBlue + "📂 General Settings:" + colors.Off + "\n")
-	preview.WriteString(fmt.Sprintf("  Data Folder: %s\n", cfg.General.DataFolder))
-	preview.WriteString(fmt.Sprintf("  Strategy: %s\n", cfg.General.Strategy))
-	preview.WriteString(fmt.Sprintf("  Detail: %s\n\n", cfg.General.Detail))
+// 	// Chains section
+// 	preview.WriteString(colors.BrightBlue + "⛓️ Chains:" + colors.Off + "\n")
 
-	// Services section
-	preview.WriteString(colors.BrightBlue + "🔧 Services:" + colors.Off + "\n")
-	titleCase := cases.Title(language.English)
-	for name, service := range cfg.Services {
-		status := "Disabled"
-		if service.Enabled {
-			status = fmt.Sprintf("Enabled (Port: %d)", service.Port)
-		}
-		preview.WriteString(fmt.Sprintf("  %s: %s\n", titleCase.String(name), status))
-	}
-	preview.WriteString("\n")
+// 	// Sort chains for consistent display
+// 	var chainNames = []string{}
+// 	for name := range cfg.Chains {
+// 		chainNames = append(chainNames, name)
+// 	}
+// 	sort.Strings(chainNames)
 
-	// Chains section
-	preview.WriteString(colors.BrightBlue + "⛓️ Chains:" + colors.Off + "\n")
+// 	for _, name := range chainNames {
+// 		chain := cfg.Chains[name]
+// 		status := "Disabled"
+// 		if chain.Enabled {
+// 			status = "Enabled"
+// 		}
 
-	// Sort chains for consistent display
-	var chainNames = []string{}
-	for name := range cfg.Chains {
-		chainNames = append(chainNames, name)
-	}
-	sort.Strings(chainNames)
+// 		preview.WriteString(fmt.Sprintf("  %s (%s):\n", titleCase.String(name), status))
+// 		for i, rpc := range chain.RPCs {
+// 			preview.WriteString(fmt.Sprintf("    RPC #%d: %s\n", i+1, rpc))
+// 		}
+// 	}
+// 	preview.WriteString("\n")
 
-	for _, name := range chainNames {
-		chain := cfg.Chains[name]
-		status := "Disabled"
-		if chain.Enabled {
-			status = "Enabled"
-		}
+// 	// Logging section
+// 	preview.WriteString(colors.BrightBlue + "📝 Logging:" + colors.Off + "\n")
+// 	preview.WriteString(fmt.Sprintf("  Log to File: %t\n", cfg.Logging.ToFile))
+// 	preview.WriteString(fmt.Sprintf("  Log Folder: %s\n", cfg.Logging.Folder))
+// 	preview.WriteString(fmt.Sprintf("  Log Level: %s\n", cfg.Logging.Level))
 
-		preview.WriteString(fmt.Sprintf("  %s (%s):\n", titleCase.String(name), status))
-		for i, rpc := range chain.RPCs {
-			preview.WriteString(fmt.Sprintf("    RPC #%d: %s\n", i+1, rpc))
-		}
-	}
-	preview.WriteString("\n")
+// 	// Create a box for the preview
+// 	style := boxes.NewStyle()
+// 	style.Width = 75
+// 	style.Justify = boxes.Left
+// 	style.BorderStyle = boxes.BorderStyle{
+// 		TopLeft:     "┌",
+// 		Top:         "─",
+// 		TopRight:    "┐",
+// 		Right:       "│",
+// 		BottomRight: "┘",
+// 		Bottom:      "─",
+// 		BottomLeft:  "└",
+// 		Left:        "│",
+// 	}
 
-	// Logging section
-	preview.WriteString(colors.BrightBlue + "📝 Logging:" + colors.Off + "\n")
-	preview.WriteString(fmt.Sprintf("  Log to File: %t\n", cfg.Logging.ToFile))
-	preview.WriteString(fmt.Sprintf("  Log Folder: %s\n", cfg.Logging.Folder))
-	preview.WriteString(fmt.Sprintf("  Log Level: %s\n", cfg.Logging.Level))
+// 	// Print the preview
+// 	fmt.Println()
+// 	box := boxes.NewBox("", preview.String(), style)
+// 	box.Display()
+// 	fmt.Println()
 
-	// Create a box for the preview
-	style := boxes.NewStyle()
-	style.Width = 75
-	style.Justify = boxes.Left
-	style.BorderStyle = boxes.BorderStyle{
-		TopLeft:     "┌",
-		Top:         "─",
-		TopRight:    "┐",
-		Right:       "│",
-		BottomRight: "┘",
-		Bottom:      "─",
-		BottomLeft:  "└",
-		Left:        "│",
-	}
-
-	// Print the preview
-	fmt.Println()
-	box := boxes.NewBox("", preview.String(), style)
-	box.Display()
-	fmt.Println()
-
-	// Adapt the question based on configuration validity
-	q.Hint = "Review the preview above and press Enter to save your configuration."
-}
+// 	// Adapt the question based on configuration validity
+// 	q.Hint = "Review the preview above and press Enter to save your configuration."
+// }
