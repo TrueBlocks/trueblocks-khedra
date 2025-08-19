@@ -12,11 +12,11 @@ trim_trailing_whitespace = true
 indent_style = tab
 indent_size = 4
 
-[*.html.tmpl]
+[*.html]
 indent_size = 2
 
 # Go template files in app/templates/ contain mixed syntax
-[app/templates/*.html.tmpl]
+[app/templates/*.html]
 # Disable certain validation for template files
 insert_final_newline = true
 trim_trailing_whitespace = true

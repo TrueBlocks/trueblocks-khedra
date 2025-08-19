@@ -713,7 +713,7 @@ func (k *KhedraApp) addHandlers() error {
 			}
 
 			serveStep := func(stepIdx int, tmplName string, data map[string]any) {
-				files := []string{"templates/base.html.tmpl", "templates/progress.html.tmpl", "templates/" + tmplName}
+				files := []string{"templates/base.html", "templates/progress.html", "templates/" + tmplName}
 				tmpl, err := loadTemplates(files...)
 				if err != nil {
 					k.logger.Error("template parse failed", "err", err, "tmpl", tmplName)
@@ -755,7 +755,7 @@ func (k *KhedraApp) addHandlers() error {
 					data["StepName"] = "dashboard"
 				}
 				w.Header().Set("Content-Type", "text/html; charset=utf-8")
-				_ = tmpl.ExecuteTemplate(w, "base.html.tmpl", data)
+				_ = tmpl.ExecuteTemplate(w, "base.html", data)
 			}
 
 			// Extract posted session (if any) prior to handling specific steps for POST requests.
@@ -842,7 +842,7 @@ func (k *KhedraApp) addHandlers() error {
 					return
 				}
 				k.logger.Info("welcome view", "remote", r.RemoteAddr, "ua", r.UserAgent())
-				serveStep(0, "welcome.html.tmpl", map[string]any{"Reset": r.URL.Query().Get("reset")})
+				serveStep(0, "welcome.html", map[string]any{"Reset": r.URL.Query().Get("reset")})
 				return
 			}
 
@@ -851,7 +851,7 @@ func (k *KhedraApp) addHandlers() error {
 			if r.URL.Path == "/install/paths" {
 				if r.Method == http.MethodPost {
 					if err := r.ParseForm(); err != nil {
-						serveStep(1, "paths.html.tmpl", map[string]any{"Errors": []install.FieldError{{Field: "general.dataFolder", Code: "bad_form", Message: "Invalid form submission"}}})
+						serveStep(1, "paths.html", map[string]any{"Errors": []install.FieldError{{Field: "general.dataFolder", Code: "bad_form", Message: "Invalid form submission"}}})
 						return
 					}
 					df := strings.TrimSpace(r.FormValue("dataFolder"))
@@ -865,7 +865,7 @@ func (k *KhedraApp) addHandlers() error {
 					}
 					ferrs := install.ValidateDraftPhase(draft, "step:paths")
 					if len(ferrs) > 0 {
-						serveStep(1, "paths.html.tmpl", map[string]any{"DataFolder": draft.Config.General.DataFolder, "Errors": ferrs})
+						serveStep(1, "paths.html", map[string]any{"DataFolder": draft.Config.General.DataFolder, "Errors": ferrs})
 						return
 					}
 					http.Redirect(w, r, buildURL("/install/chains"), http.StatusSeeOther)
@@ -876,7 +876,7 @@ func (k *KhedraApp) addHandlers() error {
 				if draft != nil {
 					df = draft.Config.General.DataFolder
 				}
-				serveStep(1, "paths.html.tmpl", map[string]any{"DataFolder": df})
+				serveStep(1, "paths.html", map[string]any{"DataFolder": df})
 				return
 			}
 
@@ -885,7 +885,7 @@ func (k *KhedraApp) addHandlers() error {
 			if r.URL.Path == "/install/index" {
 				if r.Method == http.MethodPost {
 					if err := r.ParseForm(); err != nil {
-						serveStep(3, "index.html.tmpl", map[string]any{"Errors": []install.FieldError{{Field: "general.strategy", Code: "bad_form", Message: "Invalid form submission"}}})
+						serveStep(3, "index.html", map[string]any{"Errors": []install.FieldError{{Field: "general.strategy", Code: "bad_form", Message: "Invalid form submission"}}})
 						return
 					}
 					strategy := r.FormValue("strategy")
@@ -909,7 +909,7 @@ func (k *KhedraApp) addHandlers() error {
 					}
 					ferrs := install.ValidateDraftPhase(draft, "step:index")
 					if len(ferrs) > 0 {
-						serveStep(3, "index.html.tmpl", map[string]any{"Strategy": strategy, "Detail": detail, "Disk": draft.Meta.EstDiskGB, "Hours": draft.Meta.EstHours, "Errors": ferrs})
+						serveStep(3, "index.html", map[string]any{"Strategy": strategy, "Detail": detail, "Disk": draft.Meta.EstDiskGB, "Hours": draft.Meta.EstHours, "Errors": ferrs})
 						return
 					}
 					http.Redirect(w, r, buildURL("/install/services"), http.StatusSeeOther)
@@ -932,7 +932,7 @@ func (k *KhedraApp) addHandlers() error {
 				} else {
 					disk, hours = install.EstimateIndex(strat, detail)
 				}
-				serveStep(3, "index.html.tmpl", map[string]any{"Strategy": strat, "Detail": detail, "Disk": disk, "Hours": hours})
+				serveStep(3, "index.html", map[string]any{"Strategy": strat, "Detail": detail, "Disk": disk, "Hours": hours})
 				return
 			}
 
@@ -941,7 +941,7 @@ func (k *KhedraApp) addHandlers() error {
 			if r.URL.Path == "/install/chains" {
 				if r.Method == http.MethodPost {
 					if err := r.ParseForm(); err != nil {
-						serveStep(2, "chains.html.tmpl", map[string]any{"Errors": []install.FieldError{{Field: "chains.mainnet.rpc", Code: "bad_form", Message: "Invalid form submission"}}})
+						serveStep(2, "chains.html", map[string]any{"Errors": []install.FieldError{{Field: "chains.mainnet.rpc", Code: "bad_form", Message: "Invalid form submission"}}})
 						return
 					}
 					action := r.FormValue("action")
@@ -1050,7 +1050,7 @@ func (k *KhedraApp) addHandlers() error {
 					orderedWithStatus = append(orderedWithStatus, chainWithStatus)
 				}
 				// No validation on entry - allow users to fix invalid RPCs
-				serveStep(2, "chains.html.tmpl", map[string]any{"Chains": orderedWithStatus, "Addable": addable, "Errors": []install.FieldError{}})
+				serveStep(2, "chains.html", map[string]any{"Chains": orderedWithStatus, "Addable": addable, "Errors": []install.FieldError{}})
 				return
 			}
 
@@ -1059,7 +1059,7 @@ func (k *KhedraApp) addHandlers() error {
 			if r.URL.Path == "/install/services" {
 				if r.Method == http.MethodPost {
 					if err := r.ParseForm(); err != nil {
-						serveStep(4, "services.html.tmpl", map[string]any{"Errors": []install.FieldError{{Field: "services", Code: "bad_form", Message: "Invalid form submission"}}})
+						serveStep(4, "services.html", map[string]any{"Errors": []install.FieldError{{Field: "services", Code: "bad_form", Message: "Invalid form submission"}}})
 						return
 					}
 					draft, _ := install.LoadDraft()
@@ -1081,7 +1081,7 @@ func (k *KhedraApp) addHandlers() error {
 						for name, svc := range draft.Config.Services {
 							servicesMap[name] = svc.Enabled
 						}
-						serveStep(4, "services.html.tmpl", map[string]any{"Services": servicesMap, "Errors": ferrs})
+						serveStep(4, "services.html", map[string]any{"Services": servicesMap, "Errors": ferrs})
 						return
 					}
 					http.Redirect(w, r, buildURL("/install/logging"), http.StatusSeeOther)
@@ -1093,7 +1093,7 @@ func (k *KhedraApp) addHandlers() error {
 					servicesMap[name] = svc.Enabled
 				}
 				ferrs := install.ValidateDraftPhase(draft, "step:services")
-				serveStep(4, "services.html.tmpl", map[string]any{"Services": servicesMap, "Errors": ferrs})
+				serveStep(4, "services.html", map[string]any{"Services": servicesMap, "Errors": ferrs})
 				return
 			}
 
@@ -1102,7 +1102,7 @@ func (k *KhedraApp) addHandlers() error {
 			if r.URL.Path == "/install/logging" {
 				if r.Method == http.MethodPost {
 					if err := r.ParseForm(); err != nil {
-						serveStep(5, "logging.html.tmpl", map[string]any{"Errors": []install.FieldError{{Field: "logging.level", Code: "bad_form", Message: "Invalid form submission"}}})
+						serveStep(5, "logging.html", map[string]any{"Errors": []install.FieldError{{Field: "logging.level", Code: "bad_form", Message: "Invalid form submission"}}})
 						return
 					}
 					lvl := r.FormValue("level")
@@ -1151,7 +1151,7 @@ func (k *KhedraApp) addHandlers() error {
 					}
 					ferrs := install.ValidateDraftPhase(draft, "step:logging")
 					if len(ferrs) > 0 {
-						serveStep(5, "logging.html.tmpl", map[string]any{"Level": lg.Level, "ToFile": lg.ToFile, "Folder": lg.Folder, "Filename": lg.Filename, "MaxSize": lg.MaxSize, "MaxBackups": lg.MaxBackups, "MaxAge": lg.MaxAge, "Compress": lg.Compress, "Errors": ferrs})
+						serveStep(5, "logging.html", map[string]any{"Level": lg.Level, "ToFile": lg.ToFile, "Folder": lg.Folder, "Filename": lg.Filename, "MaxSize": lg.MaxSize, "MaxBackups": lg.MaxBackups, "MaxAge": lg.MaxAge, "Compress": lg.Compress, "Errors": ferrs})
 						return
 					}
 					http.Redirect(w, r, buildURL("/install/summary"), http.StatusSeeOther)
@@ -1172,7 +1172,7 @@ func (k *KhedraApp) addHandlers() error {
 				} else {
 					data["Level"] = "info"
 				}
-				serveStep(5, "logging.html.tmpl", data)
+				serveStep(5, "logging.html", data)
 				return
 			}
 
@@ -1183,7 +1183,7 @@ func (k *KhedraApp) addHandlers() error {
 					if err := install.ApplyDraft(); err != nil {
 						draft, _ := install.LoadDraft()
 						ferrs := install.ValidateDraftPhase(draft, "final")
-						serveStep(6, "summary.html.tmpl", map[string]any{"Draft": draft, "Errors": ferrs, "Error": err.Error()})
+						serveStep(6, "summary.html", map[string]any{"Draft": draft, "Errors": ferrs, "Error": err.Error()})
 						return
 					}
 					if cfg, err := LoadConfig(); err != nil {
@@ -1205,7 +1205,7 @@ func (k *KhedraApp) addHandlers() error {
 				}
 				draft, _ := install.LoadDraft()
 				ferrs := install.ValidateDraftPhase(draft, "final")
-				serveStep(6, "summary.html.tmpl", map[string]any{"Draft": draft, "Errors": ferrs})
+				serveStep(6, "summary.html", map[string]any{"Draft": draft, "Errors": ferrs})
 				return
 			}
 
@@ -1234,10 +1234,10 @@ func (k *KhedraApp) addHandlers() error {
 			}
 
 			// minimal data for now
-			files := []string{"templates/base.html.tmpl", "templates/progress.html.tmpl", "templates/dashboard.html.tmpl"}
+			files := []string{"templates/base.html", "templates/progress.html", "templates/dashboard.html"}
 			tmpl, err := loadTemplates(files...)
 			if err != nil {
-				k.logger.Error("template parse failed", "err", err, "tmpl", "dashboard.html.tmpl")
+				k.logger.Error("template parse failed", "err", err, "tmpl", "dashboard.html")
 				w.WriteHeader(http.StatusInternalServerError)
 				_, _ = w.Write([]byte("template error: " + err.Error()))
 				return
@@ -1255,7 +1255,7 @@ func (k *KhedraApp) addHandlers() error {
 				data["DebugConfig"] = debugConfigJSON
 			}
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			_ = tmpl.ExecuteTemplate(w, "base.html.tmpl", data)
+			_ = tmpl.ExecuteTemplate(w, "base.html", data)
 			return
 		}
 
