@@ -29,7 +29,7 @@ func TestInitializeCliCommands(t *testing.T) {
 		commandNames[command.Name] = true
 	}
 
-	expectedCommands := []string{"init", "config", "version"}
+	expectedCommands := []string{"config", "version"}
 	for _, cmd := range expectedCommands {
 		assert.Contains(t, commandNames, cmd)
 	}

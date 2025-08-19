@@ -42,7 +42,7 @@
     {{ end }}
     <section style="border:1px solid #ccc;padding:.5rem;grid-column: span 3;">
       <h3 style="margin:.25rem 0;font-size:1rem;">Log Tail</h3>
-      <pre id="log-tail" style="background:#111;color:#0f0;padding:.5rem;font-size:.55rem;max-height:10rem;overflow:hidden;margin:0;">(loading)</pre>
+      <pre id="log-tail" style="background:#111;color:#0f0;padding:.5rem;font-size:.55rem;max-height:10rem;overflow-y:auto;margin:0;">(loading)</pre>
       <div id="log-footer" style="font-size:.5rem;opacity:.7;margin-top:.25rem;"></div>
     </section>
   </main>
@@ -84,6 +84,8 @@ async function fetchState() {
     } else {
       const lines = (data.logTail||[]);
       lt.textContent = lines.length?lines.join('\n'):'(no recent log lines)';
+      // Auto-scroll to bottom to show latest log entries
+      lt.scrollTop = lt.scrollHeight;
       const logPath = (data.paths?.logs? (data.paths.logs + '/' + (data.loggingFilename||'khedra.log')) : '');
       lf.textContent = logPath?('file: '+logPath):'';
     }

@@ -119,14 +119,8 @@ func (k *KhedraApp) daemonAction(c *cli.Context) error {
 
 	// Initialize the control service -- we need it for daemon
 	k.initializeControlSvc()
-
-	if os.Getenv("TB_KHEDRA_INITONLY") != "true" {
-		if err := k.serviceManager.StartAllServices(); err != nil {
-			k.logger.Fatal(err.Error())
-		}
-	} else {
-		utils.System("open http://localhost:" + fmt.Sprintf("%d", k.controlSvc.Port()))
-		// logger.Info("Open you browser to http://localhost:" + fmt.Sprintf("%d", k.controlSvc.Port()))
+	if err := k.serviceManager.StartAllServices(); err != nil {
+		k.logger.Fatal(err.Error())
 	}
 
 	// Delegate signal handling & graceful cleanup to the ServiceManager implementation.

@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"log/slog"
 	"math"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -53,11 +53,6 @@ func (k *KhedraApp) initializeControlSvc() error {
 	for _, svc := range k.config.Services {
 		switch svc.Name {
 		case "scraper":
-			// TODO: BOGUS - DO WE REALLY WANT THIS? NO!!
-			if os.Getenv("TB_KHEDRA_SCRAPER_ENABLED") != "true" {
-				slog.Info("Scraper service disabled by environment variable", "TB_KHEDRA_SCRAPER_ENABLED", os.Getenv("TB_KHEDRA_SCRAPER_ENABLED"))
-				break
-			}
 			chains := strings.Split(strings.ReplaceAll(k.config.EnabledChains(), " ", ""), ",")
 			scraperSvc := services.NewScrapeService(
 				k.logger.GetLogger(),
@@ -364,14 +359,15 @@ func (k *KhedraApp) addHandlers() error {
 		pausedSummary["paused"] = paused
 		pausedSummary["totalPausable"] = len(k.config.Services)
 		resp := map[string]any{
-			"version":       k.config.Version(),
-			"services":      servicesJSON,
-			"chains":        chainsJSON,
-			"paths":         paths,
-			"logTail":       logTail,
-			"logToFile":     logToFile,
-			"pausedSummary": pausedSummary,
-			"schema":        1,
+			"version":         k.config.Version(),
+			"services":        servicesJSON,
+			"chains":          chainsJSON,
+			"paths":           paths,
+			"logTail":         logTail,
+			"logToFile":       logToFile,
+			"loggingFilename": k.config.Logging.Filename,
+			"pausedSummary":   pausedSummary,
+			"schema":          1,
 		}
 		enc := json.NewEncoder(w)
 		_ = enc.Encode(resp)
@@ -602,37 +598,6 @@ func (k *KhedraApp) addHandlers() error {
 	k.controlSvc.SetRootHandler(func(w http.ResponseWriter, r *http.Request) {
 		configured := install.Configured()
 
-		// If not yet configured and user directly hits /dashboard, redirect them
-		// into the install flow instead of falling through to the control service
-		// default root (which exposes raw endpoint JSON).
-		if !configured && r.URL.Path == "/dashboard" {
-			http.Redirect(w, r, "/install/welcome", http.StatusSeeOther)
-			return
-		}
-
-		// Allowed wizard steps (in order) and quick lookup map.
-		var allowedWizardSteps = []string{"welcome", "paths", "chains", "index", "services", "logging", "summary"}
-		allowedWizardStepSet := map[string]struct{}{}
-		for _, s := range allowedWizardSteps {
-			allowedWizardStepSet[s] = struct{}{}
-		}
-
-		// Helper to set the wizard step cookie consistently.
-		setWizardStepCookie := func(step string, ttl time.Duration) {
-			http.SetCookie(w, &http.Cookie{Name: "KHEDRA_WIZARD_STEP", Value: step, Path: "/", Expires: time.Now().Add(ttl)})
-		}
-
-		// Resume wizard based on cookie if user lands on root/dashboard.
-		if r.URL.Path == "/" || r.URL.Path == "/dashboard" {
-			if c, err := r.Cookie("KHEDRA_WIZARD_STEP"); err == nil {
-				step := c.Value
-				if _, ok := allowedWizardStepSet[step]; ok {
-					http.Redirect(w, r, "/install/"+step, http.StatusFound)
-					return
-				}
-			}
-		}
-
 		// Determine persistent embed preference: query param overrides and sets cookie; cookie persists.
 		const embedCookieName = "KHEDRA_EMBED"
 		embedPref := false
@@ -653,80 +618,132 @@ func (k *KhedraApp) addHandlers() error {
 			debugPref = c.Value == "1"
 		}
 
-		// Prepare debug JSON: during install always show draft; on dashboard show applied config (fallback to draft). Only if debug enabled.
-		var debugConfigJSON string
-		if debugPref {
-			if strings.HasPrefix(r.URL.Path, "/install") { // draft-first view
-				if d, err := install.LoadDraft(); err == nil && d != nil {
-					if b, err2 := json.MarshalIndent(map[string]any{"file": install.DraftFilePath(), "config": d.Config}, "", "  "); err2 == nil {
-						debugConfigJSON = string(b)
+		// Helper function to build URLs with embed parameters when in embed mode
+		buildURL := func(path string, extraParams ...string) string {
+			if embedPref || len(extraParams) > 0 {
+				u, _ := url.Parse(path)
+				q := u.Query()
+				if embedPref {
+					q.Set("embed", "1")
+					q.Set("debug", map[bool]string{true: "1", false: "0"}[debugPref])
+				}
+				// Add any extra parameters
+				for i := 0; i < len(extraParams); i += 2 {
+					if i+1 < len(extraParams) {
+						q.Set(extraParams[i], extraParams[i+1])
 					}
 				}
+				u.RawQuery = q.Encode()
+				return u.String()
 			}
-			if debugConfigJSON == "" { // outside install or draft missing
-				if cfg, err := LoadConfig(); err == nil {
-					if b, err2 := json.MarshalIndent(map[string]any{"file": types.GetConfigFnNoCreate(), "config": cfg}, "", "  "); err2 == nil {
-						debugConfigJSON = string(b)
-					}
-				} else if d, err3 := install.LoadDraft(); err3 == nil && d != nil {
-					if b, err4 := json.MarshalIndent(map[string]any{"file": install.DraftFilePath(), "config": d.Config}, "", "  "); err4 == nil {
-						debugConfigJSON = string(b)
-					}
-				}
-			}
-			if debugConfigJSON == "" {
-				debugConfigJSON = "{}"
-			}
+			return path
 		}
 
-		serveStep := func(stepIdx int, tmplName string, data map[string]any) {
-			files := []string{"templates/base.html", "templates/progress.html", "templates/" + tmplName}
-			tmpl, err := loadTemplates(files...)
-			if err != nil {
-				k.logger.Error("template parse failed", "err", err, "tmpl", tmplName)
-				w.WriteHeader(http.StatusInternalServerError)
-				_, _ = w.Write([]byte("template error: " + err.Error()))
-				return
-			}
-			if data == nil {
-				data = map[string]any{}
-			}
-			steps := install.StepOrder
-			data["Steps"] = steps
-			data["Embed"] = embedPref
-			data["Debug"] = debugPref
-			if debugPref {
-				data["DebugConfig"] = debugConfigJSON
-			}
-			// Always include session id so forms can post it back; Create one early if needed.
-			data["SessionID"] = installSession.EnsureID()
-			// Corruption flag: show one-time banner if a recent corruption replacement occurred
-			if !configured {
-				if install.ConsumeCorruptionFlag(24 * time.Hour) { // one-time consumption
-					data["DraftCorrupt"] = true
-				} else {
-					data["DraftCorrupt"] = false
+		// If not yet configured and user directly hits /dashboard, redirect them
+		// into the install flow instead of falling through to the control service
+		// default root (which exposes raw endpoint JSON).
+		if !configured && r.URL.Path == "/dashboard" {
+			http.Redirect(w, r, buildURL("/install/welcome"), http.StatusSeeOther)
+			return
+		}
+
+		// Allowed wizard steps (in order) and quick lookup map.
+		var allowedWizardSteps = []string{"welcome", "paths", "chains", "index", "services", "logging", "summary"}
+		allowedWizardStepSet := map[string]struct{}{}
+		for _, s := range allowedWizardSteps {
+			allowedWizardStepSet[s] = struct{}{}
+		}
+
+		// Helper to set the wizard step cookie consistently.
+		setWizardStepCookie := func(step string, ttl time.Duration) {
+			http.SetCookie(w, &http.Cookie{Name: "KHEDRA_WIZARD_STEP", Value: step, Path: "/", Expires: time.Now().Add(ttl)})
+		}
+
+		// Resume wizard based on cookie if user lands on root/dashboard.
+		if r.URL.Path == "/" || r.URL.Path == "/dashboard" {
+			if c, err := r.Cookie("KHEDRA_WIZARD_STEP"); err == nil {
+				step := c.Value
+				if _, ok := allowedWizardStepSet[step]; ok {
+					http.Redirect(w, r, buildURL("/install/"+step), http.StatusFound)
+					return
 				}
 			}
-			// Simplest mapping: index comes directly from the URL-selected step.
-			if stepIdx >= 0 {
-				data["CurrentStepIndex"] = stepIdx
-			} else {
-				data["CurrentStepIndex"] = -1
-			}
-			if stepIdx >= 0 && stepIdx < len(steps) {
-				data["StepName"] = steps[stepIdx]
-				// Set/update cookie for resume; 7-day ttl
-				setWizardStepCookie(steps[stepIdx], 7*24*time.Hour)
-			} else {
-				data["StepName"] = "dashboard"
-			}
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			_ = tmpl.ExecuteTemplate(w, "base.html", data)
 		}
 
 		// Intercept install flow OR redirect root if not configured; otherwise serve dashboard
 		if strings.HasPrefix(r.URL.Path, "/install") || (!configured && r.URL.Path == "/") {
+			// Prepare debug JSON: during install always show draft; on dashboard show applied config (fallback to draft). Only if debug enabled.
+			var debugConfigJSON string
+			if debugPref {
+				if strings.HasPrefix(r.URL.Path, "/install") { // draft-first view
+					if d, err := install.LoadDraft(); err == nil && d != nil {
+						if b, err2 := json.MarshalIndent(map[string]any{"file": install.DraftFilePath(), "config": d.Config}, "", "  "); err2 == nil {
+							debugConfigJSON = string(b)
+						}
+					}
+				}
+				if debugConfigJSON == "" { // outside install or draft missing
+					if cfg, err := LoadConfig(); err == nil {
+						if b, err2 := json.MarshalIndent(map[string]any{"file": types.GetConfigFnNoCreate(), "config": cfg}, "", "  "); err2 == nil {
+							debugConfigJSON = string(b)
+						}
+					} else if d, err3 := install.LoadDraft(); err3 == nil && d != nil {
+						if b, err4 := json.MarshalIndent(map[string]any{"file": install.DraftFilePath(), "config": d.Config}, "", "  "); err4 == nil {
+							debugConfigJSON = string(b)
+						}
+					}
+				}
+				if debugConfigJSON == "" {
+					debugConfigJSON = "{}"
+				}
+			}
+
+			serveStep := func(stepIdx int, tmplName string, data map[string]any) {
+				files := []string{"templates/base.html", "templates/progress.html", "templates/" + tmplName}
+				tmpl, err := loadTemplates(files...)
+				if err != nil {
+					k.logger.Error("template parse failed", "err", err, "tmpl", tmplName)
+					w.WriteHeader(http.StatusInternalServerError)
+					_, _ = w.Write([]byte("template error: " + err.Error()))
+					return
+				}
+				if data == nil {
+					data = map[string]any{}
+				}
+				steps := install.StepOrder
+				data["Steps"] = steps
+				data["Embed"] = embedPref
+				data["Debug"] = debugPref
+				if debugPref {
+					data["DebugConfig"] = debugConfigJSON
+				}
+				// Always include session id so forms can post it back; Create one early if needed.
+				data["SessionID"] = installSession.EnsureID()
+				// Corruption flag: show one-time banner if a recent corruption replacement occurred
+				if !configured {
+					if install.ConsumeCorruptionFlag(24 * time.Hour) { // one-time consumption
+						data["DraftCorrupt"] = true
+					} else {
+						data["DraftCorrupt"] = false
+					}
+				}
+				// Simplest mapping: index comes directly from the URL-selected step.
+				if stepIdx >= 0 {
+					data["CurrentStepIndex"] = stepIdx
+				} else {
+					data["CurrentStepIndex"] = -1
+				}
+				if stepIdx >= 0 && stepIdx < len(steps) {
+					data["StepName"] = steps[stepIdx]
+					// Set/update cookie for resume; 7-day ttl
+					setWizardStepCookie(steps[stepIdx], 7*24*time.Hour)
+				} else {
+					data["StepName"] = "dashboard"
+				}
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				_ = tmpl.ExecuteTemplate(w, "base.html", data)
+			}
+
 			// Extract posted session (if any) prior to handling specific steps for POST requests.
 			const inactivityWindow = 5 * time.Minute
 			var postedSession string
@@ -788,13 +805,13 @@ func (k *KhedraApp) addHandlers() error {
 					_ = os.Remove(prev)
 					// Reset wizard cookie to welcome
 					setWizardStepCookie("welcome", 7*24*time.Hour)
-					http.Redirect(w, r, "/install/welcome?reset=1", http.StatusSeeOther)
+					http.Redirect(w, r, buildURL("/install/welcome", "reset", "1"), http.StatusSeeOther)
 					return
 				}
 			}
 
 			if r.URL.Path == "/" && !configured {
-				http.Redirect(w, r, "/install/welcome", http.StatusFound)
+				http.Redirect(w, r, buildURL("/install/welcome"), http.StatusFound)
 				return
 			}
 
@@ -808,7 +825,7 @@ func (k *KhedraApp) addHandlers() error {
 			if r.URL.Path == "/install" || r.URL.Path == "/install/" || r.URL.Path == "/install/welcome" {
 				if r.Method == http.MethodPost {
 					k.logger.Info("welcome submit", "remote", r.RemoteAddr, "ua", r.UserAgent())
-					http.Redirect(w, r, "/install/paths", http.StatusSeeOther)
+					http.Redirect(w, r, buildURL("/install/paths"), http.StatusSeeOther)
 					return
 				}
 				k.logger.Info("welcome view", "remote", r.RemoteAddr, "ua", r.UserAgent())
@@ -838,7 +855,7 @@ func (k *KhedraApp) addHandlers() error {
 						serveStep(1, "paths.html", map[string]any{"DataFolder": draft.Config.General.DataFolder, "Errors": ferrs})
 						return
 					}
-					http.Redirect(w, r, "/install/chains", http.StatusSeeOther)
+					http.Redirect(w, r, buildURL("/install/chains"), http.StatusSeeOther)
 					return
 				}
 				draft, _ := install.LoadDraft()
@@ -882,7 +899,7 @@ func (k *KhedraApp) addHandlers() error {
 						serveStep(3, "index.html", map[string]any{"Strategy": strategy, "Detail": detail, "Disk": draft.Meta.EstDiskGB, "Hours": draft.Meta.EstHours, "Errors": ferrs})
 						return
 					}
-					http.Redirect(w, r, "/install/services", http.StatusSeeOther)
+					http.Redirect(w, r, buildURL("/install/services"), http.StatusSeeOther)
 					return
 				}
 				draft, _ := install.LoadDraft()
@@ -970,7 +987,7 @@ func (k *KhedraApp) addHandlers() error {
 						// ONLY validate when trying to proceed to next step (Next button)
 						ferrs := install.ValidateDraftPhase(draft, "step:chains")
 						if len(ferrs) == 0 {
-							http.Redirect(w, r, "/install/index", http.StatusSeeOther)
+							http.Redirect(w, r, buildURL("/install/index"), http.StatusSeeOther)
 							return
 						}
 						// If validation fails, re-render with errors to block progression
@@ -1054,7 +1071,7 @@ func (k *KhedraApp) addHandlers() error {
 						serveStep(4, "services.html", map[string]any{"Services": servicesMap, "Errors": ferrs})
 						return
 					}
-					http.Redirect(w, r, "/install/logging", http.StatusSeeOther)
+					http.Redirect(w, r, buildURL("/install/logging"), http.StatusSeeOther)
 					return
 				}
 				draft, _ := install.LoadDraft()
@@ -1124,7 +1141,7 @@ func (k *KhedraApp) addHandlers() error {
 						serveStep(5, "logging.html", map[string]any{"Level": lg.Level, "ToFile": lg.ToFile, "Folder": lg.Folder, "Filename": lg.Filename, "MaxSize": lg.MaxSize, "MaxBackups": lg.MaxBackups, "MaxAge": lg.MaxAge, "Compress": lg.Compress, "Errors": ferrs})
 						return
 					}
-					http.Redirect(w, r, "/install/summary", http.StatusSeeOther)
+					http.Redirect(w, r, buildURL("/install/summary"), http.StatusSeeOther)
 					return
 				}
 				draft, _ := install.LoadDraft()
@@ -1160,7 +1177,7 @@ func (k *KhedraApp) addHandlers() error {
 						k.logger.Error("Live reload failed after wizard finish", "error", err)
 					}
 					setWizardStepCookie("dashboard", 30*24*time.Hour)
-					http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+					http.Redirect(w, r, buildURL("/dashboard"), http.StatusSeeOther)
 					return
 				}
 				draft, _ := install.LoadDraft()
@@ -1180,6 +1197,19 @@ func (k *KhedraApp) addHandlers() error {
 		k.logger.Debug("root handler", "configured", configured, "path", r.URL.Path)
 		// If configured and hitting root or /dashboard, render dashboard
 		if configured && (r.URL.Path == "/" || r.URL.Path == "/dashboard") {
+			// Prepare debug JSON for dashboard if debug enabled
+			var debugConfigJSON string
+			if debugPref {
+				if cfg, err := LoadConfig(); err == nil {
+					if b, err2 := json.MarshalIndent(map[string]any{"file": types.GetConfigFnNoCreate(), "config": cfg}, "", "  "); err2 == nil {
+						debugConfigJSON = string(b)
+					}
+				}
+				if debugConfigJSON == "" {
+					debugConfigJSON = "{}"
+				}
+			}
+
 			// minimal data for now
 			files := []string{"templates/base.html", "templates/progress.html", "templates/dashboard.html"}
 			tmpl, err := loadTemplates(files...)
