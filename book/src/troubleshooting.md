@@ -1,4 +1,4 @@
-# Maintenance and Troubleshooting
+# Troubleshooting
 
 This chapter covers routine maintenance tasks and solutions to common issues you might encounter when using Khedra.
 
