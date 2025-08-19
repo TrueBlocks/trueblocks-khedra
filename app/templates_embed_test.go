@@ -9,13 +9,13 @@ import (
 
 // Testing status: not_reviewed
 
-// TestLoadTemplatesTesting verifies that the embedded HTML template `testing.html`
+// TestLoadTemplatesTesting verifies that the embedded HTML template `testing.html.tmpl`
 // can be loaded through loadTemplates and that its raw content matches the
 // expected string. It also confirms the caching layer returns the same pointer
 // on subsequent calls (an extra sanity check of tplCache behavior).
 func TestLoadTemplatesTesting(t *testing.T) {
 	// First load
-	tpl, err := loadTemplates("templates/testing.html")
+	tpl, err := loadTemplates("templates/testing.html.tmpl")
 	assert.NoError(t, err)
 	if !assert.NotNil(t, tpl) {
 		return
@@ -29,7 +29,7 @@ func TestLoadTemplatesTesting(t *testing.T) {
 	assert.Contains(t, rendered, "<div>Testing Code</div>")
 
 	// Second load should hit cache and return same pointer.
-	tpl2, err := loadTemplates("templates/testing.html")
+	tpl2, err := loadTemplates("templates/testing.html.tmpl")
 	assert.NoError(t, err)
 	assert.Equal(t, tpl, tpl2, "expected cached template instance on second call")
 }

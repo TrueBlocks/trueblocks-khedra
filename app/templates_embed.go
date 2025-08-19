@@ -9,7 +9,7 @@ import (
 
 // embeddedTemplates contains all HTML templates under app/templates.
 //
-//go:embed templates/*.html
+//go:embed templates/*.html.tmpl
 var embeddedTemplates embed.FS
 
 // tplCache caches parsed template sets keyed by a pipe-joined list of file names.

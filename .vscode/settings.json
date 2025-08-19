@@ -9,7 +9,7 @@
   
   // Disable validation for template files specifically
   "files.associations": {
-    "app/templates/*.html": "html"
+    "app/templates/*.html.tmpl": "html"
   },
   
   // Exclude template directory from various language services
