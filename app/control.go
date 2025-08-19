@@ -802,7 +802,6 @@ func (k *KhedraApp) addHandlers() error {
 			if r.URL.Path != "/" && len(r.URL.Path) > 1 && strings.HasSuffix(r.URL.Path, "/") && r.URL.Path != "/install/" {
 				r.URL.Path = strings.TrimSuffix(r.URL.Path, "/")
 			}
-			// k.logger.Info("install flow intercept", "path", r.URL.Path, "configured", configured)
 
 			// -----// -----------------------------------------------------------------------------
 			// Reset endpoint: removes draft & sends user to welcome to fully restart progress
