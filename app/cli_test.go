@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	_ "github.com/TrueBlocks/trueblocks-khedra/v5/pkg/env"
 	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli/v2"

@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
-	_ "github.com/TrueBlocks/trueblocks-khedra/v5/pkg/env"
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v5"
 	"github.com/urfave/cli/v2"
 )

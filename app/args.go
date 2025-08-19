@@ -5,7 +5,6 @@ import (
 	"os"
 	"strings"
 
-	_ "github.com/TrueBlocks/trueblocks-khedra/v5/pkg/env"
 	"github.com/urfave/cli/v2"
 )
 
