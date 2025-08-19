@@ -101,7 +101,12 @@ document.addEventListener('click', async (e)=>{
   if(!btn) return;
   const act = btn.getAttribute('data-action');
   if(act==='rerun-setup') { 
-    fetch('/install/reset',{method:'POST'}).finally(()=>{ window.location='/install/welcome'; });
+    fetch('/install/reset',{method:'POST'}).then(()=>{ 
+      window.location='/install/welcome?reset=1'; 
+    }).catch(()=>{ 
+      // Even if reset fails, go to welcome to restart
+      window.location='/install/welcome'; 
+    });
     return; 
   }
   if(act==='download-config') { window.location='/config.yaml'; return; }

@@ -144,7 +144,17 @@
         });
         if(r.ok){
           const txt = await r.text();
-          pre.textContent = txt;
+          try {
+            // Parse JSON and remove Meta field from display only
+            const data = JSON.parse(txt);
+            if(data.config && data.config.Meta) {
+              delete data.config.Meta;
+            }
+            pre.textContent = JSON.stringify(data, null, 2);
+          } catch(parseError) {
+            // If JSON parsing fails, show original text
+            pre.textContent = txt;
+          }
         }
       } catch(e) { /* ignore */ }
     }
