@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -20,28 +21,28 @@ type KhedraApp struct {
 	serviceManager *services.ServiceManager
 }
 
-// ReloadConfigAndServices reloads the finalized config from disk and restarts all services.
-func (k *KhedraApp) ReloadConfigAndServices() error {
-	cfg, err := LoadConfig()
-	if err != nil {
-		k.logger.Error("Failed to reload config", "error", err)
-		return err
+// RestartAllServices restarts all services except the control service directly via service manager.
+func (k *KhedraApp) RestartAllServices() error {
+	if k.serviceManager == nil {
+		return fmt.Errorf("service manager not initialized")
 	}
-	k.config = &cfg
-	k.logger = types.NewLogger(cfg.Logging)
-	slog.SetDefault(k.logger.GetLogger())
 
-	// Re-initialize control service and service manager
-	if err := k.initializeControlSvc(); err != nil {
-		k.logger.Error("Failed to re-initialize control service", "error", err)
-		return err
-	}
-	// Restart all services
-	if err := k.serviceManager.StartAllServices(); err != nil {
+	k.logger.Info("Restarting all services (except control) directly via service manager")
+
+	// Get all services that can be restarted (this excludes control service automatically)
+	results, err := k.serviceManager.Restart("all")
+	if err != nil {
 		k.logger.Error("Failed to restart services", "error", err)
 		return err
 	}
-	k.logger.Info("Config and services reloaded successfully")
+
+	for _, result := range results {
+		serviceName := result["name"]
+		status := result["status"]
+		k.logger.Info("Service restart result", "service", serviceName, "status", status)
+	}
+
+	k.logger.Info("All restartable services restarted successfully")
 	return nil
 }
 

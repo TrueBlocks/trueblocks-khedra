@@ -113,13 +113,13 @@ document.addEventListener('click', async (e)=>{
   }
   if(act==='download-config') { window.location='/config.yaml'; return; }
   if(act==='pause-all' || act==='unpause-all') {
-    const endpoint = act==='pause-all'?'/control/pause?all=true':'/control/unpause?all=true';
-    await fetch(endpoint,{method:'POST'}); fetchState(); return;
+    const endpoint = act==='pause-all'?'/pause?name=all':'/unpause?name=all';
+    await fetch(endpoint,{method:'GET'}); fetchState(); return;
   }
   const svc = btn.getAttribute('data-svc');
   if(svc) {
-    const endpoint = act==='pause'?'/control/pause':'/control/unpause';
-    await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({services:[svc]})});
+    const endpoint = act==='pause'?'/pause':'/unpause';
+    await fetch(`${endpoint}?name=${svc}`,{method:'GET'});
     fetchState();
   }
 });

@@ -12,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -45,8 +44,6 @@ func (k *KhedraApp) initializeControlSvc() error {
 	k.controlSvc = services.NewControlService(k.logger.GetLogger())
 	meta := control.NewMetadata(k.controlSvc.Port(), k.config.Version())
 	_ = control.Write(meta)
-
-	k.addHandlers()
 
 	var activeServices []services.Servicer
 	activeServices = append(activeServices, k.controlSvc)
@@ -87,6 +84,9 @@ func (k *KhedraApp) initializeControlSvc() error {
 	k.serviceManager = services.NewServiceManager(activeServices, k.logger.GetLogger())
 	k.controlSvc.AttachServiceManager(k.serviceManager)
 
+	// Add handlers AFTER serviceManager is created so dashboard state handler can access it
+	k.addHandlers()
+
 	k.logger.Info("Control service initialized", "services", len(activeServices))
 	return nil
 }
@@ -97,7 +97,6 @@ func (k *KhedraApp) addHandlers() error {
 	// ----------------------------------------------------------------------------------
 	// Session store shared across state handler (placeholder; expanded later with inactivity logic)
 	installSession := install.NewSessionStore()
-	runtimePause := control.NewRuntimeState()
 
 	// ----------------------------------------------------------------------------------
 	// Install state handler
@@ -263,8 +262,19 @@ func (k *KhedraApp) addHandlers() error {
 		for _, name := range names {
 			svc := k.config.Services[name]
 			state := "running"
-			if runtimePause.IsPaused(name) {
-				state = "paused"
+			// Query the actual ServiceManager for real-time pause state
+			if k.serviceManager != nil {
+				if results, err := k.serviceManager.IsPaused(name); err == nil && len(results) > 0 {
+					// Find the result for this specific service
+					for _, result := range results {
+						if result["name"] == name {
+							if result["status"] == "paused" {
+								state = "paused"
+							}
+							break
+						}
+					}
+				}
 			}
 			servicesJSON = append(servicesJSON, map[string]any{
 				"name":     name,
@@ -348,11 +358,15 @@ func (k *KhedraApp) addHandlers() error {
 			}
 		}
 		pausedSummary := map[string]any{"paused": []string{}, "totalPausable": 0}
-		rsnap := runtimePause.Snapshot()
 		var paused []string
-		for name, p := range rsnap {
-			if p {
-				paused = append(paused, name)
+		// Query ServiceManager for actual paused services
+		if k.serviceManager != nil {
+			for name := range k.config.Services {
+				if results, err := k.serviceManager.IsPaused(name); err == nil && len(results) > 0 {
+					if results[0]["status"] == "paused" {
+						paused = append(paused, name)
+					}
+				}
 			}
 		}
 		sort.Strings(paused)
@@ -788,7 +802,7 @@ func (k *KhedraApp) addHandlers() error {
 			if r.URL.Path != "/" && len(r.URL.Path) > 1 && strings.HasSuffix(r.URL.Path, "/") && r.URL.Path != "/install/" {
 				r.URL.Path = strings.TrimSuffix(r.URL.Path, "/")
 			}
-			k.logger.Info("install flow intercept", "path", r.URL.Path, "configured", configured)
+			// k.logger.Info("install flow intercept", "path", r.URL.Path, "configured", configured)
 
 			// -----// -----------------------------------------------------------------------------
 			// Reset endpoint: removes draft & sends user to welcome to fully restart progress
@@ -1173,9 +1187,19 @@ func (k *KhedraApp) addHandlers() error {
 						serveStep(6, "summary.html", map[string]any{"Draft": draft, "Errors": ferrs, "Error": err.Error()})
 						return
 					}
-					if err := k.ReloadConfigAndServices(); err != nil {
-						k.logger.Error("Live reload failed after wizard finish", "error", err)
+					if cfg, err := LoadConfig(); err != nil {
+						k.logger.Error("Failed to reload config after applying draft", "error", err)
+					} else {
+						k.config = &cfg
+						k.logger = types.NewLogger(cfg.Logging)
+						k.logger.Info("Config reloaded after install wizard completion. Services will pick up changes naturally.")
 					}
+
+					// NOTE: Skip service restart to avoid disrupting the control service.
+					// Services will pick up config changes on their next iteration.
+					// if err := k.RestartAllServices(); err != nil {
+					//	k.logger.Error("Service restart failed after wizard finish", "error", err)
+					// }
 					setWizardStepCookie("dashboard", 30*24*time.Hour)
 					http.Redirect(w, r, buildURL("/dashboard"), http.StatusSeeOther)
 					return
@@ -1241,81 +1265,7 @@ func (k *KhedraApp) addHandlers() error {
 	})
 
 	// ----------------------------------------------------------------------------------
-	// Control endpoints for pausing/unpausing services
-	k.controlSvc.AddHandler("/control/pause", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		if r.Method != http.MethodPost {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			w.Write([]byte(`{"error":"POST only"}`))
-			return
-		}
-		var payload struct {
-			Services []string `json:"services"`
-			All      bool     `json:"all"`
-		}
-		_ = json.NewDecoder(r.Body).Decode(&payload)
-		var targets []string
-		if payload.All || len(payload.Services) == 0 {
-			for name := range k.config.Services {
-				targets = append(targets, name)
-			}
-		} else {
-			targets = payload.Services
-		}
-		changed := runtimePause.Pause(targets...)
-		if err := k.ReloadConfigAndServices(); err != nil {
-			k.logger.Error("Live reload failed after pause", "error", err)
-		}
-		var results []map[string]any
-		for _, name := range targets {
-			results = append(results, map[string]any{
-				"name":    name,
-				"paused":  runtimePause.IsPaused(name),
-				"changed": slices.Contains(changed, name),
-			})
-		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "results": results})
-	})
-
-	// ----------------------------------------------------------------------------------
-	// /control/unpaose
-	k.controlSvc.AddHandler("/control/unpause", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		if r.Method != http.MethodPost {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			w.Write([]byte(`{"error":"POST only"}`))
-			return
-		}
-		var payload struct {
-			Services []string `json:"services"`
-			All      bool     `json:"all"`
-		}
-		_ = json.NewDecoder(r.Body).Decode(&payload)
-		var targets []string
-		if payload.All || len(payload.Services) == 0 {
-			for name := range k.config.Services {
-				targets = append(targets, name)
-			}
-		} else {
-			targets = payload.Services
-		}
-		changed := runtimePause.Unpause(targets...)
-		if err := k.ReloadConfigAndServices(); err != nil {
-			k.logger.Error("Live reload failed after unpause", "error", err)
-		}
-		var results []map[string]any
-		for _, name := range targets {
-			results = append(results, map[string]any{
-				"name":    name,
-				"paused":  runtimePause.IsPaused(name),
-				"changed": slices.Contains(changed, name),
-			})
-		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "results": results})
-	})
-
-	// ----------------------------------------------------------------------------------
-	// Control info endpoint returning metadata + runtime pause snapshot
+	// Control info endpoint returning metadata
 	k.controlSvc.AddHandler("/control/info", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		var regenerated bool
@@ -1333,7 +1283,6 @@ func (k *KhedraApp) addHandlers() error {
 			"ok":          true,
 			"metadata":    meta,
 			"regenerated": regenerated,
-			"runtime":     map[string]any{"paused": runtimePause.Snapshot(), "schema": 1},
 		}
 		_ = json.NewEncoder(w).Encode(payload)
 	})
