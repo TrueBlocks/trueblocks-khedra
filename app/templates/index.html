@@ -34,7 +34,7 @@
   // @ts-nocheck
   // Disable linting for Go template file with mixed template/JavaScript syntax
     (function(){
-      const form = document.currentScript.closest('form');
+      const form = document.getElementById('indexForm');
       if(!form) return;
       const radios = form.querySelectorAll('input[type=radio][name=strategy], input[type=radio][name=detail]');
       let inflight = null;
@@ -71,9 +71,11 @@
             if(hp) hp.textContent = (j.config.Meta?.EstHours === 1 ? '' : 's');
           });
         }
-  radios.forEach(r => r.addEventListener('change', update));
-  // Initial application of rule and estimates
-  update();
+      }
+      
+      radios.forEach(r => r.addEventListener('change', update));
+      // Initial application of rule and estimates
+      update();
     })();
   </script>
 <!-- field focus handled globally -->

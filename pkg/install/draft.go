@@ -264,7 +264,13 @@ func ApplyFormToDraft(d *Draft, form map[string][]string) {
 
 		// Update enabled state if checkbox is present in form
 		if hasKey(enableKey) {
-			chain.Enabled = getValue(enableKey) != ""
+			val := getValue(enableKey)
+			if val == "1" {
+				chain.Enabled = true
+			} else if val == "0" {
+				chain.Enabled = false
+			}
+			// If value is neither "1" nor "0", do nothing
 		}
 
 		// Update RPC URL if present
@@ -289,7 +295,13 @@ func ApplyFormToDraft(d *Draft, form map[string][]string) {
 			// Get existing service or create new one
 			service := d.Config.Services[serviceName]
 			service.Name = serviceName
-			service.Enabled = getValue(key) != ""
+			val := getValue(key)
+			if val == "1" {
+				service.Enabled = true
+			} else if val == "0" {
+				service.Enabled = false
+			}
+			// If value is neither "1" nor "0", do nothing
 			d.Config.Services[serviceName] = service
 		}
 	}
@@ -319,6 +331,24 @@ func ApplyFormToDraft(d *Draft, form map[string][]string) {
 			d.Config.Logging.MaxAge = age
 		}
 	}
-	d.Config.Logging.ToFile = hasKey("toFile")
-	d.Config.Logging.Compress = hasKey("compress")
+
+	// Update logging checkboxes
+	if hasKey("toFile") {
+		val := getValue("toFile")
+		if val == "1" {
+			d.Config.Logging.ToFile = true
+		} else if val == "0" {
+			d.Config.Logging.ToFile = false
+		}
+		// If value is neither "1" nor "0", do nothing
+	}
+	if hasKey("compress") {
+		val := getValue("compress")
+		if val == "1" {
+			d.Config.Logging.Compress = true
+		} else if val == "0" {
+			d.Config.Logging.Compress = false
+		}
+		// If value is neither "1" nor "0", do nothing
+	}
 }

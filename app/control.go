@@ -567,7 +567,27 @@ func (k *KhedraApp) addHandlers() error {
 			w.Write([]byte(`{"error":"no config available"}`))
 			return
 		}
+
+		// Calculate estimates for the config response
+		var meta map[string]any
+		if configStruct, ok := cfg.(types.Config); ok {
+			diskGB, hours := install.EstimateIndex(configStruct.General.Strategy, configStruct.General.Detail)
+			meta = map[string]any{
+				"EstDiskGB": diskGB,
+				"EstHours":  hours,
+			}
+		}
+
 		payload := map[string]any{"source": source, "config": cfg}
+		if meta != nil {
+			payload["config"] = map[string]any{
+				"General":  cfg.(types.Config).General,
+				"Chains":   cfg.(types.Config).Chains,
+				"Services": cfg.(types.Config).Services,
+				"Logging":  cfg.(types.Config).Logging,
+				"Meta":     meta,
+			}
+		}
 		b, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -932,7 +952,7 @@ func (k *KhedraApp) addHandlers() error {
 						}
 					} else { // update existing (Next button pressed)
 						for name, ch := range draft.Config.Chains {
-							enField := "chain_enabled_" + name
+							enField := name + "_enabled" // Fix: match the actual form field names
 							rpcField := "chain_rpc_" + name
 							ch.Enabled = r.FormValue(enField) == "on"
 							if rv := strings.TrimSpace(r.FormValue(rpcField)); rv != "" {

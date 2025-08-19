@@ -24,7 +24,7 @@
 // @ts-nocheck
 // Disable linting for Go template file with mixed template/JavaScript syntax
 (function(){
-  const form = document.currentScript.previousElementSibling;
+  const form = document.getElementById('pathsForm');
   if(!form || form.tagName !== 'FORM') return;
   let timer=null;
   function push(){

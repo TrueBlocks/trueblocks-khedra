@@ -128,7 +128,20 @@ func validRPCScheme(u string) bool {
 
 func ValidateServices(d *Draft) []FieldError {
 	var out []FieldError
-	// Zero enabled allowed (control implicit)
+
+	// Check that at least one service is enabled
+	hasEnabledService := false
+	for _, svc := range d.Config.Services {
+		if svc.Enabled {
+			hasEnabledService = true
+			break
+		}
+	}
+	if !hasEnabledService {
+		out = append(out, FieldError{Field: "services", Code: "no_services_enabled", Message: "At least one service must be enabled"})
+	}
+
+	// Check port conflicts for enabled services
 	seen := map[int]string{}
 	for name, svc := range d.Config.Services {
 		if !svc.Enabled || svc.Port == 0 { // only ports for tcp services (api/ipfs)

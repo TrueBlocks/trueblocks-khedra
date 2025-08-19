@@ -56,20 +56,24 @@
 // @ts-nocheck
 // Disable linting for Go template file with mixed template/JavaScript syntax
 (function(){
-  const form = document.currentScript.previousElementSibling;
+  const form = document.getElementById('loggingForm');
   if(!form || form.tagName !== 'FORM') return;
-  let timer=null;
-  function push(){
+  
+  function update(){
     const fd = new FormData(form);
     const formData = new FormData();
     ['level','folder','filename','maxSize','maxBackups','maxAge'].forEach(k=>{ if(fd.get(k)!==null) formData.set(k, fd.get(k)); });
-    if(fd.get('compress')==='1' || form.querySelector('input[name=compress]')?.checked) formData.set('compress','1');
-    if(fd.get('toFile')==='1' || form.querySelector('input[name=toFile]')?.checked) formData.set('toFile','1');
+    
+    // Send explicit '1' or '0' for checkboxes
+    const compressCheckbox = form.querySelector('input[name=compress]');
+    const toFileCheckbox = form.querySelector('input[name=toFile]');
+    if(compressCheckbox) formData.set('compress', compressCheckbox.checked ? '1' : '0');
+    if(toFileCheckbox) formData.set('toFile', toFileCheckbox.checked ? '1' : '0');
     
     // Use centralized function
     if(window.updateConfigAndDebug) window.updateConfigAndDebug(formData);
   }
-  function schedule(){ if(timer) clearTimeout(timer); timer = setTimeout(push, 300); }
+  
   function updateFileControls(){
     const toFileCheckbox = form.querySelector('input[name="toFile"]');
     const fileControls = form.querySelectorAll('input[name="folder"], input[name="filename"], input[name="maxSize"], input[name="maxBackups"], input[name="maxAge"], input[name="compress"]');
@@ -81,15 +85,18 @@
       }
     });
   }
+  
   // Initial state
   updateFileControls();
+  
   // Update on change
   const toFileCheckbox = form.querySelector('input[name="toFile"]');
   if (toFileCheckbox) {
     toFileCheckbox.addEventListener('change', updateFileControls);
   }
-  form.addEventListener('change', schedule);
-  form.addEventListener('input', schedule);
+  
+  form.addEventListener('change', update);
+  form.addEventListener('input', update);
 })();
 </script>
 {{ end }}

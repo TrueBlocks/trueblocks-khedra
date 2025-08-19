@@ -118,10 +118,8 @@ func isWritable(path string) bool {
 		return false
 	} else {
 		fil.Close()
-		if err := os.Remove(tmpFile); err != nil {
-			fmt.Println(fmt.Errorf("error cleaning up test file in %s: %v", path, err))
-			return false
-		}
+		// Try to clean up test file, but don't fail if cleanup fails
+		os.Remove(tmpFile) // Ignore error - file may already be gone or have permission issues
 	}
 	return true
 }
