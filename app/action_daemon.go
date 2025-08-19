@@ -16,6 +16,7 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/config"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
+	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/control"
 	_ "github.com/TrueBlocks/trueblocks-khedra/v5/pkg/env"
 	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/install"
 	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
@@ -23,6 +24,11 @@ import (
 )
 
 func (k *KhedraApp) daemonAction(c *cli.Context) error {
+	defer func() {
+		// cleanup the control file on exit
+		_ = os.Remove(control.Path())
+	}()
+
 	_ = c // linter
 	// Ensure logger is initialized for first-run case
 	if k.logger == nil {
