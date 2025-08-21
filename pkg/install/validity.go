@@ -1,7 +1,10 @@
 package install
 
 import (
+	"context"
 	"strings"
+	"sync"
+	"time"
 
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
@@ -9,10 +12,61 @@ import (
 	yamlv2 "gopkg.in/yaml.v2"
 )
 
-// Configured returns true only if a config file exists AND contains an enabled mainnet
-// chain with at least one RPC URL present. Deep RPC reachability probing is deferred
-// (performed during daemon startup); here we only perform a shallow structural check
-// to decide whether to present the installation wizard.
+// Cache for mainnet accessibility checks
+var (
+	accessibilityCache    = map[string]accessibilityCacheEntry{}
+	accessibilityCacheMu  sync.Mutex
+	accessibilityCacheTTL = 30 * time.Second
+)
+
+type accessibilityCacheEntry struct {
+	accessible bool
+	checkedAt  time.Time
+}
+
+// checkMainnetAccessible checks if mainnet RPC is accessible and returns chainId == 1
+// Uses an in-memory cache with 30 second TTL to avoid hitting RPC repeatedly
+func checkMainnetAccessible(rpcUrl string) bool {
+	accessibilityCacheMu.Lock()
+	defer accessibilityCacheMu.Unlock()
+
+	// Check cache first
+	if entry, ok := accessibilityCache[rpcUrl]; ok {
+		if time.Since(entry.checkedAt) < accessibilityCacheTTL {
+			logger.Info("mainnet accessibility cache hit", "url", rpcUrl, "accessible", entry.accessible)
+			return entry.accessible
+		}
+		// Cache expired, delete old entry
+		delete(accessibilityCache, rpcUrl)
+	}
+
+	// Perform the actual RPC check
+	ctx := context.Background()
+	probe := RpcProbeJSON(ctx, rpcUrl)
+	accessible := probe.OK && (probe.ChainID == "0x1" || probe.ChainID == "1")
+
+	// Cache the result
+	accessibilityCache[rpcUrl] = accessibilityCacheEntry{
+		accessible: accessible,
+		checkedAt:  time.Now(),
+	}
+
+	if !accessible {
+		if !probe.OK {
+			logger.Info("mainnet RPC unreachable", "url", rpcUrl, "error", probe.Error)
+		} else {
+			logger.Info("mainnet RPC returns wrong chainId", "url", rpcUrl, "chainId", probe.ChainID, "expected", "1")
+		}
+	}
+
+	return accessible
+}
+
+// Configured returns true only if a config file exists AND contains a mainnet
+// configuration with a reachable RPC endpoint that returns chainId == 1.
+// Mainnet may be disabled for processing but its RPC must always be accessible.
+// Deep RPC reachability probing is performed here but cached for performance;
+// this determines whether to present the installation wizard.
 func Configured() bool {
 	fn := types.GetConfigFnNoCreate()
 	if !coreFile.FileExists(fn) {
@@ -31,14 +85,17 @@ func Configured() bool {
 	}
 	// Must have a mainnet key
 	if main, ok := cfg.Chains["mainnet"]; ok {
-		if !main.Enabled {
-			logger.Info("mainnet chain present but disabled; treating as not configured")
-			return false
-		}
+		// Mainnet RPC is always required and must return valid data (chainId == 1)
 		if len(main.RPCs) == 0 || strings.TrimSpace(main.RPCs[0]) == "" {
-			logger.Info("mainnet enabled but no RPC present")
+			logger.Info("mainnet RPC missing but is required")
 			return false
 		}
+
+		// Verify mainnet RPC is reachable and returns chainId == 1 (with caching)
+		if !checkMainnetAccessible(main.RPCs[0]) {
+			return false
+		}
+
 		if main.ChainID == 0 {
 			logger.Info("mainnet chainId zero", "cfgFile", fn, "chain", main, "rawLen", len(b))
 			return false
