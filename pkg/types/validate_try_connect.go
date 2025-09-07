@@ -155,7 +155,7 @@ func ParseHexNumber(hexString string) (string, error) {
 
 func TryConnect(chain, providerUrl string, maxAttempts int) error {
 	for i := 1; i <= maxAttempts; i++ {
-		err := rpc.PingRpc(providerUrl)
+		_, err := rpc.PingRpc(providerUrl)
 		if err == nil {
 			return nil
 		} else {

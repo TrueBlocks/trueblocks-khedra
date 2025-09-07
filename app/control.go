@@ -2,7 +2,6 @@ package app
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -19,6 +18,7 @@ import (
 	"time"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/rpc"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
 	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/control"
 	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/install"
@@ -221,9 +221,10 @@ func (k *KhedraApp) addHandlers() error {
 				url = ch.RPCs[0]
 			}
 		}
-		ctx, cancel := context.WithTimeout(r.Context(), 6*time.Second)
-		defer cancel()
-		res := install.RpcProbeJSON(ctx, url)
+		res, err := rpc.PingRpc(url)
+		if err != nil {
+			k.logger.Debug("RPC ping failed", "url", url, "error", err)
+		}
 		payload := map[string]any{
 			"ok":            res.OK,
 			"chainId":       res.ChainID,
@@ -398,9 +399,10 @@ func (k *KhedraApp) addHandlers() error {
 			return
 		}
 		// Probe JSON directly (reachability assumed if returns)
-		ctx, cancel := context.WithTimeout(r.Context(), 6*time.Second)
-		defer cancel()
-		res := install.RpcProbeJSON(ctx, rpcURL)
+		res, err := rpc.PingRpc(rpcURL)
+		if err != nil {
+			k.logger.Debug("RPC ping failed during chain add", "url", rpcURL, "error", err)
+		}
 		if !res.OK || res.ChainID == "" {
 			w.WriteHeader(http.StatusBadGateway)
 			b, _ := json.Marshal(res)

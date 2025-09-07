@@ -1,12 +1,10 @@
 package install
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -15,35 +13,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/rpc"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
 )
 
-type rpcProbeResult struct {
-	URL           string `json:"url"`
-	OK            bool   `json:"ok"`
-	ChainID       string `json:"chainId,omitempty"`
-	ChainName     string `json:"chainName,omitempty"`
-	ExpectedChain string `json:"expectedChainId,omitempty"`
-	// ChainMismatch removed from UI error semantics; always treat reachable as OK
-	ClientVersion string `json:"clientVersion,omitempty"`
-	Mode          string `json:"mode"` // head or json
-	Error         string `json:"error,omitempty"`
-	StatusCode    int    `json:"statusCode,omitempty"`
-	CheckedAt     int64  `json:"checkedAt"`
-	LatencyMS     int64  `json:"latencyMs,omitempty"`
-	FallbackJSON  bool   `json:"fallbackJson,omitempty"`
-	Updated       bool   `json:"updated,omitempty"` // true if draft chainId was updated
-}
-
-// RpcProbeJSON provides external packages a simple way to perform a JSON probe (eth_chainId + clientVersion)
-// without caching side-effects of the HTTP handler. It returns a rpcProbeResult with Mode=json.
-func RpcProbeJSON(ctx context.Context, raw string) rpcProbeResult {
-	return jsonProbe(ctx, raw, "")
-}
-
 var (
-	probeCacheHead = map[string]rpcProbeResult{}
-	probeCacheJSON = map[string]rpcProbeResult{}
+	probeCacheHead = map[string]rpc.PingResult{}
+	probeCacheJSON = map[string]rpc.PingResult{}
 	probeCacheMu   sync.Mutex
 	probeTTL       = 30 * time.Second
 
@@ -55,26 +31,6 @@ var (
 	sessionHits      = map[string][]time.Time{}
 	globalHits       []time.Time
 )
-
-// jsonRpcRequest / response minimal structures
-type jsonRpcRequest struct {
-	JSONRPC string      `json:"jsonrpc"`
-	ID      int         `json:"id"`
-	Method  string      `json:"method"`
-	Params  interface{} `json:"params"`
-}
-
-type jsonRpcResponse struct {
-	JSONRPC string          `json:"jsonrpc"`
-	ID      int             `json:"id"`
-	Result  json.RawMessage `json:"result"`
-	Error   *jsonRpcRespErr `json:"error"`
-}
-
-type jsonRpcRespErr struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
 
 func sanitizeURL(raw string) (string, error) {
 	if raw == "" {
@@ -95,14 +51,9 @@ func sanitizeURL(raw string) (string, error) {
 	return u.String(), nil
 }
 
-// trimQuotes removes leading/trailing double quotes from a JSON string value.
-func trimQuotes(s string) string {
-	return strings.Trim(s, "\"")
-}
-
-func headProbe(ctx context.Context, raw string) rpcProbeResult {
+func headProbe(ctx context.Context, raw string) rpc.PingResult {
 	now := time.Now()
-	pr := rpcProbeResult{URL: raw, Mode: "head", CheckedAt: now.Unix()}
+	pr := rpc.PingResult{URL: raw, Mode: "head", CheckedAt: now.Unix()}
 	req, _ := http.NewRequestWithContext(ctx, http.MethodHead, raw, nil)
 	client := &http.Client{Timeout: 4 * time.Second}
 	start := time.Now()
@@ -138,58 +89,20 @@ func headProbe(ctx context.Context, raw string) rpcProbeResult {
 	return pr
 }
 
-func jsonProbe(ctx context.Context, raw string, expected string) rpcProbeResult {
-	now := time.Now()
-	pr := rpcProbeResult{URL: raw, Mode: "json", CheckedAt: now.Unix(), ExpectedChain: expected}
-	client := &http.Client{Timeout: 6 * time.Second}
-	// eth_chainId
-	chainIDHex, status, rawBody, err := callSimple(ctx, client, raw, "eth_chainId")
-	pr.StatusCode = status
+func jsonProbe(ctx context.Context, raw string, expected string) rpc.PingResult {
+	result, err := rpc.PingRpc(raw)
 	if err != nil {
-		pr.Error = err.Error()
-		// Log raw body snippet for diagnostics (truncate to 160 chars)
-		snippet := string(rawBody)
-		if len(snippet) > 160 {
-			snippet = snippet[:160] + "…"
-		}
-		slog.Info("rpc json probe chainId error", "url", raw, "status", status, "err", err.Error(), "body", snippet)
-		return pr
+		slog.Info("rpc json probe error", "url", raw, "err", err.Error())
 	}
-	pr.ChainID = trimQuotes(chainIDHex)
-	// clientVersion (best effort) – ignore error but capture status if first call succeeded.
-	if cv, _, _, err2 := callSimple(ctx, client, raw, "web3_clientVersion"); err2 == nil {
-		pr.ClientVersion = trimQuotes(cv)
+	if result == nil {
+		return rpc.PingResult{URL: raw, Mode: "json", CheckedAt: time.Now().Unix(), ExpectedChain: expected}
 	}
-	pr.OK = true
-	slog.Info("rpc json probe ok", "url", raw, "status", status, "chainId", pr.ChainID, "expected", expected)
-	return pr
-}
-
-func callSimple(ctx context.Context, client *http.Client, rawURL, method string) (string, int, []byte, error) {
-	payload := jsonRpcRequest{JSONRPC: "2.0", ID: 1, Method: method, Params: []interface{}{}}
-	b, _ := json.Marshal(payload)
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, rawURL, bytes.NewReader(b))
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", 0, nil, err
+	result.Mode = "json"
+	result.ExpectedChain = expected
+	if result.OK {
+		slog.Info("rpc json probe ok", "url", raw, "chainId", result.ChainID, "expected", expected)
 	}
-	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", resp.StatusCode, body, fmt.Errorf("status %s", resp.Status)
-	}
-	var jr jsonRpcResponse
-	if err := json.Unmarshal(body, &jr); err != nil {
-		return "", resp.StatusCode, body, err
-	}
-	if jr.Error != nil {
-		return "", resp.StatusCode, body, fmt.Errorf("rpc error %d %s", jr.Error.Code, jr.Error.Message)
-	}
-	if jr.Result == nil {
-		return "", resp.StatusCode, body, errors.New("empty result")
-	}
-	return string(jr.Result), resp.StatusCode, body, nil
+	return *result
 }
 
 // RpcProbeHandler returns minimal information about chain RPC reachability for quick UI validation.
@@ -203,7 +116,7 @@ func RpcProbeHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("rpc probe request", "url", raw, "mode", mode, "expected", expected)
 	// Explicitly reject websocket schemes with clearer message (UI previously showed generic 'unreachable')
 	if strings.HasPrefix(strings.ToLower(raw), "ws://") || strings.HasPrefix(strings.ToLower(raw), "wss://") {
-		_ = json.NewEncoder(w).Encode(rpcProbeResult{URL: raw, OK: false, Error: "websocket RPC endpoints (ws://, wss://) are not supported; please use http:// or https://", CheckedAt: now.Unix(), Mode: mode})
+		_ = json.NewEncoder(w).Encode(rpc.PingResult{URL: raw, OK: false, Error: "websocket RPC endpoints (ws://, wss://) are not supported; please use http:// or https://", CheckedAt: now.Unix(), Mode: mode})
 		return
 	}
 	// rudimentary session-based rate limiting (session id passed via header or cookie later; fallback remote addr)
@@ -248,13 +161,13 @@ func RpcProbeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if raw == "" {
-		_ = json.NewEncoder(w).Encode(rpcProbeResult{URL: raw, OK: false, Error: "missing url", CheckedAt: now.Unix(), Mode: mode})
+		_ = json.NewEncoder(w).Encode(rpc.PingResult{URL: raw, OK: false, Error: "missing url", CheckedAt: now.Unix(), Mode: mode})
 		return
 	}
 	sanitized, err := sanitizeURL(raw)
 	if err != nil {
 		slog.Info("rpc probe invalid url", "raw", raw, "err", err.Error(), "mode", mode)
-		_ = json.NewEncoder(w).Encode(rpcProbeResult{URL: raw, OK: false, Error: err.Error(), CheckedAt: now.Unix(), Mode: mode})
+		_ = json.NewEncoder(w).Encode(rpc.PingResult{URL: raw, OK: false, Error: err.Error(), CheckedAt: now.Unix(), Mode: mode})
 		return
 	}
 	if mode == "" {
@@ -284,7 +197,7 @@ func RpcProbeHandler(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(r.Context(), 6*time.Second)
 	defer cancel()
-	var pr rpcProbeResult
+	var pr rpc.PingResult
 	startProbe := time.Now()
 	if mode == "json" {
 		pr = jsonProbe(ctx, sanitized, expected)

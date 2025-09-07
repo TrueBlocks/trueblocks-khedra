@@ -130,7 +130,7 @@ type CustomLogger struct {
 
 func (c *CustomLogger) Panic(msg string, args ...any) {
 	s := fmt.Sprintf(msg, args...)
-	logger.Panic(s)
+	panic(s)
 }
 
 func (c *CustomLogger) Fatal(msg string, args ...any) {

@@ -1,13 +1,13 @@
 package install
 
 import (
-	"context"
 	"strings"
 	"sync"
 	"time"
 
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/rpc"
 	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
 	yamlv2 "gopkg.in/yaml.v2"
 )
@@ -41,8 +41,10 @@ func checkMainnetAccessible(rpcUrl string) bool {
 	}
 
 	// Perform the actual RPC check
-	ctx := context.Background()
-	probe := RpcProbeJSON(ctx, rpcUrl)
+	probe, err := rpc.PingRpc(rpcUrl)
+	if err != nil {
+		logger.Info("mainnet RPC ping failed", "url", rpcUrl, "error", err)
+	}
 	accessible := probe.OK && (probe.ChainID == "0x1" || probe.ChainID == "1")
 
 	// Cache the result
