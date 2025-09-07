@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"html/template"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/base"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v5"
 )
@@ -100,11 +100,11 @@ func mustGetConfigPath() string {
 	cfgDir := utils.ResolvePath("~/.khedra")
 	if !coreFile.FolderExists(cfgDir) {
 		if err = coreFile.EstablishFolder(cfgDir); err != nil {
-			log.Fatalf("error establishing log folder %s: %v", cfgDir, err)
+			logger.Panicf("error establishing log folder %s: %v", cfgDir, err)
 		}
 	}
 	if !isWritable(cfgDir) {
-		log.Fatalf("log directory %s is not writable: %v", cfgDir, err)
+		logger.Panicf("log directory %s is not writable: %v", cfgDir, err)
 	}
 	return cfgDir
 }

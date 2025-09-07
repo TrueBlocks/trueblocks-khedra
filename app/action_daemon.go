@@ -119,7 +119,7 @@ func (k *KhedraApp) daemonAction(c *cli.Context) error {
 	// Initialize the control service -- we need it for daemon
 	k.initializeControlSvc()
 	if err := k.serviceManager.StartAllServices(); err != nil {
-		k.logger.Fatal(err.Error())
+		k.logger.Panic(err.Error())
 	}
 
 	// Delegate signal handling & graceful cleanup to the ServiceManager implementation.
@@ -477,11 +477,11 @@ func (opts *MonitorsOptions) getOutputFolder(orig string) (string, error) {
 	parts := strings.Split(strings.Replace(cmdLine, "  ", " ", -1), " ")
 	if len(parts) < 1 || parts[0] != "chifra" {
 		s := fmt.Sprintf("Invalid command: %s. Must start with 'chifra'.", strings.Trim(orig, " \t\n\r"))
-		logger.Fatal(s)
+		logger.Panic(s)
 	}
 	if len(parts) < 2 || !okMap[parts[1]] {
 		s := fmt.Sprintf("Invalid command: %s. Must start with 'chifra export', 'chifra list', 'chifra state', or 'chifra tokens'.", orig)
-		logger.Fatal(s)
+		logger.Panic(s)
 	}
 
 	cwd, _ := os.Getwd()
@@ -577,7 +577,7 @@ func (opts *MonitorsOptions) getMonitorList() []monitor.Monitor {
 						return types.Usage("The {0} option requires {1} to exist.", "--watch", opts.Commands)
 					}
 					if file.FileSize(cmdFile) == 0 {
-						logger.Fatal(types.Usage("The file you specified ({0}) was found but contained no commands.", cmdFile).Error())
+						logger.Panic(types.Usage("The file you specified ({0}) was found but contained no commands.", cmdFile).Error())
 					}
 				}
 
@@ -590,14 +590,14 @@ func (opts *MonitorsOptions) getMonitorList() []monitor.Monitor {
 							return types.Usage("The {0} option requires {1} to exist.", "--watch", opts.Watchlist)
 						}
 						if file.FileSize(watchList) == 0 {
-							logger.Fatal(types.Usage("The file you specified ({0}) was found but contained no addresses.", watchList).Error())
+							logger.Panic(types.Usage("The file you specified ({0}) was found but contained no addresses.", watchList).Error())
 						}
 					}
 				}
 
 				if err := index.IsInitialized(chain, config.ExpectedVersion()); err != nil {
 					if (errors.Is(err, index.ErrNotInitialized) || errors.Is(err, index.ErrIncorrectHash)) && !opts.Globals.IsApiMode() {
-						logger.Fatal(err)
+						logger.Panic(err)
 					}
 					return err
 				}

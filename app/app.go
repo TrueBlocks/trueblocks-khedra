@@ -2,11 +2,11 @@ package app
 
 import (
 	"fmt"
-	"log"
 	"log/slog"
 	"os"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
 	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
 	"github.com/TrueBlocks/trueblocks-sdk/v5/services"
@@ -49,7 +49,7 @@ func (k *KhedraApp) RestartAllServices() error {
 func NewKhedraApp() *KhedraApp {
 	k := KhedraApp{}
 	if k.isRunning() {
-		log.Fatal(colors.BrightBlue + "khedra is already running - cannot run..." + colors.Off)
+		logger.Panic(colors.BrightBlue + "khedra is already running - cannot run..." + colors.Off)
 	}
 	k.cli = initCli(&k)
 	return &k
