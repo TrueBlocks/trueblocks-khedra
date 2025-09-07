@@ -2,6 +2,8 @@ module github.com/TrueBlocks/trueblocks-khedra/v5
 
 go 1.23.1
 
+replace github.com/TrueBlocks/trueblocks-core/src/apps/chifra => ../src/apps/chifra
+
 require (
 	github.com/TrueBlocks/trueblocks-core/src/apps/chifra v0.0.0-20250609000835-e567c05604cb
 	github.com/TrueBlocks/trueblocks-sdk/v5 v5.3.0
