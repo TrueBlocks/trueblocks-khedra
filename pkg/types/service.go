@@ -3,6 +3,7 @@ package types
 import (
 	"fmt"
 
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
 )
 
@@ -43,8 +44,9 @@ func NewService(serviceType string) Service {
 			Port:    5001,
 		}
 	default:
-		panic("Unknown service type: " + serviceType)
+		logger.Panic("Unknown service type: " + serviceType)
 	}
+	return Service{}
 }
 
 func (s *Service) IsEnabled() bool {
