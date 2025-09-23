@@ -119,7 +119,7 @@ func (k *KhedraApp) daemonAction(c *cli.Context) error {
 	// Initialize the control service -- we need it for daemon
 	k.initializeControlSvc()
 	if err := k.serviceManager.StartAllServices(); err != nil {
-		k.logger.Panic(err.Error())
+		k.logger.Panic("%s", err.Error())
 	}
 
 	// Delegate signal handling & graceful cleanup to the ServiceManager implementation.
