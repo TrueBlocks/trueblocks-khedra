@@ -1,6 +1,7 @@
 module github.com/TrueBlocks/trueblocks-khedra/v5
 
-go 1.23.1
+// Go Version
+go 1.25.1
 
 replace github.com/TrueBlocks/trueblocks-core/src/apps/chifra => ../src/apps/chifra
 
