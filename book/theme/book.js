@@ -467,7 +467,7 @@ function playground_text(playground, hidden = true) {
         body.classList.remove('sidebar-visible')
         body.classList.add('sidebar-hidden');
         Array.from(sidebarLinks).forEach(function (link) {
-            link.setAttribute('tabIndex', -1);
+            link.setAttribute('tabIndex');
         });
         sidebarToggleButton.setAttribute('aria-expanded', false);
         sidebar.setAttribute('aria-hidden', true);

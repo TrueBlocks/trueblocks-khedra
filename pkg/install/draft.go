@@ -123,9 +123,9 @@ func SaveDraftAtomic(d *Draft) error {
 		_ = os.Remove(tmp)
 		return err
 	}
-	if err := fsyncDir(dir); err != nil { // best effort
-		// continue; not fatal on some platforms
-	}
+	// if err := fsyncDir(dir); err != nil { // best effort
+	// 	// continue; not fatal on some platforms
+	// }
 	if err := os.Rename(tmp, draftPath); err != nil {
 		_ = os.Remove(tmp)
 		return err

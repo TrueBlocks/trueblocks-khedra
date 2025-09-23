@@ -45,6 +45,7 @@ func currentStep() string { return StepOrder[0] }
 
 func Handler(session *SessionStore, version string, configured bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		_ = r
 		sid, _ := session.Get()
 		st := State{Configured: configured, CurrentStep: currentStep(), SessionID: sid, Version: version, Schema: 1}
 		w.Header().Set("Content-Type", "application/json")

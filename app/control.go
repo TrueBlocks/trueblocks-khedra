@@ -85,7 +85,7 @@ func (k *KhedraApp) initializeControlSvc() error {
 	k.controlSvc.AttachServiceManager(k.serviceManager)
 
 	// Add handlers AFTER serviceManager is created so dashboard state handler can access it
-	k.addHandlers()
+	_ = k.addHandlers()
 
 	k.logger.Info("Control service initialized", "services", len(activeServices))
 	return nil
@@ -119,7 +119,7 @@ func (k *KhedraApp) addHandlers() error {
 		d, err := install.LoadDraft()
 		if err != nil || d == nil {
 			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("config not found"))
+			_, _ = w.Write([]byte("config not found"))
 			return
 		}
 		cfg := d.Config
@@ -130,9 +130,9 @@ func (k *KhedraApp) addHandlers() error {
 		processed := types.RemoveZeroLines(buf.String())
 		w.Header().Set("Content-Disposition", "attachment; filename=\"config.draft.yaml\"")
 		if processed != "" {
-			w.Write([]byte(processed))
+			_, _ = w.Write([]byte(processed))
 		} else {
-			w.Write([]byte("# draft config could not be rendered"))
+			_, _ = w.Write([]byte("# draft config could not be rendered"))
 		}
 	})
 
@@ -156,7 +156,7 @@ func (k *KhedraApp) addHandlers() error {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
-			w.Write([]byte(`{"error":"GET only"}`))
+			_, _ = w.Write([]byte(`{"error":"GET only"}`))
 			return
 		}
 		// Rate limiting (per-session + global)
@@ -252,6 +252,7 @@ func (k *KhedraApp) addHandlers() error {
 	// ----------------------------------------------------------------------------------
 	// Dashboard state endpoint (initial minimal implementation per spec)
 	k.controlSvc.AddHandler("/dashboard/state", func(w http.ResponseWriter, r *http.Request) {
+		_ = r
 		w.Header().Set("Content-Type", "application/json")
 		// Build services slice, sorted alphabetically for stable UI
 		var servicesJSON []map[string]any
@@ -395,7 +396,7 @@ func (k *KhedraApp) addHandlers() error {
 		rpcURL := strings.TrimSpace(r.URL.Query().Get("rpc"))
 		if rpcURL == "" {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"error":"missing rpc"}`))
+			_, _ = w.Write([]byte(`{"error":"missing rpc"}`))
 			return
 		}
 		// Probe JSON directly (reachability assumed if returns)
@@ -406,7 +407,7 @@ func (k *KhedraApp) addHandlers() error {
 		if !res.OK || res.ChainID == "" {
 			w.WriteHeader(http.StatusBadGateway)
 			b, _ := json.Marshal(res)
-			w.Write(b)
+			_, _ = w.Write(b)
 			return
 		}
 		// Validate that chainId exists in local ChainList; reject if unknown
@@ -414,12 +415,12 @@ func (k *KhedraApp) addHandlers() error {
 		cidNum, errParse := strconv.ParseUint(cidStr, 16, 64)
 		if errParse != nil {
 			w.WriteHeader(http.StatusUnprocessableEntity)
-			w.Write([]byte(fmt.Sprintf(`{"ok":false,"error":"invalid chainId %s"}`, res.ChainID)))
+			fmt.Fprintf(w, `{"ok":false,"error":"invalid chainId %s"}`, res.ChainID)
 			return
 		}
 		if utils.GetChainListItem("~/.khedra", int(cidNum)) == nil {
 			w.WriteHeader(http.StatusUnprocessableEntity)
-			w.Write([]byte(fmt.Sprintf(`{"ok":false,"error":"unknown chainId %s not found in chain list"}`, res.ChainID)))
+			fmt.Fprintf(w, `{"ok":false,"error":"unknown chainId %s not found in chain list"}`, res.ChainID)
 			return
 		}
 		// Load draft and append / replace chain keyed by chain name or fallback numeric id
@@ -469,7 +470,7 @@ func (k *KhedraApp) addHandlers() error {
 		draft.Config.Chains[name] = ch
 		if err := install.SaveDraftAtomic(draft); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(`{"ok":false,"error":"save failed"}`))
+			_, _ = w.Write([]byte(`{"ok":false,"error":"save failed"}`))
 			return
 		}
 		// Create response with RPC validity
@@ -481,7 +482,7 @@ func (k *KhedraApp) addHandlers() error {
 			"rpcValid": true, // If we got here, probe was successful so RPC is valid
 		}
 		b, _ := json.Marshal(map[string]any{"ok": true, "chain": chainWithStatus, "probe": res})
-		w.Write(b)
+		_, _ = w.Write(b)
 	})
 
 	// ----------------------------------------------------------------------------------
@@ -490,7 +491,7 @@ func (k *KhedraApp) addHandlers() error {
 		w.Header().Set("Content-Type", "application/json")
 		name := strings.TrimSpace(r.URL.Query().Get("name"))
 		if name == "" || name == "mainnet" {
-			w.Write([]byte(`{"ok":false}`))
+			_, _ = w.Write([]byte(`{"ok":false}`))
 			return
 		}
 		draft, _ := install.LoadDraft()
@@ -498,12 +499,15 @@ func (k *KhedraApp) addHandlers() error {
 			delete(draft.Config.Chains, name)
 			_ = install.SaveDraftAtomic(draft)
 		}
-		w.Write([]byte(`{"ok":true}`))
+		_, _ = w.Write([]byte(`{"ok":true}`))
 	})
 
 	// ----------------------------------------------------------------------------------
 	// Simple ping endpoint to verify new binary deployed
-	k.controlSvc.AddHandler("/install/ping", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("pong")) })
+	k.controlSvc.AddHandler("/install/ping", func(w http.ResponseWriter, r *http.Request) {
+		_ = r
+		_, _ = w.Write([]byte("pong"))
+	})
 
 	// ----------------------------------------------------------------------------------
 
@@ -517,14 +521,14 @@ func (k *KhedraApp) addHandlers() error {
 			draft, err := install.LoadDraft()
 			if err != nil || draft == nil {
 				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(`{"error":"failed to load draft config"}`))
+				_, _ = w.Write([]byte(`{"error":"failed to load draft config"}`))
 				return
 			}
 
 			// Parse form data and update draft
 			if err := r.ParseForm(); err != nil {
 				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte(`{"error":"invalid form data"}`))
+				_, _ = w.Write([]byte(`{"error":"invalid form data"}`))
 				return
 			}
 
@@ -534,7 +538,7 @@ func (k *KhedraApp) addHandlers() error {
 			// Save draft to disk immediately
 			if err := install.SaveDraft(draft); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(`{"error":"failed to save draft config"}`))
+				_, _ = w.Write([]byte(`{"error":"failed to save draft config"}`))
 				return
 			}
 		}
@@ -564,7 +568,7 @@ func (k *KhedraApp) addHandlers() error {
 			loaded, err := LoadConfig()
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(`{"error":"failed to load config"}`))
+				_, _ = w.Write([]byte(`{"error":"failed to load config"}`))
 				return
 			}
 			cfg = loaded
@@ -576,7 +580,7 @@ func (k *KhedraApp) addHandlers() error {
 		} else {
 			// No config available
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(`{"error":"no config available"}`))
+			_, _ = w.Write([]byte(`{"error":"no config available"}`))
 			return
 		}
 
@@ -603,10 +607,10 @@ func (k *KhedraApp) addHandlers() error {
 		b, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(`{"error":"failed to marshal config"}`))
+			_, _ = w.Write([]byte(`{"error":"failed to marshal config"}`))
 			return
 		}
-		w.Write(b)
+		_, _ = w.Write(b)
 	})
 
 	// ----------------------------------------------------------------------------------
@@ -918,11 +922,11 @@ func (k *KhedraApp) addHandlers() error {
 					return
 				}
 				draft, _ := install.LoadDraft()
-				strat := "download"
+				strategy := "download"
 				detail := "index"
 				if draft != nil {
 					if draft.Config.General.Strategy != "" {
-						strat = draft.Config.General.Strategy
+						strategy = draft.Config.General.Strategy
 					}
 					if draft.Config.General.Detail != "" {
 						detail = draft.Config.General.Detail
@@ -932,9 +936,9 @@ func (k *KhedraApp) addHandlers() error {
 				if draft != nil && draft.Meta.EstDiskGB > 0 && draft.Meta.EstHours > 0 {
 					disk, hours = draft.Meta.EstDiskGB, draft.Meta.EstHours
 				} else {
-					disk, hours = install.EstimateIndex(strat, detail)
+					disk, hours = install.EstimateIndex(strategy, detail)
 				}
-				serveStep(3, "index.html", map[string]any{"Strategy": strat, "Detail": detail, "Disk": disk, "Hours": hours})
+				serveStep(3, "index.html", map[string]any{"Strategy": strategy, "Detail": detail, "Disk": disk, "Hours": hours})
 				return
 			}
 
@@ -1268,6 +1272,7 @@ func (k *KhedraApp) addHandlers() error {
 	// ----------------------------------------------------------------------------------
 	// Control info endpoint returning metadata
 	k.controlSvc.AddHandler("/control/info", func(w http.ResponseWriter, r *http.Request) {
+		_ = r
 		w.Header().Set("Content-Type", "application/json")
 		var regenerated bool
 		var meta control.Metadata

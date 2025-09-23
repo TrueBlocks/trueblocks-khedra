@@ -90,6 +90,7 @@ func headProbe(ctx context.Context, raw string) rpc.PingResult {
 }
 
 func jsonProbe(ctx context.Context, raw string, expected string) rpc.PingResult {
+	_ = ctx
 	result, err := rpc.PingRpc(raw)
 	if err != nil {
 		slog.Info("rpc json probe error", "url", raw, "err", err.Error())

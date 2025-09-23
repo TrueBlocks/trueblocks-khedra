@@ -117,7 +117,7 @@ func (k *KhedraApp) daemonAction(c *cli.Context) error {
 	}
 
 	// Initialize the control service -- we need it for daemon
-	k.initializeControlSvc()
+	_ = k.initializeControlSvc()
 	if err := k.serviceManager.StartAllServices(); err != nil {
 		k.logger.Panic("%s", err.Error())
 	}
@@ -325,7 +325,7 @@ func (c *Command) resolve(addr base.Address, before, after int64) string {
 		}
 		c.Cmd += " --append --no_header"
 	}
-	c.Cmd = strings.Replace(c.Cmd, "  ", " ", -1)
+	c.Cmd = strings.ReplaceAll(c.Cmd, "  ", " ")
 	ret := c.Cmd + " --fmt " + c.Fmt + " --output " + c.fileName(addr) + " " + addr.Hex()
 	if c.Cache {
 		ret += " --cache"
@@ -429,12 +429,12 @@ func GetExportFormat(cmd, def string) string {
 }
 
 func (opts *MonitorsOptions) cleanLine(lineIn string) (cmd Command, err error) {
-	line := strings.Replace(lineIn, "[{ADDRESS}]", "", -1)
+	line := strings.ReplaceAll(lineIn, "[{ADDRESS}]", "")
 	if strings.Contains(line, "--fmt") {
-		line = strings.Replace(line, "--fmt", "", -1)
-		line = strings.Replace(line, "json", "", -1)
-		line = strings.Replace(line, "csv", "", -1)
-		line = strings.Replace(line, "txt", "", -1)
+		line = strings.ReplaceAll(line, "--fmt", "")
+		line = strings.ReplaceAll(line, "json", "")
+		line = strings.ReplaceAll(line, "csv", "")
+		line = strings.ReplaceAll(line, "txt", "")
 	}
 	line = utils.StripComments(line)
 	if len(line) == 0 {
@@ -474,7 +474,7 @@ func (opts *MonitorsOptions) getOutputFolder(orig string) (string, error) {
 	}
 
 	cmdLine := orig
-	parts := strings.Split(strings.Replace(cmdLine, "  ", " ", -1), " ")
+	parts := strings.Split(strings.ReplaceAll(cmdLine, "  ", " "), " ")
 	if len(parts) < 1 || parts[0] != "chifra" {
 		s := fmt.Sprintf("Invalid command: %s. Must start with 'chifra'.", strings.Trim(orig, " \t\n\r"))
 		logger.Panic(s)

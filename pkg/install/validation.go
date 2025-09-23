@@ -63,11 +63,11 @@ func ValidatePaths(d *Draft) []FieldError {
 
 func ValidateIndex(d *Draft) []FieldError {
 	var out []FieldError
-	strat := d.Config.General.Strategy
-	if strat == "" {
+	strategy := d.Config.General.Strategy
+	if strategy == "" {
 		out = append(out, FieldError{Field: "general.strategy", Code: "required", Message: "strategy is required"})
-	} else if strat != "download" && strat != "scratch" {
-		out = append(out, FieldError{Field: "general.strategy", Code: "invalid_strategy", Message: fmt.Sprintf("unknown strategy '%s'", strat)})
+	} else if strategy != "download" && strategy != "scratch" {
+		out = append(out, FieldError{Field: "general.strategy", Code: "invalid_strategy", Message: fmt.Sprintf("unknown strategy '%s'", strategy)})
 	}
 	det := d.Config.General.Detail
 	if det == "" { // allow empty -> will default later, no error
