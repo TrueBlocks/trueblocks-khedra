@@ -6,8 +6,8 @@ go 1.25.1
 replace github.com/TrueBlocks/trueblocks-core/src/apps/chifra => ../src/apps/chifra
 
 require (
-	github.com/TrueBlocks/trueblocks-core/src/apps/chifra v0.0.0-20250923033958-180bbc7ebdbd
-	github.com/TrueBlocks/trueblocks-sdk/v5 v5.3.0
+	github.com/TrueBlocks/trueblocks-core/src/apps/chifra v0.0.0-20250928042956-de9ea31404b7
+	github.com/TrueBlocks/trueblocks-sdk/v5 v5.9.1
 	github.com/alecthomas/assert/v2 v2.11.0
 	github.com/goccy/go-yaml v1.17.1
 	github.com/google/go-cmp v0.7.0
