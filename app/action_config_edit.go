@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/exec"
 
-	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v5/pkg/file"
+	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/file"
 	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 	"github.com/urfave/cli/v2"
 )
