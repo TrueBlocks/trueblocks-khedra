@@ -8,8 +8,8 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v5/pkg/colors"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v5/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v5/pkg/utils"
-	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
-	"github.com/TrueBlocks/trueblocks-sdk/v5/services"
+	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
+	"github.com/TrueBlocks/trueblocks-sdk/v6/services"
 	"github.com/urfave/cli/v2"
 )
 

@@ -13,7 +13,7 @@ import (
 	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v5/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v5/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v5/pkg/utils"
-	sdk "github.com/TrueBlocks/trueblocks-sdk/v5"
+	sdk "github.com/TrueBlocks/trueblocks-sdk/v6"
 )
 
 type Config struct {

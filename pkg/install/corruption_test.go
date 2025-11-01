@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
+	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 )
 
 func TestDetectRecentCorruption(t *testing.T) {

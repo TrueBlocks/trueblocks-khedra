@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
+	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 	"github.com/google/go-cmp/cmp"
 )
 

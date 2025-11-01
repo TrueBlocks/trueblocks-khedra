@@ -19,7 +19,7 @@ app:
 	@go build -o $(dest) *.go
 
 update:
-	@go get "github.com/TrueBlocks/trueblocks-sdk/v5@latest"
+	@go get "github.com/TrueBlocks/trueblocks-sdk/v6@latest"
 	@go get github.com/TrueBlocks/trueblocks-core/src/apps/chifra@latest
 	@go get -u ./...
 

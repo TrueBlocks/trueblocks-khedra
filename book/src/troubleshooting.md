@@ -13,7 +13,7 @@ To keep Khedra running smoothly, periodically check for and install updates:
 khedra version
 
 # Update to the latest version
-go get -u github.com/TrueBlocks/trueblocks-khedra/v5
+go get -u github.com/TrueBlocks/trueblocks-khedra/v6
 
 # Rebuild and install
 cd <path_for_khedra_github_repo>

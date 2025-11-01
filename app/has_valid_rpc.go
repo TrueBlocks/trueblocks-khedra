@@ -1,7 +1,7 @@
 package app
 
 import (
-	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
+	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 )
 
 func HasValidRpc(ch *types.Chain, tries int) bool {

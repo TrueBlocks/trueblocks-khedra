@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
+	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 )
 
 // FieldError identifies a specific invalid field; empty Field means global error.

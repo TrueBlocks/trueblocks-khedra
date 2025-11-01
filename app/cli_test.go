@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
+	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli/v2"
 )

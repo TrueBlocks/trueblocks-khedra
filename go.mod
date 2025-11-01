@@ -1,4 +1,4 @@
-module github.com/TrueBlocks/trueblocks-khedra/v5
+module github.com/TrueBlocks/trueblocks-khedra/v6
 
 // Go Version
 go 1.25.1
@@ -6,7 +6,7 @@ go 1.25.1
 replace github.com/TrueBlocks/trueblocks-core/src/apps/chifra => ../src/apps/chifra
 
 require (
-	github.com/TrueBlocks/trueblocks-sdk/v5 v5.9.3
+	github.com/TrueBlocks/trueblocks-sdk/v6 v5.9.3
 	github.com/alecthomas/assert/v2 v2.11.0
 	github.com/goccy/go-yaml v1.17.1
 	github.com/google/go-cmp v0.7.0
