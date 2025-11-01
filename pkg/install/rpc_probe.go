@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/rpc"
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v5/pkg/rpc"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v5/pkg/utils"
 )
 
 var (

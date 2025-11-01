@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/config"
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v5/pkg/config"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v5/pkg/file"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v5/pkg/utils"
 	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/control"
 	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/install"
 	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"

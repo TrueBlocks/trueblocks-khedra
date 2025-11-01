@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v5/pkg/colors"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v5/pkg/logger"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 

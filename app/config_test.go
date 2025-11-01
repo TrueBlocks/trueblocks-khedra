@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"testing"
 
-	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
+	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v5/pkg/file"
 	"github.com/TrueBlocks/trueblocks-khedra/v5/pkg/types"
 	"github.com/stretchr/testify/assert"
 	yamlv2 "gopkg.in/yaml.v2"
