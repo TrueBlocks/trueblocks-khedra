@@ -26,8 +26,6 @@ You may use environment variables to override specific options. This document ou
 2. **Establish the config file and edit values for your system**:
 
    ```bash
-   mkdir -p ~/.khedra
-   cp config.yaml.example ~/.khedra/config.yaml
    ./khedra config edit
    ```
 
