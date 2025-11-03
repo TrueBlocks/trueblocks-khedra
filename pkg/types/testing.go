@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/file"
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/utils"
+	coreFile "github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
+	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/utils"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"

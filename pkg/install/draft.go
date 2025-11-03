@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/file"
+	coreFile "github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
 	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 	yamlv2 "gopkg.in/yaml.v2"
 )

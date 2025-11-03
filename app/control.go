@@ -17,9 +17,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/file"
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/rpc"
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/utils"
+	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
+	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/rpc"
+	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/utils"
 	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/control"
 	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/install"
 	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"

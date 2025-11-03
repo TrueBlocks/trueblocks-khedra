@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/file"
+	coreFile "github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
 	"github.com/TrueBlocks/trueblocks-khedra/v6/app"
 	"github.com/joho/godotenv"
 )
