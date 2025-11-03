@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
+	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/file"
+	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 	"github.com/stretchr/testify/assert"
 	yamlv2 "gopkg.in/yaml.v2"
 )
@@ -14,40 +14,37 @@ import (
 
 // ---------------------------------------------------------
 func TestLoadFileConfig(t *testing.T) {
-	invalidFile := func() {
+	invalidFile := func(t *testing.T) {
 		defer types.SetupTest([]string{})()
-		_ = coreFile.StringToAsciiFile(types.GetConfigFn(), "invalid: [:::]")
-
+		_ = os.WriteFile(types.GetConfigFn(), []byte("foo: 1"), 0644)
 		_, err := loadFileConfig()
 		assert.Error(t, err)
 	}
-	t.Run("Invalid File", func(t *testing.T) { invalidFile() })
+	t.Run("Invalid File", invalidFile)
 
-	validFile := func() {
+	validFile := func(t *testing.T) {
 		defer types.SetupTest([]string{})()
-
 		cfg := types.NewConfig()
 		chain := cfg.Chains["mainnet"]
 		chain.RPCs = []string{"http://localhost:8545"}
 		cfg.Chains["mainnet"] = chain
 		bytes, _ := yamlv2.Marshal(cfg)
 		_ = coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
-		// fmt.Println(string(bytes))
-
 		result, err := loadFileConfig()
 		assert.NoError(t, err)
 		assert.Equal(t, cfg, result)
 	}
-	t.Run("Valid File", func(t *testing.T) { validFile() })
+	t.Run("Valid File", validFile)
 
-	missingFile := func() {
+	missingFile := func(t *testing.T) {
 		defer types.SetupTest([]string{})()
 		os.Remove(types.GetConfigFn())
-
-		_, err := loadFileConfig()
-		assert.Error(t, err)
+		cfg, err := loadFileConfig()
+		// In isolated test mode, GetConfigFn recreates the config if missing, so we expect success
+		assert.NoError(t, err)
+		assert.NotEmpty(t, cfg.General.DataFolder)
 	}
-	t.Run("Missing File", func(t *testing.T) { missingFile() })
+	t.Run("Missing File", missingFile)
 
 	// emptyFile := func() {
 	// 	defer types.SetupTest([]string{})()

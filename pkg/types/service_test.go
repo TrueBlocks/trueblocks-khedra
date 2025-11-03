@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/validate"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -73,7 +72,7 @@ func TestNewService(t *testing.T) {
 				assert.Equal(t, tt.expected, service)
 
 				// Validate the returned service
-				err := validate.Validate(&service)
+				err := Validate(&service)
 				assert.NoError(t, err, "Validation failed for service: %v", service)
 			}
 		})
@@ -302,7 +301,7 @@ func TestServiceValidationUnified(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validate.Validate(&tt.service)
+			err := Validate(&tt.service)
 			if tt.wantErr {
 				assert.Error(t, err, "Expected an error in test '%s', but got none", tt.name)
 			} else {
@@ -340,8 +339,34 @@ func TestServiceListValidation(t *testing.T) {
 
 	for i, service := range services {
 		t.Run(fmt.Sprintf("Service %d Validation", i+1), func(t *testing.T) {
-			err := validate.Validate(&service)
+			err := Validate(&service)
 			assert.NoError(t, err, "Validation failed for service %d: %v", i+1, err)
 		})
+	}
+}
+
+// Added minimal missing coverage per ai/TestDesign_service.go.md
+func TestService_IsEnabled(t *testing.T) {
+	api := NewService("api")
+	assert.True(t, api.IsEnabled(), "api service should start enabled")
+	api.Enabled = false
+	assert.False(t, api.IsEnabled(), "api service should reflect disabled state")
+
+	monitor := NewService("monitor") // constructor sets Enabled false
+	assert.False(t, monitor.IsEnabled(), "monitor service should start disabled")
+	monitor.Enabled = true
+	assert.True(t, monitor.IsEnabled(), "monitor service should reflect enabled state after change")
+}
+
+func TestServiceValidation_UnknownNameOneOf(t *testing.T) {
+	// Directly construct a Service with an invalid Name to trigger oneof failure
+	s := Service{Name: "random", Enabled: true}
+	err := Validate(&s)
+	assert.Error(t, err, "expected validation error for unknown service name")
+	if err != nil {
+		assert.Contains(t, err.Error(), "service_field", "should include custom validator tag in error")
+		// The struct tag includes both 'required' and 'oneof', ensure at least a hint of the name issue
+		// We expect multiple service_field validator failures referencing unknown service name
+		assert.Contains(t, err.Error(), "unknown service name", "should note unknown service name in custom validator failures")
 	}
 }

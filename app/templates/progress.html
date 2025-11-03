@@ -1,0 +1,9 @@
+{{define "progress"}}
+{{ if .Steps }}
+<div class="progress">
+  {{range $i, $step := .Steps}}
+    <div class="progress-step {{if lt $i $.CurrentStepIndex}}done{{else if eq $i $.CurrentStepIndex}}current{{end}}"></div>
+  {{end}}
+</div>
+{{ end }}
+{{end}}

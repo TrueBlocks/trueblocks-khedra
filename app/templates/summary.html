@@ -1,0 +1,42 @@
+{{define "navright"}}
+  <a class="nav-btn" href="/install/logging" aria-label="Back">Back</a>
+  <button class="nav-btn" form="summaryForm" type="submit" aria-label="Finish install">Finish</button>
+{{end}}
+{{ define "content" }}
+<h2>Summary</h2>
+<p>Review your settings below. Click Finish to apply the configuration.</p>
+{{ if .Error }}<div role="alert" class="err-banner" style="margin:1em 0;">
+  <strong>Apply failed:</strong> {{ .Error }}
+</div>{{ end }}
+{{ if .Errors }}{{ if gt (len .Errors) 0 }}<div role="alert" class="err-banner" style="margin:1em 0;">
+  <strong>Issues:</strong>
+  <ul style="margin:4px 0 0 1em; padding:0;">
+  {{ range .Errors }}<li data-err-field="{{ .Field }}">{{ .Message }}</li>{{ end }}
+  </ul>
+</div>{{ end }}{{ end }}
+<pre style="background:#f4f4f4;padding:1em;border-radius:6px;max-height:300px;overflow:auto;white-space:pre;">
+{{ if .Draft -}}
+Data Folder: {{ .Draft.Config.General.DataFolder }}
+Strategy:    {{ .Draft.Config.General.Strategy }} (detail: {{ .Draft.Config.General.Detail }})
+
+Services:
+{{ range $name, $svc := .Draft.Config.Services -}}
+  - {{$name}}: {{ if $svc.Enabled }}enabled{{ else }}disabled{{ end }} (port {{$svc.Port}})
+{{ end -}}
+
+Chains:
+{{ range $name, $ch := .Draft.Config.Chains -}}
+  - {{$name}}: {{ if $ch.Enabled }}enabled{{ else }}disabled{{ end }} RPCs: {{ len $ch.RPCs }}
+{{ end -}}
+
+Logging:
+  Level: {{ .Draft.Config.Logging.Level }}
+{{ else -}}
+(no draft loaded)
+{{ end -}}
+</pre>
+<form id="summaryForm" method="POST" action="/install/summary" style="position:relative;">
+  <input type="hidden" name="session" value="{{ .SessionID }}" />
+</form>
+<nav style="display:none;"></nav>
+{{ end }}

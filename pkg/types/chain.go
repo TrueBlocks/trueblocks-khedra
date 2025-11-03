@@ -1,14 +1,14 @@
 package types
 
 import (
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/utils"
 )
 
 type Chain struct {
-	Name    string   `koanf:"name" json:"name,omitempty" validate:"req_if_enabled"` // Must be non-empty
-	RPCs    []string `koanf:"rpcs" validate:"req_if_enabled,dive,strict_url"`       // Must have at least one reachable RPC URL
-	ChainID int      `koanf:"chainId" json:"chainId,omitempty" validate:"non_zero"` // Must be non-zero
-	Enabled bool     `koanf:"enabled"`                                              // Defaults to false if not specified
+	Name    string   `koanf:"name" yaml:"name" json:"name,omitempty" validate:"req_if_enabled"`                 // Must be non-empty
+	RPCs    []string `koanf:"rpcs" yaml:"rpcs" json:"rpcs,omitempty" validate:"req_if_enabled,dive,strict_url"` // Must have at least one reachable RPC URL
+	ChainID int      `koanf:"chainId" yaml:"chainId" json:"chainId,omitempty" validate:"non_zero"`              // Must be non-zero
+	Enabled bool     `koanf:"enabled" yaml:"enabled" json:"enabled,omitempty"`                                  // Defaults to false if not specified
 }
 
 func NewChain(chain string, chainId int) Chain {

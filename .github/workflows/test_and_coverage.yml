@@ -13,10 +13,10 @@ jobs:
     env:
       TB_GITHUB_TESTING: "true"
     steps:
-      # Checkout the repository
+      # Checkout the repository Go Version
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Install Go 1.23.1
+      - name: Install Go 1.25.1
         run: |
           ARCH=$(uname -m)
           if [ "$ARCH" = "x86_64" ]; then
@@ -27,8 +27,8 @@ jobs:
             echo "Unsupported architecture: $ARCH"
             exit 1
           fi
-          curl -LO https://golang.org/dl/go1.23.1.linux-$ARCH.tar.gz
-          sudo tar -C /usr/local -xzf go1.23.1.linux-$ARCH.tar.gz
+          curl -LO https://golang.org/dl/go1.25.1.linux-$ARCH.tar.gz
+          sudo tar -C /usr/local -xzf go1.25.1.linux-$ARCH.tar.gz
           export PATH=$PATH:/usr/local/go/bin
           go version
       # Run go mod tidy

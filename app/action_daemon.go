@@ -2,37 +2,82 @@ package app
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"html/template"
-	"log/slog"
+	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
-	_ "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/env"
-	"github.com/TrueBlocks/trueblocks-sdk/v5/services"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/config"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/file"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/utils"
+	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/control"
+	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/install"
+	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 	"github.com/urfave/cli/v2"
 )
 
 func (k *KhedraApp) daemonAction(c *cli.Context) error {
+	defer func() {
+		// cleanup the control file on exit
+		_ = os.Remove(control.Path())
+	}()
+
 	_ = c // linter
-	if err := k.loadConfigIfInitialized(); err != nil {
+	// Ensure logger is initialized for first-run case
+	if k.logger == nil {
+		k.logger = types.NewLogger(types.Logging{Level: "info"})
+	}
+
+	// On first run, start control service immediately for wizard access
+	if !install.Configured() {
+		if err := k.initializeControlSvc(); err != nil {
+			return err
+		}
+		if os.Getenv("KHEDRA_EMBED") != "1" {
+			fmt.Printf("Khedra is not configured. Please complete setup in your browser: http://localhost:%d\n", k.controlSvc.Port())
+			utils.System("open http://localhost:" + fmt.Sprintf("%d", k.controlSvc.Port()))
+		}
+		// Let daemon continue to blocking loop - live-reload will handle config changes
+	}
+
+	// Only load config if we're now configured (either was already, or just completed setup)
+	if install.Configured() {
+		if err := k.loadConfigIfInitialized(); err != nil {
+			return err
+		}
+		k.logger.Info("Starting khedra daemon...config loaded...")
+	}
+
+	if err := k.handleWaitForNode(); err != nil {
 		return err
 	}
-	k.logger.Info("Starting khedra daemon...config loaded...")
 
-	for _, ch := range k.config.Chains {
-		if ch.Enabled {
-			if !HasValidRpc(&ch, 4) {
-				return fmt.Errorf("chain %s has no valid RPC", ch.Name)
+	// Only validate RPCs if we have a complete, finalized configuration
+	// Skip validation if wizard is still in progress (draft exists) or config is incomplete
+	draft, _ := install.LoadDraft()
+	if install.Configured() && draft == nil {
+		for _, ch := range k.config.Chains {
+			if ch.Enabled {
+				if !HasValidRpc(&ch, 4) {
+					return fmt.Errorf("chain %s has no valid RPC", ch.Name)
+				}
+				k.logger.Progress("Connected to", "chain", ch.Name)
 			}
-			k.logger.Progress("Connected to", "chain", ch.Name)
 		}
 	}
 	k.logger.Info("Processing chains...", "chainList", k.config.EnabledChains())
+	k.logger.Info("Paths:", "indexPath", k.config.IndexPath())
+	k.logger.Info("", "cachePath", k.config.CachePath())
 
-	os.Setenv("XDG_CONFIG_HOME", k.config.General.DataFolder)
+	rootFolder := config.PathToRootConfig()
+
+	os.Setenv("XDG_CONFIG_HOME", rootFolder)
 	os.Setenv("TB_SETTINGS_DEFAULTCHAIN", "mainnet")
 	os.Setenv("TB_SETTINGS_INDEXPATH", k.config.IndexPath())
 	os.Setenv("TB_SETTINGS_CACHEPATH", k.config.CachePath())
@@ -56,7 +101,7 @@ func (k *KhedraApp) daemonAction(c *cli.Context) error {
 
 	k.logger.Progress("Starting services", "services", k.config.ServiceList(true /* enabledOnly */))
 
-	configFn := filepath.Join(k.config.General.DataFolder, "trueBlocks.toml")
+	configFn := filepath.Join(rootFolder, "trueBlocks.toml")
 	if file.FileExists(configFn) {
 		k.logger.Info("Config file found", "fn", configFn)
 		if !k.chainsConfigured(configFn) {
@@ -65,67 +110,22 @@ func (k *KhedraApp) daemonAction(c *cli.Context) error {
 		}
 	} else {
 		k.logger.Warn("Config file not found", "fn", configFn)
-		if err := k.createChifraConfig(); err != nil {
+		if err := k.createChifraConfig(rootFolder); err != nil {
 			k.logger.Error("Error creating config file", "error", err)
 			return err
 		}
 	}
 
-	var activeServices []services.Servicer
-	controlService := services.NewControlService(k.logger.GetLogger())
-	activeServices = append(activeServices, controlService)
-	for _, svc := range k.config.Services {
-		switch svc.Name {
-		case "scraper":
-			chains := strings.Split(strings.ReplaceAll(k.config.EnabledChains(), " ", ""), ",")
-			scraperSvc := services.NewScrapeService(
-				k.logger.GetLogger(),
-				"all",
-				chains,
-				k.config.Services["scraper"].Sleep,
-				k.config.Services["scraper"].BatchSize,
-			)
-			activeServices = append(activeServices, scraperSvc)
-			if !svc.Enabled {
-				scraperSvc.Pause()
-			}
-		case "monitor":
-			monitorSvc := services.NewMonitorService(nil)
-			activeServices = append(activeServices, monitorSvc)
-			if !svc.Enabled {
-				monitorSvc.Pause()
-			}
-		case "api":
-			if svc.Enabled {
-				apiSvc := services.NewApiService(k.logger.GetLogger())
-				activeServices = append(activeServices, apiSvc)
-			}
-		case "ipfs":
-			if svc.Enabled {
-				ipfsSvc := services.NewIpfsService(k.logger.GetLogger())
-				activeServices = append(activeServices, ipfsSvc)
-			}
-		}
+	// Initialize the control service -- we need it for daemon
+	_ = k.initializeControlSvc()
+	if err := k.serviceManager.StartAllServices(); err != nil {
+		k.logger.Panic("%s", err.Error())
 	}
 
-	slog.Info("Starting khedra daemon", "services", len(activeServices))
-	serviceManager := services.NewServiceManager(activeServices, k.logger.GetLogger())
-	for _, svc := range activeServices {
-		if controlSvc, ok := svc.(*services.ControlService); ok {
-			controlSvc.AttachServiceManager(serviceManager)
-		}
-	}
-	if err := serviceManager.StartAllServices(); err != nil {
-		k.logger.Fatal(err.Error())
-	}
-
-	serviceManager.HandleSignals()
-
-	if true {
-		select {}
-	}
-
-	return nil
+	// Delegate signal handling & graceful cleanup to the ServiceManager implementation.
+	k.serviceManager.HandleSignals()
+	k.logger.Info("daemon running; press Ctrl+C to initiate graceful shutdown (managed by ServiceManager)")
+	select {} // block until ServiceManager handles signal and exits process
 }
 
 func (k *KhedraApp) chainsConfigured(configFn string) bool {
@@ -147,15 +147,15 @@ func (k *KhedraApp) chainsConfigured(configFn string) bool {
 	return true
 }
 
-func (k *KhedraApp) createChifraConfig() error {
-	if err := file.EstablishFolder(k.config.General.DataFolder); err != nil {
+func (k *KhedraApp) createChifraConfig(rootFolder string) error {
+	if err := file.EstablishFolder(rootFolder); err != nil {
 		return err
 	}
 
 	chainStr := k.config.EnabledChains()
 	chains := strings.Split(chainStr, ",")
 	for _, chain := range chains {
-		if err := k.createChainConfig(chain); err != nil {
+		if err := k.createChainConfigFolder(rootFolder, chain); err != nil {
 			return err
 		}
 	}
@@ -173,7 +173,7 @@ func (k *KhedraApp) createChifraConfig() error {
 		return fmt.Errorf("empty config file")
 	}
 
-	configFn := filepath.Join(k.config.General.DataFolder, "trueBlocks.toml")
+	configFn := filepath.Join(rootFolder, "trueBlocks.toml")
 	err = file.StringToAsciiFile(configFn, buf.String())
 	if err != nil {
 		return err
@@ -193,24 +193,26 @@ func (k *KhedraApp) createChifraConfig() error {
 // 14170,apps,Accounts,monitors,acctExport,n4,,,,,note,,,,,,Addresses provided on the command line are ignored in `--watch` mode.
 // 14180,apps,Accounts,monitors,acctExport,n5,,,,,note,,,,,,Providing the value `existing` to the `--watchlist` monitors all existing monitor files (see --list).
 
-func (k *KhedraApp) createChainConfig(chain string) error {
-	chainConfig := filepath.Join(k.config.General.DataFolder, "config", chain)
+func (k *KhedraApp) createChainConfigFolder(rootFolder string, chain string) error {
+	chainConfig := filepath.Join(rootFolder, "config", chain)
 	if err := file.EstablishFolder(chainConfig); err != nil {
 		return fmt.Errorf("failed to create folder %s: %w", chainConfig, err)
 	}
 
-	k.logger.Progress("Creating chain config", "chainConfig", chainConfig)
-
-	// baseURL := "https://raw.githubusercontent.com/TrueBlocks/trueblocks-core/refs/heads/master/src/other/install/per-chain/"
-	// url, err := url.JoinPath(baseURL, chain, "allocs.csv")
-	// if err != nil {
-	// 	return err
-	// }
-	// allocFn := filepath.Join(chainConfig, "allocs.csv")
-	// dur := 100 * 365 * 24 * time.Hour // 100 years
-	// if _, err := utils.Download AndStore(url, allocFn, dur); err != nil {
-	// 	return fmt.Errorf("failed to download and store allocs.csv for chain %s: %w", chain, err)
-	// }
+	baseURL := "https://raw.githubusercontent.com/TrueBlocks/trueblocks-core/refs/heads/master/src/other/install/per-chain"
+	url, err := url.JoinPath(baseURL, chain, "allocs.csv")
+	if err != nil {
+		return err
+	}
+	allocFn := filepath.Join(chainConfig, "allocs.csv")
+	dur := 100 * 365 * 24 * time.Hour // 100 years
+	if _, err := downloadAndStore(url, allocFn, dur); err != nil {
+		k.logger.Warn(fmt.Errorf("failed to download and store allocs.csv for chain %s: %w", chain, err).Error())
+		// It's not an error to not have an allocation file. IsArchiveNode assumes archive if not present.
+		return nil
+	}
+	k.logger.Progress("Creating chain config", "chainConfig", allocFn)
+	k.logger.Progress("Creating chain config", "source", url)
 
 	return nil
 }
@@ -271,7 +273,7 @@ func (opts *MonitorsOptions) RunMonitorScraper(wg *sync.WaitGroup, s *Scraper) {
 		} else {
 			monitorList := opts.getMonitorList()
 			if len(monitorList) == 0 {
-				logger.Error(validate.Usage("No monitors found. Use 'chifra list' to initialize a monitor.").Error())
+				logger.Error(types.Usage("No monitors found. Use 'chifra list' to initialize a monitor.").Error())
 				return
 			}
 
@@ -323,7 +325,7 @@ func (c *Command) resolve(addr base.Address, before, after int64) string {
 		}
 		c.Cmd += " --append --no_header"
 	}
-	c.Cmd = strings.Replace(c.Cmd, "  ", " ", -1)
+	c.Cmd = strings.ReplaceAll(c.Cmd, "  ", " ")
 	ret := c.Cmd + " --fmt " + c.Fmt + " --output " + c.fileName(addr) + " " + addr.Hex()
 	if c.Cache {
 		ret += " --cache"
@@ -427,12 +429,12 @@ func GetExportFormat(cmd, def string) string {
 }
 
 func (opts *MonitorsOptions) cleanLine(lineIn string) (cmd Command, err error) {
-	line := strings.Replace(lineIn, "[{ADDRESS}]", "", -1)
+	line := strings.ReplaceAll(lineIn, "[{ADDRESS}]", "")
 	if strings.Contains(line, "--fmt") {
-		line = strings.Replace(line, "--fmt", "", -1)
-		line = strings.Replace(line, "json", "", -1)
-		line = strings.Replace(line, "csv", "", -1)
-		line = strings.Replace(line, "txt", "", -1)
+		line = strings.ReplaceAll(line, "--fmt", "")
+		line = strings.ReplaceAll(line, "json", "")
+		line = strings.ReplaceAll(line, "csv", "")
+		line = strings.ReplaceAll(line, "txt", "")
 	}
 	line = utils.StripComments(line)
 	if len(line) == 0 {
@@ -472,14 +474,14 @@ func (opts *MonitorsOptions) getOutputFolder(orig string) (string, error) {
 	}
 
 	cmdLine := orig
-	parts := strings.Split(strings.Replace(cmdLine, "  ", " ", -1), " ")
+	parts := strings.Split(strings.ReplaceAll(cmdLine, "  ", " "), " ")
 	if len(parts) < 1 || parts[0] != "chifra" {
 		s := fmt.Sprintf("Invalid command: %s. Must start with 'chifra'.", strings.Trim(orig, " \t\n\r"))
-		logger.Fatal(s)
+		logger.Panic(s)
 	}
 	if len(parts) < 2 || !okMap[parts[1]] {
 		s := fmt.Sprintf("Invalid command: %s. Must start with 'chifra export', 'chifra list', 'chifra state', or 'chifra tokens'.", orig)
-		logger.Fatal(s)
+		logger.Panic(s)
 	}
 
 	cwd, _ := os.Getwd()
@@ -560,63 +562,127 @@ func (opts *MonitorsOptions) getMonitorList() []monitor.Monitor {
 
 			if opts.Watch {
 				if opts.Globals.IsApiMode() {
-					return validate.Usage("The {0} options is not available from the API", "--watch")
+					return types.Usage("The {0} options is not available from the API", "--watch")
 				}
 
 				if len(opts.Globals.File) > 0 {
-					return validate.Usage("The {0} option is not allowed with the {1} option. Use {2} instead.", "--file", "--watch", "--commands")
+					return types.Usage("The {0} option is not allowed with the {1} option. Use {2} instead.", "--file", "--watch", "--commands")
 				}
 
 				if len(opts.Commands) == 0 {
-					return validate.Usage("The {0} option requires {1}.", "--watch", "a --commands file")
+					return types.Usage("The {0} option requires {1}.", "--watch", "a --commands file")
 				} else {
 					cmdFile, err := filepath.Abs(opts.Commands)
 					if err != nil || !file.FileExists(cmdFile) {
-						return validate.Usage("The {0} option requires {1} to exist.", "--watch", opts.Commands)
+						return types.Usage("The {0} option requires {1} to exist.", "--watch", opts.Commands)
 					}
 					if file.FileSize(cmdFile) == 0 {
-						logger.Fatal(validate.Usage("The file you specified ({0}) was found but contained no commands.", cmdFile).Error())
+						logger.Panic(types.Usage("The file you specified ({0}) was found but contained no commands.", cmdFile).Error())
 					}
 				}
 
 				if len(opts.Watchlist) == 0 {
-					return validate.Usage("The {0} option requires {1}.", "--watch", "a --watchlist file")
+					return types.Usage("The {0} option requires {1}.", "--watch", "a --watchlist file")
 				} else {
 					if opts.Watchlist != "existing" {
 						watchList, err := filepath.Abs(opts.Watchlist)
 						if err != nil || !file.FileExists(watchList) {
-							return validate.Usage("The {0} option requires {1} to exist.", "--watch", opts.Watchlist)
+							return types.Usage("The {0} option requires {1} to exist.", "--watch", opts.Watchlist)
 						}
 						if file.FileSize(watchList) == 0 {
-							logger.Fatal(validate.Usage("The file you specified ({0}) was found but contained no addresses.", watchList).Error())
+							logger.Panic(types.Usage("The file you specified ({0}) was found but contained no addresses.", watchList).Error())
 						}
 					}
 				}
 
 				if err := index.IsInitialized(chain, config.ExpectedVersion()); err != nil {
 					if (errors.Is(err, index.ErrNotInitialized) || errors.Is(err, index.ErrIncorrectHash)) && !opts.Globals.IsApiMode() {
-						logger.Fatal(err)
+						logger.Panic(err)
 					}
 					return err
 				}
 
 				if opts.BatchSize < 1 {
-					return validate.Usage("The {0} option must be greater than zero.", "--batch_size")
+					return types.Usage("The {0} option must be greater than zero.", "--batch_size")
 				}
 			} else {
 
 			if opts.BatchSize != 8 {
-				return validate.Usage("The {0} option is not available{1}.", "--batch_size", " without --watch")
+				return types.Usage("The {0} option is not available{1}.", "--batch_size", " without --watch")
 			} else {
 				opts.BatchSize = 0
 			}
 
 			if opts.RunCount > 0 {
-				return validate.Usage("The {0} option is not available{1}.", "--run_count", " without --watch")
+				return types.Usage("The {0} option is not available{1}.", "--run_count", " without --watch")
 			}
 
 			if opts.Sleep != 14 {
-				return validate.Usage("The {0} option is not available{1}.", "--sleep", " without --watch")
+				return types.Usage("The {0} option is not available{1}.", "--sleep", " without --watch")
 			}
 
 */
+
+// TODO: Search for this function in trueblocks-core/src/apps/pkg/utils. It's identical to here.
+// TODO: Make that function public and remove this one.
+func downloadAndStore(url, filename string, dur time.Duration) ([]byte, error) {
+	if file.FileExists(filename) {
+		lastModDate, err := file.GetModTime(filename)
+		if err != nil {
+			return nil, err
+		}
+		if time.Since(lastModDate) < dur {
+			data, err := os.ReadFile(filename)
+			if err != nil {
+				return nil, err
+			}
+			return data, nil
+		}
+	}
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		// If the file doesn't exist remotely, store an empty file
+		if err := os.WriteFile(filename, []byte{}, 0644); err != nil {
+			return nil, err
+		}
+		// Optionally update its mod time
+		_ = file.Touch(filename)
+		return []byte{}, nil
+	} else if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("received status %d %s for URL %s",
+			resp.StatusCode, resp.Status, url)
+	}
+
+	rawData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var prettyData []byte
+	if json.Valid(rawData) {
+		var jsonData interface{}
+		if err := json.Unmarshal(rawData, &jsonData); err != nil {
+			return nil, err
+		}
+		prettyData, err = json.MarshalIndent(jsonData, "", "  ")
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		prettyData = rawData
+	}
+
+	if err := os.WriteFile(filename, prettyData, 0644); err != nil {
+		return nil, err
+	}
+
+	_ = file.Touch(filename)
+
+	return prettyData, nil
+}

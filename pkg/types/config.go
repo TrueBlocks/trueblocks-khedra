@@ -4,17 +4,16 @@ import (
 	"bufio"
 	"fmt"
 	"html/template"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/base"
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
-	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
-	_ "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/env"
-	sdk "github.com/TrueBlocks/trueblocks-sdk/v5"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/base"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/colors"
+	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/file"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/logger"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/utils"
+	sdk "github.com/TrueBlocks/trueblocks-sdk/v6"
 )
 
 type Config struct {
@@ -34,7 +33,6 @@ func NewConfig() Config {
 		"api":     NewService("api"),
 		"ipfs":    NewService("ipfs"),
 	}
-
 	return Config{
 		General:  NewGeneral(),
 		Chains:   chains,
@@ -59,84 +57,77 @@ func (c *Config) CachePath() string {
 }
 
 func GetConfigFnNoCreate() string {
-	if base.IsTestMode() {
-		tmpDir := os.TempDir()
-		return filepath.Join(tmpDir, "config.yaml")
+	if testFn, ok := os.LookupEnv("KHEDRA_TEST_CONFIG_FN"); ok && testFn != "" {
+		return testFn
 	}
-
-	// current folder
+	if base.IsTestMode() {
+		return filepath.Join(os.TempDir(), "config.yaml")
+	}
 	fn := utils.ResolvePath("config.yaml")
 	if coreFile.FileExists(fn) {
 		return fn
 	}
-
-	// expanded default config folder
 	return utils.ResolvePath(filepath.Join(mustGetConfigPath(), "config.yaml"))
 }
 
-// GetConfigFn returns the path to the config file which must
-// be either in the current folder or in the default location. If
-// there is no such file, establish it
 func GetConfigFn() string {
-	if base.IsTestMode() {
-		tmpDir := os.TempDir()
-		return filepath.Join(tmpDir, "config.yaml")
+	if testFn, ok := os.LookupEnv("KHEDRA_TEST_CONFIG_FN"); ok && testFn != "" {
+		if coreFile.FileExists(testFn) {
+			return testFn
+		}
+		cfg := NewConfig()
+		if err := cfg.WriteToFile(testFn); err != nil {
+			fmt.Println(colors.Red+"error writing config file: %v", err, colors.Off)
+		}
+		return testFn
 	}
-
+	if base.IsTestMode() {
+		return filepath.Join(os.TempDir(), "config.yaml")
+	}
 	fn := GetConfigFnNoCreate()
 	if coreFile.FileExists(fn) {
 		return fn
 	}
-
 	cfg := NewConfig()
-	err := cfg.WriteToFile(fn)
-	if err != nil {
+	if err := cfg.WriteToFile(fn); err != nil {
 		fmt.Println(colors.Red+"error writing config file: %v", err, colors.Off)
 	}
-
 	return fn
 }
 
 func mustGetConfigPath() string {
 	var err error
 	cfgDir := utils.ResolvePath("~/.khedra")
-
 	if !coreFile.FolderExists(cfgDir) {
 		if err = coreFile.EstablishFolder(cfgDir); err != nil {
-			log.Fatalf("error establishing log folder %s: %v", cfgDir, err)
+			logger.Panicf("error establishing log folder %s: %v", cfgDir, err)
 		}
 	}
-
-	if writable := isWritable(cfgDir); !writable {
-		log.Fatalf("log directory %s is not writable: %v", cfgDir, err)
+	if !isWritable(cfgDir) {
+		logger.Panicf("log directory %s is not writable: %v", cfgDir, err)
 	}
-
 	return cfgDir
 }
 
 // isWritable checks to see if a folder is writable
 func isWritable(path string) bool {
 	tmpFile := filepath.Join(path, ".test")
-
 	if fil, err := os.Create(tmpFile); err != nil {
 		fmt.Println(fmt.Errorf("folder %s is not writable: %v", path, err))
 		return false
 	} else {
 		fil.Close()
-		if err := os.Remove(tmpFile); err != nil {
-			fmt.Println(fmt.Errorf("error cleaning up test file in %s: %v", path, err))
-			return false
-		}
+		// Try to clean up test file, but don't fail if cleanup fails
+		os.Remove(tmpFile) // Ignore error - file may already be gone or have permission issues
 	}
-
 	return true
 }
 
 func (c *Config) EnabledChains() string {
 	var ret []string
-	for key, ch := range c.Chains {
+	for k, ch := range c.Chains {
 		if ch.Enabled {
-			ret = append(ret, key)
+			ret = append(ret, k)
 		}
 	}
 	return strings.Join(ret, ",")
@@ -144,9 +135,9 @@ func (c *Config) EnabledChains() string {
 
 func (c *Config) ServiceList(enabledOnly bool) string {
 	var ret []string
-	for key, svc := range c.Services {
+	for k, svc := range c.Services {
 		if !enabledOnly || svc.Enabled {
-			ret = append(ret, key)
+			ret = append(ret, k)
 		}
 	}
 	return strings.Join(ret, ",")
@@ -179,17 +170,15 @@ func (c *Config) WriteToFile(fn string) error {
 }
 
 func RemoveZeroLines(input string) string {
-	var builder strings.Builder
-	scanner := bufio.NewScanner(strings.NewReader(input))
-
-	for scanner.Scan() {
-		line := scanner.Text()
+	var b strings.Builder
+	sc := bufio.NewScanner(strings.NewReader(input))
+	for sc.Scan() {
+		line := sc.Text()
 		if !strings.HasSuffix(line, ": 0") {
-			builder.WriteString(line + "\n")
+			b.WriteString(line + "\n")
 		}
 	}
-
-	return builder.String()
+	return b.String()
 }
 
 const tmpl = `
@@ -243,3 +232,8 @@ logging:
   compress: {{ .Logging.Compress }}
   level: "{{ .Logging.Level }}"
 `
+
+// ConfigTemplate returns the YAML template for the config file.
+func ConfigTemplate() string {
+	return tmpl
+}

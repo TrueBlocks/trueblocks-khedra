@@ -9,6 +9,7 @@
     numbered = false
     default-theme = "rust"
     theme = "theme"
+    additional-js = ["theme/build-info.js"]
 
 [preprocessor.mermaid]
 

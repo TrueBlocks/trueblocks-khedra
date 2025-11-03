@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"testing"
 
-	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
+	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/file"
+	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 	"github.com/stretchr/testify/assert"
 	yamlv2 "gopkg.in/yaml.v2"
 )
@@ -59,7 +59,9 @@ func TestLoadConfig_InvalidFileConfig(t *testing.T) {
 
 	_, err := LoadConfig()
 	assert.Error(t, err, t.Name())
-	assert.Contains(t, err.Error(), "failed to load file configuration")
+	if err != nil {
+		assert.Contains(t, err.Error(), "failed to load file configuration")
+	}
 
 	os.Remove(types.GetConfigFn())
 }

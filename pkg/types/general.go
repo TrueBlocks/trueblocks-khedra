@@ -3,6 +3,8 @@ package types
 import (
 	"os"
 	"path/filepath"
+
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/logger"
 )
 
 // General represents configuration for data storage, ensuring the data folder is specified,
@@ -24,7 +26,7 @@ func NewGeneral() General {
 func getDefaultDataFolder() string {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		panic("could not determine user home directory")
+		logger.Panic("could not determine user home directory")
 	}
 	return filepath.Join(homeDir, ".khedra", "data")
 }

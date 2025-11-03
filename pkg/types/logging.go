@@ -9,7 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/colors"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/logger"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
@@ -27,7 +28,7 @@ type Logging struct {
 func NewLogging() Logging {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		panic("could not determine user home directory")
+		logger.Panic("could not determine user home directory")
 	}
 	return Logging{
 		Folder:     filepath.Join(homeDir, ".khedra", "logs"),
@@ -125,6 +126,11 @@ func (m *multiHandler) WithGroup(name string) slog.Handler {
 type CustomLogger struct {
 	*slog.Logger
 	screenHandler slog.Handler
+}
+
+func (c *CustomLogger) Panic(msg string, args ...any) {
+	s := fmt.Sprintf(msg, args...)
+	panic(s)
 }
 
 func (c *CustomLogger) Fatal(msg string, args ...any) {

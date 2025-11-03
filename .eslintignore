@@ -1,0 +1,2 @@
+# Ignore Go template files that contain mixed template syntax and JavaScript
+app/templates/

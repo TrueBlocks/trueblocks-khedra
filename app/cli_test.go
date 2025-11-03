@@ -8,8 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	_ "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/env"
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
+	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli/v2"
 )
@@ -29,7 +28,7 @@ func TestInitializeCliCommands(t *testing.T) {
 		commandNames[command.Name] = true
 	}
 
-	expectedCommands := []string{"init", "config", "version"}
+	expectedCommands := []string{"config", "version"}
 	for _, cmd := range expectedCommands {
 		assert.Contains(t, commandNames, cmd)
 	}

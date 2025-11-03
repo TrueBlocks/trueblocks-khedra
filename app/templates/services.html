@@ -1,0 +1,171 @@
+{{define "navright"}}
+  <a class="nav-btn" href="/install/index" aria-label="Back">Back</a>
+  <button class="nav-btn" form="servicesForm" type="submit">Next</button>
+{{end}}
+{{ define "content" }}
+<h2>Services</h2>
+<p>Select which services to enable. You can change these later.</p>
+{{ if .Errors }}<div role="alert" class="err-banner">
+  <strong>Issues:</strong>
+  <ul>
+    {{ range .Errors }}<li data-err-field="{{ .Field }}">{{ .Message }}</li>{{ end }}
+  </ul>
+</div>{{ end }}
+<form id="servicesForm" method="POST" action="/install/services">
+  <input type="hidden" name="session" value="{{ .SessionID }}" />
+  <table class="services-table">
+    <colgroup>
+      <col style="width:10%;">
+      <col style="width:10%;">
+      <col style="width:10%;">
+      <col style="width:70%;">
+    </colgroup>
+    <thead>
+      <tr>
+        <th scope="col">On</th>
+        <th scope="col"></th>
+        <th scope="col">Service</th>
+        <th scope="col">Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ range $name, $enabled := .Services }}
+      <tr>
+        <td><input type="checkbox" id="{{$name}}_enabled" name="{{$name}}_enabled" {{ if $enabled }}checked{{ end }} aria-label="Enable {{$name}} service"></td>
+        <td>
+          {{ if or (eq $name "scraper") (eq $name "monitor") }}
+            <a href="#" class="config-link-{{$name}}" onclick="openConfigModal('{{$name}}'); return false;" style="display: none;">[config]</a>
+            <span class="config-disabled-{{$name}}" style="color: #ccc;">[config]</span>
+          {{ end }}
+        </td>
+        <td><label for="{{$name}}_enabled">{{$name}}</label></td>
+        <td>
+          {{ if eq $name "scraper" }}Continuously indexes new blocks into the Unchained Index{{ else if eq $name "monitor" }}Watches addresses for chain activity (feature pending){{ else if eq $name "api" }}Serves TrueBlocks API endpoints over HTTP{{ else if eq $name "ipfs" }}Allows for pinning chunks and Bloom filters to IPFS{{ else }}Service description{{ end }}
+        </td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+</form>
+
+<!-- Configuration Modal -->
+<div id="configModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4);">
+  <div style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 400px; border-radius: 6px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+      <h3 id="modalTitle">Configure Service</h3>
+      <span onclick="closeConfigModal()" style="color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+    </div>
+    <form id="configForm">
+      <p id="modalMessage">Configuration options for this service will be available here.</p>
+      <!-- Service configuration fields will be added here later -->
+    </form>
+    <div style="text-align: right; margin-top: 15px;">
+      <button type="button" onclick="closeConfigModal()" style="margin-right: 10px;">Cancel</button>
+      <button type="button" onclick="saveConfig()">Save</button>
+    </div>
+  </div>
+</div>
+
+<nav style="display:none;"></nav>
+<script>
+/* eslint-disable */
+// @ts-nocheck  
+// Disable linting for Go template file with mixed template/JavaScript syntax
+(function(){
+  const form = document.getElementById('servicesForm');
+  if(!form || form.tagName !== 'FORM') return;
+  function update(){
+    const formData = new FormData();
+    // Collect all service checkbox states - send '1' for checked, '0' for unchecked
+    const checkboxes = form.querySelectorAll('input[type="checkbox"][name$="_enabled"]');
+    checkboxes.forEach(cb => {
+      formData.set(cb.name, cb.checked ? '1' : '0');
+    });
+    
+    // Update configure links visibility
+    updateConfigureLinks();
+    
+    // Use centralized function
+    if(window.updateConfigAndDebug) window.updateConfigAndDebug(formData);
+  }
+  
+  function updateConfigureLinks() {
+    // Update scraper configure link/text
+    const scraperCheckbox = form.querySelector('input[name="scraper_enabled"]');
+    const scraperConfigLink = document.querySelector('.config-link-scraper');
+    const scraperConfigDisabled = document.querySelector('.config-disabled-scraper');
+    if (scraperCheckbox && scraperConfigLink && scraperConfigDisabled) {
+      if (scraperCheckbox.checked) {
+        scraperConfigLink.style.display = 'inline';
+        scraperConfigDisabled.style.display = 'none';
+      } else {
+        scraperConfigLink.style.display = 'none';
+        scraperConfigDisabled.style.display = 'inline';
+      }
+    }
+    
+    // Update monitor configure link/text
+    const monitorCheckbox = form.querySelector('input[name="monitor_enabled"]');
+    const monitorConfigLink = document.querySelector('.config-link-monitor');
+    const monitorConfigDisabled = document.querySelector('.config-disabled-monitor');
+    if (monitorCheckbox && monitorConfigLink && monitorConfigDisabled) {
+      if (monitorCheckbox.checked) {
+        monitorConfigLink.style.display = 'inline';
+        monitorConfigDisabled.style.display = 'none';
+      } else {
+        monitorConfigLink.style.display = 'none';
+        monitorConfigDisabled.style.display = 'inline';
+      }
+    }
+  }
+  // Add listeners to all service checkboxes
+  const checkboxes = form.querySelectorAll('input[type="checkbox"][name$="_enabled"]');
+  checkboxes.forEach(cb => {
+    cb.addEventListener('change', update);
+  });
+  
+  // Initialize configure links visibility on page load
+  updateConfigureLinks();
+})();
+
+// Modal functions for service configuration
+function openConfigModal(serviceName) {
+  const modal = document.getElementById('configModal');
+  const title = document.getElementById('modalTitle');
+  const message = document.getElementById('modalMessage');
+  
+  title.textContent = 'Configure ' + serviceName.charAt(0).toUpperCase() + serviceName.slice(1);
+  message.textContent = 'Configuration options for the ' + serviceName + ' service will be available here in a future update.';
+  
+  modal.style.display = 'block';
+}
+
+function closeConfigModal() {
+  document.getElementById('configModal').style.display = 'none';
+}
+
+function saveConfig() {
+  // Placeholder for saving configuration
+  alert('Configuration saved! (This is a placeholder - actual configuration will be implemented later)');
+  closeConfigModal();
+}
+
+// Close modal when clicking outside of it
+window.onclick = function(event) {
+  const modal = document.getElementById('configModal');
+  if (event.target === modal) {
+    closeConfigModal();
+  }
+}
+
+// Close modal when pressing Escape key
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape') {
+    const modal = document.getElementById('configModal');
+    if (modal && modal.style.display === 'block') {
+      closeConfigModal();
+    }
+  }
+});
+</script>
+{{ end }}

@@ -1,0 +1,46 @@
+{{define "navright"}}
+  <a class="nav-btn" href="/install/welcome" aria-label="Back">Back</a>
+  <button class="nav-btn" form="pathsForm" type="submit">Next</button>
+{{end}}
+{{define "content"}}
+<h2>Data Paths</h2>
+<p>Choose where Khedra will store its data. You may accept the default or point to an existing location.</p>
+{{ if .Errors }}<div role="alert" class="err-banner">
+  <strong>Issues:</strong>
+  <ul>
+    {{ range .Errors }}<li data-err-field="{{ .Field }}">{{ .Message }}</li>{{ end }}
+  </ul>
+</div>{{ end }}
+<form id="pathsForm" method="POST" action="/install/paths">
+  <input type="hidden" name="session" value="{{ .SessionID }}" />
+  <label for="dataFolder">Data Folder</label><br>
+  <input data-field="general.dataFolder" type="text" id="dataFolder" name="dataFolder" size="50" value="{{.DataFolder}}" placeholder="/path/to/data" required>
+  <p style="font-size: 0.85em; color:#555; margin-top:4px;">Folder will be created if it does not exist. Ensure you have sufficient disk space.</p>
+</form>
+<nav style="display:none;"></nav>
+<!-- field focus handled globally -->
+<script>
+/* eslint-disable */
+// @ts-nocheck
+// Disable linting for Go template file with mixed template/JavaScript syntax
+(function(){
+  const form = document.getElementById('pathsForm');
+  if(!form || form.tagName !== 'FORM') return;
+  let timer=null;
+  function push(){
+    const fd = new FormData(form);
+    const formData = new FormData();
+    if(fd.get('dataFolder')) formData.set('dataFolder', fd.get('dataFolder'));
+    
+    // Use centralized function
+    if(window.updateConfigAndDebug) window.updateConfigAndDebug(formData);
+  }
+  function schedule(){ if(timer) clearTimeout(timer); timer = setTimeout(push, 300); }
+  const dataFolderInput = form.querySelector('input[name="dataFolder"]');
+  if (dataFolderInput) {
+    dataFolderInput.addEventListener('blur', schedule);
+    dataFolderInput.addEventListener('input', schedule);
+  }
+})();
+</script>
+{{end}}

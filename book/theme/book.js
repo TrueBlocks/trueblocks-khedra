@@ -467,7 +467,7 @@ function playground_text(playground, hidden = true) {
         body.classList.remove('sidebar-visible')
         body.classList.add('sidebar-hidden');
         Array.from(sidebarLinks).forEach(function (link) {
-            link.setAttribute('tabIndex', -1);
+            link.setAttribute('tabIndex');
         });
         sidebarToggleButton.setAttribute('aria-expanded', false);
         sidebar.setAttribute('aria-hidden', true);
@@ -690,45 +690,65 @@ function playground_text(playground, hidden = true) {
 })();
 
 window.addEventListener("DOMContentLoaded", () => {
-    console.log("Custom JavaScript loaded!");
-
     const rightMenu = document.getElementById("right-menu");
-    if (!rightMenu) {
-        console.error("Right-menu container not found!");
-        return;
-    }
+    if (!rightMenu) return;
 
-    const headers = document.querySelectorAll("main h2"); // Find all second-level headers (##)
-    if (headers.length === 0) {
-        console.warn("No headers found in the content! Hiding the side menu.");
-        rightMenu.style.display = "none"; // Hide the side menu if no headers are found
-        return;
-    }
+    // Only consider h2 (page sections). Require at least 2 to display.
+    const headers = Array.from(document.querySelectorAll("main h2"));
+    if (headers.length < 2) { rightMenu.style.display = "none"; return; }
 
-    console.log(`Found ${headers.length} headers.`);
+    // Avoid showing on very small screens (CSS also hides but we short-circuit work).
+    if (window.innerWidth < 1350) { rightMenu.style.display = "none"; return; }
 
+    const frag = document.createDocumentFragment();
     const title = document.createElement("h3");
     title.textContent = "On this page";
-    rightMenu.appendChild(title);
+    frag.appendChild(title);
+    const menu = document.createElement("ul");
+    menu.className = "submenu";
 
-    const menu = document.createElement("ul"); // Create a menu container
-    menu.classList.add("submenu");
-
-    headers.forEach((header) => {
-        if (!header.id) {
-            header.id = header.textContent.trim().toLowerCase().replace(/\s+/g, "-");
-            console.log(`Generated ID for header: ${header.id}`);
-        }
-
-        const item = document.createElement("li"); // Create a list item
-        const link = document.createElement("a"); // Create a link
-        link.href = `#${header.id}`;
-        link.textContent = header.textContent.trim().toLowerCase(); // Convert text to lowercase
-
-        item.appendChild(link);
-        menu.appendChild(item);
+    headers.forEach(h => {
+        if (!h.id) h.id = h.textContent.trim().toLowerCase().replace(/\s+/g,'-');
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent.trim();
+        li.appendChild(a);
+        menu.appendChild(li);
     });
+    frag.appendChild(menu);
+    rightMenu.appendChild(frag);
 
-    rightMenu.appendChild(menu); // Add the menu to the right-menu container
-    console.log("Right-side menu created with a Title.");
+    // Scrollspy highlight
+    const links = Array.from(rightMenu.querySelectorAll('a'));
+    const linkById = new Map(links.map(l => [l.getAttribute('href').slice(1), l]));
+
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                links.forEach(l => l.classList.remove('active'));
+                const link = linkById.get(entry.target.id);
+                if (link) link.classList.add('active');
+            }
+        });
+    }, {
+        // Trigger when header crosses 35% viewport height
+        root: null,
+        rootMargin: '0px 0px -65% 0px',
+        threshold: 0
+    });
+    headers.forEach(h => observer.observe(h));
+
+    // Smooth scroll behavior for internal clicks (native in many browsers, fallback here)
+    rightMenu.addEventListener('click', e => {
+        if (e.target.tagName === 'A') {
+            const id = e.target.getAttribute('href').slice(1);
+            const target = document.getElementById(id);
+            if (target) {
+                e.preventDefault();
+                window.history.pushState(null, '', '#' + id);
+                target.scrollIntoView({behavior: 'smooth'});
+            }
+        }
+    });
 });

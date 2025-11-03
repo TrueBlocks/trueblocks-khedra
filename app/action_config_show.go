@@ -3,9 +3,8 @@ package app
 import (
 	"fmt"
 
-	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
-	_ "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/env"
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
+	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/file"
+	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 	"github.com/urfave/cli/v2"
 	yamlv2 "gopkg.in/yaml.v2"
 )

@@ -5,9 +5,8 @@ import (
 	"os"
 	"os/exec"
 
-	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
-	_ "github.com/TrueBlocks/trueblocks-khedra/v2/pkg/env"
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/types"
+	coreFile "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/v6/pkg/file"
+	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 	"github.com/urfave/cli/v2"
 )
 
@@ -19,9 +18,10 @@ func (k *KhedraApp) configEditAction(c *cli.Context) error {
 	}
 
 	editor := os.Getenv("EDITOR")
-	if editor == "" {
+	switch editor {
+	case "":
 		return fmt.Errorf("EDITOR environment variable not set")
-	} else if editor == "testing" {
+	case "testing":
 		fmt.Println("Would have edited:")
 		return nil
 	}

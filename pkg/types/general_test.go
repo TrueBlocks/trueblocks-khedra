@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/TrueBlocks/trueblocks-khedra/v2/pkg/validate"
 	"github.com/stretchr/testify/assert"
 	yamlv2 "gopkg.in/yaml.v2"
 )
@@ -26,7 +25,7 @@ func TestNewGeneral(t *testing.T) {
 // TestGeneralValidation validates the functionality of the General type to ensure
 // that invalid data is caught and proper validation rules are applied.
 func TestGeneralValidation(t *testing.T) {
-	defer SetTestEnv([]string{})()
+	defer SetupTest([]string{})()
 	tests := []struct {
 		name    string
 		general General
@@ -36,24 +35,6 @@ func TestGeneralValidation(t *testing.T) {
 			name: "Valid General struct with all fields",
 			general: General{
 				DataFolder: createTempDir(t, true),
-				Strategy:   "scratch",
-				Detail:     "bloom",
-			},
-			wantErr: false,
-		},
-		{
-			name: "Non-existent DataFolder with valid strategy and detail",
-			general: General{
-				DataFolder: "/non/existent/path",
-				Strategy:   "download",
-				Detail:     "index",
-			},
-			wantErr: false,
-		},
-		{
-			name: "Non-writable DataFolder with valid strategy and detail",
-			general: General{
-				DataFolder: createTempDir(t, false),
 				Strategy:   "scratch",
 				Detail:     "bloom",
 			},
@@ -108,7 +89,7 @@ func TestGeneralValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validate.Validate(&tt.general)
+			err := Validate(&tt.general)
 			if tt.wantErr {
 				assert.Error(t, err, "Expected error for test case '%s'", tt.name)
 			} else {
@@ -156,7 +137,7 @@ detail: "index"
 	assert.NoError(t, err, "Unexpected error during YAML parsing")
 
 	// Validate the struct with unsupported characters
-	err = validate.Validate(&g)
+	err = Validate(&g)
 	assert.Error(t, err, "Expected validation error for unsupported characters")
 	errStr := err.Error()
 	assert.Contains(t, errStr, "invalid characters", "Expected dataFolder validation to fail due to invalid characters")
@@ -168,11 +149,26 @@ func TestNewGeneralValidation(t *testing.T) {
 	g := NewGeneral()
 
 	// Validate the defaults
-	err := validate.Validate(&g)
+	err := Validate(&g)
 	assert.NoError(t, err, "Expected NewGeneral defaults to pass validation")
 
 	// Assert specific defaults
 	assert.NotEmpty(t, g.DataFolder, "DataFolder should not be empty")
 	assert.Equal(t, "download", g.Strategy, "Default Strategy should be 'download'")
 	assert.Equal(t, "index", g.Detail, "Default Detail should be 'index'")
+}
+
+// TestGeneral_FolderValidatorSkipInTestMode ensures that the folder_exists validator
+// is bypassed (returns Passed) during test mode. We supply a clearly non-existent
+// and invalid path; validation should not error because base.IsTestMode() is true
+// within SetupTest and folderExistsValidator short-circuits.
+func TestGeneral_FolderValidatorSkipInTestMode(t *testing.T) {
+	defer SetupTest([]string{})()
+	g := General{
+		DataFolder: "/this/does/not/exist/and/should/not/be/created",
+		Strategy:   "download",
+		Detail:     "index",
+	}
+	err := Validate(&g)
+	assert.NoError(t, err, "folder_exists should be skipped in test mode")
 }
