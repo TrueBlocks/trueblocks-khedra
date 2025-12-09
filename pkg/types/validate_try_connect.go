@@ -49,7 +49,6 @@ func TestRpcEndpoint(endpoint string) RpcTestResult {
 	startTime := time.Now()
 	blockNumberPayload := strings.NewReader(`{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}`)
 	resp, err := client.Post(endpoint, "application/json", blockNumberPayload)
-
 	if err != nil {
 		result.ErrorMessage = fmt.Sprintf("Connection failed: %s", err.Error())
 		return result
@@ -166,6 +165,5 @@ func TryConnect(chain, providerUrl string, maxAttempts int) error {
 		}
 	}
 
-	fv := NewFieldValidator("ping_rpc", "Chain", "rpc", fmt.Sprintf("[%s]", chain))
-	return Failed(fv, fmt.Sprintf("cannot connect to RPC (%s-%s) after %d attempts", chain, providerUrl, maxAttempts), "")
+	return fmt.Errorf("cannot connect to RPC (%s-%s) after %d attempts", chain, providerUrl, maxAttempts)
 }

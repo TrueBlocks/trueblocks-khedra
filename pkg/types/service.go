@@ -1,10 +1,7 @@
 package types
 
 import (
-	"fmt"
-
 	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/logger"
-	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/utils"
 )
 
 type Service struct {
@@ -51,55 +48,4 @@ func NewService(serviceType string) Service {
 
 func (s *Service) IsEnabled() bool {
 	return s.Enabled
-}
-
-func init() {
-	serviceFieldValidator := func(fv FieldValidator) error {
-		serviceName := utils.RemoveAny(fv.Context(), "[]") // Assuming the context has the service name
-
-		var service *Service
-		// We may get either a Config...
-		if config, ok := fv.Root().(*Config); ok {
-			services := config.Services
-			for _, s := range services {
-				if s.Name == serviceName {
-					service = &s
-					break
-				}
-			}
-		} else {
-			// ...or (when testing) a Service type
-			var ok bool
-			if service, ok = fv.Root().(*Service); !ok {
-				return Failed(fv, "invalid root type", fmt.Sprintf("%T", fv.Root()))
-			}
-		}
-
-		if service == nil {
-			return Failed(fv, "service not found", serviceName)
-		}
-
-		if !service.Enabled {
-			return Passed(fv, "not-enabled", serviceName)
-		}
-
-		switch service.Name {
-		case "api", "ipfs":
-			if service.Port < 1024 || service.Port > 65535 {
-				return Failed(fv, "Port must be between 1024 and 65535 (inclusive)", fmt.Sprintf("Port=%d", service.Port))
-			}
-		case "scraper", "monitor":
-			if service.Sleep <= 0 {
-				return Failed(fv, "Sleep must be a positive integer", fmt.Sprintf("Sleep=%d", service.Sleep))
-			} else if service.BatchSize < 50 || service.BatchSize > 10000 {
-				return Failed(fv, "BatchSize must be between 50 and 10000 (inclusive)", fmt.Sprintf("Port=%d", service.Port))
-			}
-		default:
-			return Failed(fv, "unknown service name", serviceName)
-		}
-
-		return Passed(fv, "valid", serviceName)
-	}
-
-	_ = RegisterValidator("service_field", serviceFieldValidator)
 }
