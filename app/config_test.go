@@ -3,13 +3,15 @@ package app
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"testing"
 
-	coreFile "github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
-	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 	"github.com/stretchr/testify/assert"
 	yamlv2 "gopkg.in/yaml.v2"
+
+	coreFile "github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
+	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 )
 
 // Testing status: not_reviewed
@@ -55,7 +57,7 @@ func TestLoadConfig_ValidConfig(t *testing.T) {
 func TestLoadConfig_InvalidFileConfig(t *testing.T) {
 	defer types.SetupTest([]string{})()
 
-	_ = os.WriteFile(types.GetConfigFn(), []byte("invalid_yaml"), 0644)
+	_ = os.WriteFile(types.GetConfigFn(), []byte("invalid_yaml"), 0o644)
 
 	_, err := LoadConfig()
 	assert.Error(t, err, t.Name())
@@ -321,4 +323,68 @@ func TestConfigMustLoadDefaults(t *testing.T) {
 			}
 		}
 	}
+}
+
+// Phase 4a: Config pipeline tests
+
+func TestLoadFileConfig_EmptyFile(t *testing.T) {
+	defer types.SetupTest([]string{})()
+	_ = os.WriteFile(types.GetConfigFn(), []byte(""), 0o644)
+
+	_, err := loadFileConfig()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "empty")
+}
+
+func TestLoadFileConfig_SetsChainNames(t *testing.T) {
+	defer types.SetupTest([]string{})()
+
+	cfg := types.Config{
+		Chains: map[string]types.Chain{
+			"mainnet": {RPCs: []string{"http://rpc1"}, Enabled: true, ChainID: 1},
+			"sepolia": {RPCs: []string{"http://rpc2"}, Enabled: true, ChainID: 11155111},
+		},
+		Services: map[string]types.Service{
+			"scraper": types.NewService("scraper"),
+		},
+		Logging: types.NewLogging(),
+		General: types.General{DataFolder: "/tmp/data", Strategy: "scratch", Detail: "index"},
+	}
+
+	bytes, _ := yamlv2.Marshal(cfg)
+	_ = coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
+
+	result, err := loadFileConfig()
+	assert.NoError(t, err)
+	assert.Equal(t, "mainnet", result.Chains["mainnet"].Name)
+	assert.Equal(t, "sepolia", result.Chains["sepolia"].Name)
+	assert.Equal(t, "scraper", result.Services["scraper"].Name)
+}
+
+func TestFinalCleanup_CleansPaths(t *testing.T) {
+	cfg := types.Config{
+		General: types.General{DataFolder: "/tmp//data/../data/"},
+		Logging: types.Logging{Folder: "/tmp/logs/./"},
+	}
+
+	err := finalCleanup(&cfg)
+	assert.NoError(t, err)
+	assert.Equal(t, "/tmp/data", cfg.General.DataFolder)
+	assert.Equal(t, "/tmp/logs", cfg.Logging.Folder)
+}
+
+func TestInitializeFolders_CreatesDirectories(t *testing.T) {
+	tempDir := t.TempDir()
+	cfg := types.Config{
+		General: types.General{DataFolder: filepath.Join(tempDir, "data")},
+		Logging: types.Logging{Folder: filepath.Join(tempDir, "logs")},
+	}
+
+	err := initializeFolders(cfg)
+	assert.NoError(t, err)
+
+	_, err = os.Stat(filepath.Join(tempDir, "data"))
+	assert.NoError(t, err)
+	_, err = os.Stat(filepath.Join(tempDir, "logs"))
+	assert.NoError(t, err)
 }
