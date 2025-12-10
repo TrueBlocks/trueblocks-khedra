@@ -45,41 +45,9 @@ func (k *KhedraApp) initializeControlSvc() error {
 	meta := control.NewMetadata(k.controlSvc.Port(), k.config.Version())
 	_ = control.Write(meta)
 
-	var activeServices []services.Servicer
-	activeServices = append(activeServices, k.controlSvc)
-	for _, svc := range k.config.Services {
-		switch svc.Name {
-		case "scraper":
-			chains := strings.Split(strings.ReplaceAll(k.config.EnabledChains(), " ", ""), ",")
-			scraperSvc := services.NewScrapeService(
-				k.logger.GetLogger(),
-				"all",
-				chains,
-				k.config.Services["scraper"].Sleep,
-				k.config.Services["scraper"].BatchSize,
-			)
-			activeServices = append(activeServices, scraperSvc)
-			if !svc.Enabled {
-				scraperSvc.Pause()
-			}
-		case "monitor":
-			monitorSvc := services.NewMonitorService(nil)
-			activeServices = append(activeServices, monitorSvc)
-			if !svc.Enabled {
-				monitorSvc.Pause()
-			}
-		case "api":
-			if svc.Enabled {
-				apiSvc := services.NewApiService(k.logger.GetLogger())
-				activeServices = append(activeServices, apiSvc)
-			}
-		case "ipfs":
-			if svc.Enabled {
-				ipfsSvc := services.NewIpfsService(k.logger.GetLogger())
-				activeServices = append(activeServices, ipfsSvc)
-			}
-		}
-	}
+	// Create all services using factory
+	factory := NewServiceFactory(k.config, k.logger)
+	activeServices := factory.CreateAllServices(k.controlSvc)
 
 	k.serviceManager = services.NewServiceManager(activeServices, k.logger.GetLogger())
 	k.controlSvc.AttachServiceManager(k.serviceManager)
@@ -144,8 +112,8 @@ func (k *KhedraApp) addHandlers() error {
 		count int
 		reset time.Time
 	}
-	var perSession = map[string]*probeWindow{}
-	var globalWindow = &probeWindow{count: 0, reset: time.Now().Add(10 * time.Second)}
+	perSession := map[string]*probeWindow{}
+	globalWindow := &probeWindow{count: 0, reset: time.Now().Add(10 * time.Second)}
 	const perSessionLimit = 5
 	const globalLimit = 60
 	const windowDur = 10 * time.Second
@@ -668,7 +636,7 @@ func (k *KhedraApp) addHandlers() error {
 		}
 
 		// Allowed wizard steps (in order) and quick lookup map.
-		var allowedWizardSteps = []string{"welcome", "paths", "chains", "index", "services", "logging", "summary"}
+		allowedWizardSteps := []string{"welcome", "paths", "chains", "index", "services", "logging", "summary"}
 		allowedWizardStepSet := map[string]struct{}{}
 		for _, s := range allowedWizardSteps {
 			allowedWizardStepSet[s] = struct{}{}
