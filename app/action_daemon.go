@@ -1,17 +1,15 @@
 package app
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/urfave/cli/v2"
 
 	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/config"
 	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
@@ -19,7 +17,6 @@ import (
 	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/control"
 	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/install"
 	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
-	"github.com/urfave/cli/v2"
 )
 
 func (k *KhedraApp) daemonAction(c *cli.Context) error {
@@ -101,22 +98,13 @@ func (k *KhedraApp) daemonAction(c *cli.Context) error {
 
 	k.logger.Progress("Starting services", "services", k.config.ServiceList(true /* enabledOnly */))
 
-	configFn := filepath.Join(rootFolder, "trueBlocks.toml")
-	if file.FileExists(configFn) {
-		k.logger.Info("Config file found", "fn", configFn)
-		if !k.chainsConfigured(configFn) {
-			k.logger.Error("Config file not configured", "fn", configFn)
-			return fmt.Errorf("config file not configured")
-		}
-	} else {
-		k.logger.Warn("Config file not found", "fn", configFn)
-		if err := k.createChifraConfig(rootFolder); err != nil {
-			k.logger.Error("Error creating config file", "error", err)
-			return err
-		}
-	}
+	// Initialize daemon bootstrapper
+	bootstrapper := NewDaemonBootstrapper(k.config, rootFolder, k.logger)
 
-	// Initialize the control service -- we need it for daemon
+	// Ensure config is created or validated
+	if err := bootstrapper.EnsureConfig(); err != nil {
+		return err
+	} // Initialize the control service -- we need it for daemon
 	_ = k.initializeControlSvc()
 	if err := k.serviceManager.StartAllServices(); err != nil {
 		k.logger.Panic("%s", err.Error())
@@ -126,95 +114,6 @@ func (k *KhedraApp) daemonAction(c *cli.Context) error {
 	k.serviceManager.HandleSignals()
 	k.logger.Info("daemon running; press Ctrl+C to initiate graceful shutdown (managed by ServiceManager)")
 	select {} // block until ServiceManager handles signal and exits process
-}
-
-func (k *KhedraApp) chainsConfigured(configFn string) bool {
-	chainStr := k.config.EnabledChains()
-	chains := strings.Split(chainStr, ",")
-
-	k.logger.Info("chifra config loaded")
-	k.logger.Info("checking", "configFile", configFn, "nChains", len(chains))
-
-	contents := file.AsciiFileToString(configFn)
-	for _, chain := range chains {
-		search := "[chains." + chain + "]"
-		if !strings.Contains(contents, search) {
-			msg := fmt.Sprintf("config file {%s} does not contain {%s}", configFn, search)
-			k.logger.Error(msg)
-			return false
-		}
-	}
-	return true
-}
-
-func (k *KhedraApp) createChifraConfig(rootFolder string) error {
-	if err := file.EstablishFolder(rootFolder); err != nil {
-		return err
-	}
-
-	chainStr := k.config.EnabledChains()
-	chains := strings.Split(chainStr, ",")
-	for _, chain := range chains {
-		if err := k.createChainConfigFolder(rootFolder, chain); err != nil {
-			return err
-		}
-	}
-
-	tmpl, err := template.New("tmpl").Parse(configTmpl)
-	if err != nil {
-		return err
-	}
-
-	var buf bytes.Buffer
-	if err = tmpl.Execute(&buf, &k.config); err != nil {
-		return err
-	}
-	if len(buf.String()) == 0 {
-		return fmt.Errorf("empty config file")
-	}
-
-	configFn := filepath.Join(rootFolder, "trueBlocks.toml")
-	err = file.StringToAsciiFile(configFn, buf.String())
-	if err != nil {
-		return err
-	}
-	k.logger.Info("Created config file", "configFile", configFn, "nChains", len(chains))
-	return nil
-}
-
-// For monitor --watch
-// 14080,apps,Accounts,monitors,acctExport,watch,w,,visible|docs|notApi,4,switch,<boolean>,,,,,continually scan for new blocks and extract data as per the command file
-// 14090,apps,Accounts,monitors,acctExport,watchlist,a,,visible|docs|notApi,,flag,<string>,,,,,available with --watch option only&#44; a file containing the addresses to watch
-// 14100,apps,Accounts,monitors,acctExport,commands,d,,visible|docs|notApi,,flag,<string>,,,,,available with --watch option only&#44; the file containing the list of commands to apply to each watched address
-// 14110,apps,Accounts,monitors,acctExport,batch_size,b,8,visible|docs|notApi,,flag,<uint64>,,,,,available with --watch option only&#44; the number of monitors to process in each batch
-// 14120,apps,Accounts,monitors,acctExport,run_count,u,,visible|docs|notApi,,flag,<uint64>,,,,,available with --watch option only&#44; run the monitor this many times&#44; then quit
-// 14130,apps,Accounts,monitors,acctExport,sleep,s,14,visible|docs|notApi,,flag,<float64>,,,,,available with --watch option only&#44; the number of seconds to sleep between runs
-// 14160,apps,Accounts,monitors,acctExport,n3,,,,,note,,,,,,The --watch option requires two additional parameters to be specified: `--watchlist` and `--commands`.
-// 14170,apps,Accounts,monitors,acctExport,n4,,,,,note,,,,,,Addresses provided on the command line are ignored in `--watch` mode.
-// 14180,apps,Accounts,monitors,acctExport,n5,,,,,note,,,,,,Providing the value `existing` to the `--watchlist` monitors all existing monitor files (see --list).
-
-func (k *KhedraApp) createChainConfigFolder(rootFolder string, chain string) error {
-	chainConfig := filepath.Join(rootFolder, "config", chain)
-	if err := file.EstablishFolder(chainConfig); err != nil {
-		return fmt.Errorf("failed to create folder %s: %w", chainConfig, err)
-	}
-
-	baseURL := "https://raw.githubusercontent.com/TrueBlocks/trueblocks-core/refs/heads/master/src/other/install/per-chain"
-	url, err := url.JoinPath(baseURL, chain, "allocs.csv")
-	if err != nil {
-		return err
-	}
-	allocFn := filepath.Join(chainConfig, "allocs.csv")
-	dur := 100 * 365 * 24 * time.Hour // 100 years
-	if _, err := downloadAndStore(url, allocFn, dur); err != nil {
-		k.logger.Warn(fmt.Errorf("failed to download and store allocs.csv for chain %s: %w", chain, err).Error())
-		// It's not an error to not have an allocation file. IsArchiveNode assumes archive if not present.
-		return nil
-	}
-	k.logger.Progress("Creating chain config", "chainConfig", allocFn)
-	k.logger.Progress("Creating chain config", "source", url)
-
-	return nil
 }
 
 var configTmpl string = `[version]
@@ -648,7 +547,7 @@ func downloadAndStore(url, filename string, dur time.Duration) ([]byte, error) {
 
 	if resp.StatusCode == http.StatusNotFound {
 		// If the file doesn't exist remotely, store an empty file
-		if err := os.WriteFile(filename, []byte{}, 0644); err != nil {
+		if err := os.WriteFile(filename, []byte{}, 0o644); err != nil {
 			return nil, err
 		}
 		// Optionally update its mod time
@@ -678,7 +577,7 @@ func downloadAndStore(url, filename string, dur time.Duration) ([]byte, error) {
 		prettyData = rawData
 	}
 
-	if err := os.WriteFile(filename, prettyData, 0644); err != nil {
+	if err := os.WriteFile(filename, prettyData, 0o644); err != nil {
 		return nil, err
 	}
 
