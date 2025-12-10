@@ -4,20 +4,23 @@ import (
 	"os"
 	"testing"
 
-	coreFile "github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
-	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 	"github.com/stretchr/testify/assert"
 	yamlv2 "gopkg.in/yaml.v2"
+
+	coreFile "github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
+	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 )
 
 // Testing status: not_reviewed
 
 // ---------------------------------------------------------
 func TestLoadFileConfig(t *testing.T) {
+	loader := NewConfigLoader()
+
 	invalidFile := func(t *testing.T) {
 		defer types.SetupTest([]string{})()
-		_ = os.WriteFile(types.GetConfigFn(), []byte("foo: 1"), 0644)
-		_, err := loadFileConfig()
+		_ = os.WriteFile(types.GetConfigFn(), []byte("foo: 1"), 0o644)
+		_, err := loader.loadFromFile()
 		assert.Error(t, err)
 	}
 	t.Run("Invalid File", invalidFile)
@@ -30,7 +33,7 @@ func TestLoadFileConfig(t *testing.T) {
 		cfg.Chains["mainnet"] = chain
 		bytes, _ := yamlv2.Marshal(cfg)
 		_ = coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
-		result, err := loadFileConfig()
+		result, err := loader.loadFromFile()
 		assert.NoError(t, err)
 		assert.Equal(t, cfg, result)
 	}
@@ -39,7 +42,7 @@ func TestLoadFileConfig(t *testing.T) {
 	missingFile := func(t *testing.T) {
 		defer types.SetupTest([]string{})()
 		os.Remove(types.GetConfigFn())
-		cfg, err := loadFileConfig()
+		cfg, err := loader.loadFromFile()
 		// In isolated test mode, GetConfigFn recreates the config if missing, so we expect success
 		assert.NoError(t, err)
 		assert.NotEmpty(t, cfg.General.DataFolder)
@@ -59,9 +62,11 @@ func TestLoadFileConfig(t *testing.T) {
 
 // ---------------------------------------------------------
 func TestValidateConfig(t *testing.T) {
+	loader := NewConfigLoader()
+
 	validConfig := func() {
 		cfg := types.NewConfig()
-		err := validateConfig(cfg)
+		err := loader.validate(cfg)
 		assert.NoError(t, err)
 	}
 	t.Run("Valid Config", func(t *testing.T) { validConfig() })
@@ -71,7 +76,7 @@ func TestValidateConfig(t *testing.T) {
 		cfg.Chains = map[string]types.Chain{
 			"mainnet": {Name: "mainnet", RPCs: []string{}, Enabled: true},
 		}
-		err := validateConfig(cfg)
+		err := loader.validate(cfg)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "cannot be empty")
 	}
@@ -80,7 +85,7 @@ func TestValidateConfig(t *testing.T) {
 	invalidLoggingFolder := func() {
 		cfg := types.NewConfig()
 		cfg.Logging.Folder = ""
-		err := validateConfig(cfg)
+		err := loader.validate(cfg)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "is required")
 	}
@@ -92,7 +97,7 @@ func TestValidateConfig(t *testing.T) {
 			Folder:   "",
 			Filename: "",
 		}
-		err := validateConfig(cfg)
+		err := loader.validate(cfg)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "is required")
 	}
@@ -105,7 +110,7 @@ func TestValidateConfig(t *testing.T) {
 			Strategy:   "download",
 			Detail:     "index",
 		}
-		err := validateConfig(cfg)
+		err := loader.validate(cfg)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "is required")
 	}
@@ -114,6 +119,8 @@ func TestValidateConfig(t *testing.T) {
 
 // ---------------------------------------------------------
 func TestInitializeFolders(t *testing.T) {
+	loader := NewConfigLoader()
+
 	cleanup := func(cfg types.Config) {
 		os.RemoveAll(cfg.Logging.Folder)
 		os.RemoveAll(cfg.General.DataFolder)
@@ -134,7 +141,7 @@ func TestInitializeFolders(t *testing.T) {
 		_ = os.MkdirAll(cfg.Logging.Folder, os.ModePerm)
 		_ = os.MkdirAll(cfg.General.DataFolder, os.ModePerm)
 
-		err := initializeFolders(cfg)
+		err := loader.initializeFolders(cfg)
 		assert.NoError(t, err)
 
 		cleanup(cfg)
@@ -155,7 +162,7 @@ func TestInitializeFolders(t *testing.T) {
 
 		cleanup(cfg)
 
-		err := initializeFolders(cfg)
+		err := loader.initializeFolders(cfg)
 		assert.NoError(t, err)
 
 		_, err = os.Stat(cfg.Logging.Folder)

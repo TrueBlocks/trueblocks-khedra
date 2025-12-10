@@ -8,28 +8,8 @@ import (
 )
 
 func LoadConfig() (types.Config, error) {
-	cfg, err := loadFileConfig()
-	if err != nil {
-		return types.Config{}, fmt.Errorf("failed to load file configuration: %w", err)
-	}
-	keys := types.GetEnvironmentKeys(cfg, types.InEnv)
-	if err := types.ApplyEnv(keys, &cfg); err != nil {
-		return types.Config{}, fmt.Errorf("failed to apply environment configuration: %w", err)
-	}
-
-	if err := finalCleanup(&cfg); err != nil {
-		return types.Config{}, fmt.Errorf("failed to finalize configuration: %w", err)
-	}
-
-	if err := validateConfig(cfg); err != nil {
-		return types.Config{}, fmt.Errorf("validation error: %w", err)
-	}
-
-	if err := initializeFolders(cfg); err != nil {
-		return types.Config{}, fmt.Errorf("failed to initialize folders: %w", err)
-	}
-
-	return cfg, nil
+	loader := NewConfigLoader()
+	return loader.Load()
 }
 
 func (k *KhedraApp) loadConfigIfInitialized() error {

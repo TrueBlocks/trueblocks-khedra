@@ -331,7 +331,8 @@ func TestLoadFileConfig_EmptyFile(t *testing.T) {
 	defer types.SetupTest([]string{})()
 	_ = os.WriteFile(types.GetConfigFn(), []byte(""), 0o644)
 
-	_, err := loadFileConfig()
+	loader := NewConfigLoader()
+	_, err := loader.loadFromFile()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "empty")
 }
@@ -354,7 +355,8 @@ func TestLoadFileConfig_SetsChainNames(t *testing.T) {
 	bytes, _ := yamlv2.Marshal(cfg)
 	_ = coreFile.StringToAsciiFile(types.GetConfigFn(), string(bytes))
 
-	result, err := loadFileConfig()
+	loader := NewConfigLoader()
+	result, err := loader.loadFromFile()
 	assert.NoError(t, err)
 	assert.Equal(t, "mainnet", result.Chains["mainnet"].Name)
 	assert.Equal(t, "sepolia", result.Chains["sepolia"].Name)
@@ -367,7 +369,8 @@ func TestFinalCleanup_CleansPaths(t *testing.T) {
 		Logging: types.Logging{Folder: "/tmp/logs/./"},
 	}
 
-	err := finalCleanup(&cfg)
+	loader := NewConfigLoader()
+	err := loader.cleanup(&cfg)
 	assert.NoError(t, err)
 	assert.Equal(t, "/tmp/data", cfg.General.DataFolder)
 	assert.Equal(t, "/tmp/logs", cfg.Logging.Folder)
@@ -380,7 +383,8 @@ func TestInitializeFolders_CreatesDirectories(t *testing.T) {
 		Logging: types.Logging{Folder: filepath.Join(tempDir, "logs")},
 	}
 
-	err := initializeFolders(cfg)
+	loader := NewConfigLoader()
+	err := loader.initializeFolders(cfg)
 	assert.NoError(t, err)
 
 	_, err = os.Stat(filepath.Join(tempDir, "data"))
