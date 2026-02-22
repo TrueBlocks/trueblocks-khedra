@@ -5,11 +5,12 @@ import (
 )
 
 type Service struct {
-	Name      string `koanf:"name" json:"name" validate:"required,oneof=api scraper monitor ipfs"`
-	Enabled   bool   `koanf:"enabled" json:"enabled"`
-	Port      int    `koanf:"port,omitempty" yaml:"port,omitempty" json:"port,omitempty" validate:"service_field"`
-	Sleep     int    `koanf:"sleep,omitempty" yaml:"sleep,omitempty" json:"sleep,omitempty" validate:"service_field"`
-	BatchSize int    `koanf:"batchSize,omitempty" yaml:"batchSize,omitempty" json:"batchSize,omitempty" validate:"service_field"`
+	Name        string `koanf:"name" json:"name" validate:"required,oneof=api scraper monitor ipfs"`
+	Enabled     bool   `koanf:"enabled" json:"enabled"`
+	Port        int    `koanf:"port,omitempty" yaml:"port,omitempty" json:"port,omitempty" validate:"service_field"`
+	Sleep       int    `koanf:"sleep,omitempty" yaml:"sleep,omitempty" json:"sleep,omitempty" validate:"service_field"`
+	BatchSize   int    `koanf:"batchSize,omitempty" yaml:"batchSize,omitempty" json:"batchSize,omitempty" validate:"service_field"`
+	Concurrency int    `koanf:"concurrency,omitempty" yaml:"concurrency,omitempty" json:"concurrency,omitempty" validate:"service_field"`
 }
 
 func NewService(serviceType string) Service {
@@ -23,10 +24,11 @@ func NewService(serviceType string) Service {
 		}
 	case "monitor":
 		return Service{
-			Name:      "monitor",
-			Enabled:   false,
-			Sleep:     12,
-			BatchSize: 500,
+			Name:        "monitor",
+			Enabled:     false,
+			Sleep:       12,
+			BatchSize:   8,
+			Concurrency: 4,
 		}
 	case "api":
 		return Service{

@@ -124,6 +124,7 @@ func TestInitializeFolders(t *testing.T) {
 	cleanup := func(cfg types.Config) {
 		os.RemoveAll(cfg.Logging.Folder)
 		os.RemoveAll(cfg.General.DataFolder)
+		os.RemoveAll(cfg.General.MonitorsFolder)
 	}
 
 	allFoldersExist := func() {
@@ -132,14 +133,16 @@ func TestInitializeFolders(t *testing.T) {
 				Folder: "/tmp/test-logging-folder",
 			},
 			General: types.General{
-				DataFolder: "/tmp/test-data-folder",
-				Strategy:   "download",
-				Detail:     "index",
+				DataFolder:     "/tmp/test-data-folder",
+				MonitorsFolder: "/tmp/test-monitors-folder",
+				Strategy:       "download",
+				Detail:         "index",
 			},
 		}
 
 		_ = os.MkdirAll(cfg.Logging.Folder, os.ModePerm)
 		_ = os.MkdirAll(cfg.General.DataFolder, os.ModePerm)
+		_ = os.MkdirAll(cfg.General.MonitorsFolder, os.ModePerm)
 
 		err := loader.initializeFolders(cfg)
 		assert.NoError(t, err)
@@ -154,9 +157,10 @@ func TestInitializeFolders(t *testing.T) {
 				Folder: "/tmp/test-missing-logging-folder",
 			},
 			General: types.General{
-				DataFolder: "/tmp/test-missing-data-folder",
-				Strategy:   "download",
-				Detail:     "index",
+				DataFolder:     "/tmp/test-missing-data-folder",
+				MonitorsFolder: "/tmp/test-missing-monitors-folder",
+				Strategy:       "download",
+				Detail:         "index",
 			},
 		}
 

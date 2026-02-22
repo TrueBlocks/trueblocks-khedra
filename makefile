@@ -3,20 +3,21 @@
 SRC_GO := $(shell find . -name '*.go')
 
 #-------------------------------------------------
-bin=../bin
+bin=bin
 
 #-------------------------------------------------
 exec=khedra
-dest=$(bin)/$(exec)
+dest=$(shell which khedra)
 
 #-------------------------------------------------
 all: $(SRC_GO)
 	@make app
 
 app:
-	@cd ../build ; make khedra ; cd -
 	@mkdir -p $(bin)
-	@go build -o $(dest) *.go
+	@rm -f $(dest)
+	@go build -o $(dest) .
+	@ls -l $(dest)
 
 update:
 	@go get "github.com/TrueBlocks/trueblocks-sdk/v6@latest"

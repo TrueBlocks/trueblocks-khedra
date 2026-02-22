@@ -6,9 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	coreFile "github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
 	"github.com/stretchr/testify/assert"
 	yamlv2 "gopkg.in/yaml.v2"
+
+	coreFile "github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
 )
 
 // Testing status: reviewed
@@ -59,7 +60,7 @@ func TestConfigNew(t *testing.T) {
 	assert.False(t, svc.Enabled)
 	assert.Equal(t, 0, svc.Port)
 	assert.Equal(t, 12, svc.Sleep)
-	assert.Equal(t, 500, svc.BatchSize)
+	assert.Equal(t, 8, svc.BatchSize)
 
 	svc = cfg.Services["api"]
 	assert.Equal(t, "api", svc.Name)

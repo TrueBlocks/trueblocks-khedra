@@ -21,6 +21,7 @@ import (
 	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/rpc"
 	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/utils"
 	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/control"
+	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/coordinator"
 	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/install"
 	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 	"github.com/TrueBlocks/trueblocks-sdk/v6/services"
@@ -45,8 +46,11 @@ func (k *KhedraApp) initializeControlSvc() error {
 	meta := control.NewMetadata(k.controlSvc.Port(), k.config.Version())
 	_ = control.Write(meta)
 
+	// Create coordinator for scraper-monitor coordination
+	k.coordinator = coordinator.NewScraperMonitorCoordinator(k.logger.GetLogger())
+
 	// Create all services using factory
-	factory := NewServiceFactory(k.config, k.logger)
+	factory := NewServiceFactory(k.config, k.logger, k.coordinator)
 	activeServices := factory.CreateAllServices(k.controlSvc)
 
 	k.serviceManager = services.NewServiceManager(activeServices, k.logger.GetLogger())

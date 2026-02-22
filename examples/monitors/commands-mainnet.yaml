@@ -1,0 +1,46 @@
+# EXAMPLE: Commands for Ethereum Mainnet Monitors
+#
+# TO USE THIS FILE:
+#   1. Copy this file to: ~/.khedra/monitors/commands-mainnet.yaml
+#   2. Customize the commands below for your needs
+#   3. Ensure the monitor service is enabled in config.yaml
+#   4. Start khedra
+#
+# TEMPLATE VARIABLES:
+#   {address}     - The monitored address
+#   {chain}       - The chain name (e.g., mainnet)
+#   {first_block} - First block to process in this iteration
+#   {last_block}  - Last block to process in this iteration
+#   {block_count} - Number of blocks being processed
+#
+# Example commands:
+
+commands:
+  # Export transactions for the monitored address
+  - id: export_transactions
+    command: chifra
+    arguments:
+      - export
+      - "{address}"
+      - --chain
+      - "{chain}"
+      - --first_block
+      - "{first_block}"
+      - --last_block
+      - "{last_block}"
+    output: /dev/null
+
+  # Export logs for the monitored address
+  # - id: export_logs
+  #   command: chifra
+  #   arguments:
+  #     - export
+  #     - --logs
+  #     - "{address}"
+  #     - --chain
+  #     - "{chain}"
+  #     - --first_block
+  #     - "{first_block}"
+  #     - --last_block
+  #     - "{last_block}"
+  #   output: /dev/null

@@ -8,6 +8,7 @@ import (
 	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/colors"
 	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/utils"
+	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/coordinator"
 	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 	"github.com/TrueBlocks/trueblocks-sdk/v6/services"
 	"github.com/urfave/cli/v2"
@@ -19,6 +20,7 @@ type KhedraApp struct {
 	logger         *types.CustomLogger
 	controlSvc     *services.ControlService
 	serviceManager *services.ServiceManager
+	coordinator    *coordinator.ScraperMonitorCoordinator
 }
 
 // RestartAllServices restarts all services except the control service directly via service manager.

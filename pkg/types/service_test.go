@@ -30,10 +30,11 @@ func TestNewService(t *testing.T) {
 			name:        "Create monitor service",
 			serviceType: "monitor",
 			expected: Service{
-				Name:      "monitor",
-				Enabled:   false,
-				Sleep:     12,
-				BatchSize: 500,
+				Name:        "monitor",
+				Enabled:     false,
+				Sleep:       12,
+				BatchSize:   8,
+				Concurrency: 4,
 			},
 		},
 		{

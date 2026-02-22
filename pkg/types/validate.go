@@ -114,12 +114,20 @@ func (s Service) validate() error {
 			errs = append(errs, fmt.Sprintf("Service[%s].Port must be between 1024 and 65535, got %d", s.Name, s.Port))
 		}
 
-	case "scraper", "monitor":
+	case "scraper":
 		if s.Sleep <= 0 {
 			errs = append(errs, fmt.Sprintf("Service[%s].Sleep must be positive, got %d", s.Name, s.Sleep))
 		}
 		if s.BatchSize < 50 || s.BatchSize > 10000 {
 			errs = append(errs, fmt.Sprintf("Service[%s].BatchSize must be between 50 and 10000, got %d", s.Name, s.BatchSize))
+		}
+
+	case "monitor":
+		if s.Sleep <= 0 {
+			errs = append(errs, fmt.Sprintf("Service[%s].Sleep must be positive, got %d", s.Name, s.Sleep))
+		}
+		if s.BatchSize < 1 || s.BatchSize > 1000 {
+			errs = append(errs, fmt.Sprintf("Service[%s].BatchSize must be between 1 and 1000, got %d", s.Name, s.BatchSize))
 		}
 
 	default:

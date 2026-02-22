@@ -2,7 +2,8 @@
 # Version: 2.0
 
 general:
-  dataFolder: "~/.khedra/data"   # See note 1
+  dataFolder:     "~/.khedra/data"     # See note 1
+  monitorsFolder: "~/.khedra/monitors" # Directory for monitor watchlists and commands
 
 chains:
   mainnet:                       # Blockchain name (see notes 2, 3, and 4)
@@ -11,22 +12,16 @@ chains:
     enabled: true                # `true` if this chain is enabled
     chainId: 1                   # Chain ID
 
-  sepolia:
+  gnosis:
     rpcs:
-      - "rpc_endpoint_for_sepolia"
+      - "rpc_endpoint_for_gnosis"
     enabled: true
-    chainId: 11155111
-
-  gnosis:                         # Add as many chains as your machine can handle
-    rpcs:
-      - "rpc_endpoint_for_gnosis" # must be a reachable, valid URL if the chain is enabled
-    enabled: false                # this chain is disabled
     chainId: 100
 
-  optimism:
+  optimism:                       # Add as many chains as your machine can handle
     rpcs:
-      - "rpc_endpoint_for_optimism"
-    enabled: false
+      - "rpc_endpoint_for_optimism" # must be a reachable, valid URL if the chain is enabled
+    enabled: false                # this chain is disabled
     chainId: 10
 
 services:                          # See note 5
@@ -36,9 +31,10 @@ services:                          # See note 5
     batchSize: 500                 # Number of blocks to process in a batch (range: 50-10000)
 
   monitor:
-    enabled: true
-    sleep: 12                      # Seconds between scraping batches (see note 6)
-    batchSize: 500                 # Number of blocks processed in a batch (range: 50-10000)
+    enabled: false                 # Set to true to enable address monitoring (see note 7)
+    sleep: 12                      # Seconds between monitor iterations
+    batchSize: 8                   # Number of addresses to freshen per batch
+    concurrency: 4                 # Number of parallel command executions
 
   api:
     enabled: true
@@ -76,3 +72,5 @@ logging:
 # 5. The `services` section is required. At least one service must be enabled.
 #
 # 6. When a `scraper` or `monitor` is "catching up" to a chain, the `sleep` value is ignored.
+#
+# 7. The `monitor` service watches specified addresses and executes commands when new blocks appear. Configure watchlists in `monitorsFolder`. See `examples/monitors/` for configuration examples.

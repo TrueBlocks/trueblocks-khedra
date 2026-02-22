@@ -111,6 +111,7 @@ func (cl *ConfigLoader) validate(cfg types.Config) error {
 func (cl *ConfigLoader) initializeFolders(cfg types.Config) error {
 	folders := []string{
 		utils.ResolvePath(cfg.General.DataFolder),
+		utils.ResolvePath(cfg.General.MonitorsFolder),
 		utils.ResolvePath(cfg.Logging.Folder),
 	}
 

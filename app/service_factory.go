@@ -3,21 +3,25 @@ package app
 import (
 	"strings"
 
+	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/coordinator"
 	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 	"github.com/TrueBlocks/trueblocks-sdk/v6/services"
+	"github.com/TrueBlocks/trueblocks-sdk/v6/services/monitor"
 )
 
 // ServiceFactory creates and configures services based on configuration
 type ServiceFactory struct {
-	config *types.Config
-	logger *types.CustomLogger
+	config      *types.Config
+	logger      *types.CustomLogger
+	coordinator *coordinator.ScraperMonitorCoordinator
 }
 
 // NewServiceFactory creates a new service factory
-func NewServiceFactory(config *types.Config, logger *types.CustomLogger) *ServiceFactory {
+func NewServiceFactory(config *types.Config, logger *types.CustomLogger, coord *coordinator.ScraperMonitorCoordinator) *ServiceFactory {
 	return &ServiceFactory{
-		config: config,
-		logger: logger,
+		config:      config,
+		logger:      logger,
+		coordinator: coord,
 	}
 }
 
@@ -30,10 +34,17 @@ func (sf *ServiceFactory) CreateAllServices(controlSvc *services.ControlService)
 		switch svc.Name {
 		case "scraper":
 			scraperSvc := sf.createScraperService(svc)
+			scraperSvc.SetScrapeCompleteCallback(sf.coordinator.HandleEvent)
 			activeServices = append(activeServices, scraperSvc)
 		case "monitor":
 			monitorSvc := sf.createMonitorService(svc)
-			activeServices = append(activeServices, monitorSvc)
+			if monitorSvc != nil {
+				chains := strings.Split(strings.ReplaceAll(sf.config.EnabledChains(), " ", ""), ",")
+				for _, chain := range chains {
+					sf.coordinator.RegisterMonitor(chain, monitorSvc)
+				}
+				activeServices = append(activeServices, monitorSvc)
+			}
 		case "api":
 			if svc.Enabled {
 				apiSvc := sf.createApiService()
@@ -67,8 +78,22 @@ func (sf *ServiceFactory) createScraperService(svc types.Service) *services.Scra
 }
 
 // createMonitorService creates and configures the monitor service
-func (sf *ServiceFactory) createMonitorService(svc types.Service) *services.MonitorService {
-	monitorSvc := services.NewMonitorService(nil)
+func (sf *ServiceFactory) createMonitorService(svc types.Service) *monitor.MonitorService {
+	chains := strings.Split(strings.ReplaceAll(sf.config.EnabledChains(), " ", ""), ",")
+	config := monitor.MonitorConfig{
+		WatchlistDir:    sf.config.General.MonitorsFolder,
+		CommandsDir:     sf.config.General.MonitorsFolder,
+		BatchSize:       svc.BatchSize,
+		Concurrency:     svc.Concurrency,
+		Sleep:           svc.Sleep,
+		MaxBlocksPerRun: 0,
+	}
+	monitorSvc, err := monitor.NewMonitorService(sf.logger.GetLogger(), chains, config)
+	if err != nil {
+		sf.logger.Error("Failed to create monitor service", "error", err)
+		return nil
+	}
+
 	if !svc.Enabled {
 		monitorSvc.Pause()
 	}

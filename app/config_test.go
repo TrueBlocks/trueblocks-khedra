@@ -36,9 +36,10 @@ func TestLoadConfig_ValidConfig(t *testing.T) {
 		},
 		Logging: types.NewLogging(),
 		General: types.General{
-			DataFolder: "/tmp/test-data-folder",
-			Strategy:   "scratch",
-			Detail:     "index",
+			DataFolder:     "/tmp/test-data-folder",
+			MonitorsFolder: "/tmp/test-monitors-folder",
+			Strategy:       "scratch",
+			Detail:         "index",
 		},
 	}
 
@@ -100,9 +101,10 @@ func TestLoadConfig_EnvOverrides(t *testing.T) {
 			Level:      "info",
 		},
 		General: types.General{
-			DataFolder: "/tmp/test-data-folder",
-			Strategy:   "download",
-			Detail:     "bloom",
+			DataFolder:     "/tmp/test-data-folder",
+			MonitorsFolder: "/tmp/test-monitors-folder",
+			Strategy:       "download",
+			Detail:         "bloom",
 		},
 	}
 
@@ -313,9 +315,13 @@ func TestConfigMustLoadDefaults(t *testing.T) {
 	} else {
 		for name, service := range cfg.Services {
 			switch name {
-			case "scraper", "monitor":
+			case "scraper":
 				assert.GreaterOrEqual(t, service.BatchSize, 50)
 				assert.LessOrEqual(t, service.BatchSize, 10000)
+				assert.GreaterOrEqual(t, service.Sleep, 0)
+			case "monitor":
+				assert.GreaterOrEqual(t, service.BatchSize, 1)
+				assert.LessOrEqual(t, service.BatchSize, 100)
 				assert.GreaterOrEqual(t, service.Sleep, 0)
 			case "api", "ipfs":
 				assert.GreaterOrEqual(t, service.Port, 1024)
@@ -379,7 +385,10 @@ func TestFinalCleanup_CleansPaths(t *testing.T) {
 func TestInitializeFolders_CreatesDirectories(t *testing.T) {
 	tempDir := t.TempDir()
 	cfg := types.Config{
-		General: types.General{DataFolder: filepath.Join(tempDir, "data")},
+		General: types.General{
+			DataFolder:     filepath.Join(tempDir, "data"),
+			MonitorsFolder: filepath.Join(tempDir, "monitors"),
+		},
 		Logging: types.Logging{Folder: filepath.Join(tempDir, "logs")},
 	}
 
@@ -388,6 +397,8 @@ func TestInitializeFolders_CreatesDirectories(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = os.Stat(filepath.Join(tempDir, "data"))
+	assert.NoError(t, err)
+	_, err = os.Stat(filepath.Join(tempDir, "monitors"))
 	assert.NoError(t, err)
 	_, err = os.Stat(filepath.Join(tempDir, "logs"))
 	assert.NoError(t, err)

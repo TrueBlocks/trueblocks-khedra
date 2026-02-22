@@ -143,6 +143,35 @@ Khedra consists of five core services:
 
 Services communicate through shared data structures and can be independently controlled.
 
+### Monitor Service
+
+The Monitor Service provides automated address monitoring across all configured chains. Key features:
+
+- **Watchlist Management**: Define addresses to monitor per chain
+- **Custom Commands**: Execute any command when new blocks appear for monitored addresses
+- **Template Variables**: Dynamic command generation with address, chain, and block info
+- **Batch Processing**: Efficient freshening of multiple addresses
+- **Parallel Execution**: Concurrent command processing for better performance
+
+**Quick Setup**:
+
+```bash
+# Copy example files
+cp examples/monitors/watchlist-mainnet.txt ~/.khedra/monitors/
+cp examples/monitors/commands-mainnet.yaml ~/.khedra/monitors/
+
+# Add your addresses
+echo "0xYourAddressHere" >> ~/.khedra/monitors/watchlist-mainnet.txt
+
+# Enable in config
+nano ~/.khedra/config.yaml  # Set monitor.enabled: true
+
+# Start khedra
+khedra daemon
+```
+
+See [docs/MONITORS.md](docs/MONITORS.md) for complete documentation.
+
 ## Configuration
 
 Before using `khedra`, you may need to configure it to point at the TrueBlocks indexing data or specify custom indexing rules:

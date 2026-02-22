@@ -1,0 +1,22 @@
+# EXAMPLE: Watchlist for Ethereum Mainnet
+#
+# TO USE THIS FILE:
+#   1. Copy this file to: ~/.khedra/monitors/watchlist-mainnet.txt
+#   2. Add your monitored addresses below
+#   3. Enable the monitor service in config.yaml
+#   4. Start khedra
+#
+# FORMAT: address[,starting_block]
+#
+# EXAMPLES:
+#   0x1234567890123456789012345678901234567890
+#   0xabcdefabcdefabcdefabcdefabcdefabcdefabcd,15000000
+#
+# NOTES:
+#   - Each line should contain an Ethereum address (0x + 40 hex chars) or ENS name (e.g., trueblocks.eth)
+#   - Optionally followed by a comma and starting block number
+#   - Lines starting with # are comments and will be ignored
+#   - Empty lines are ignored
+#
+# Add your monitored addresses below:
+
