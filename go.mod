@@ -4,7 +4,7 @@ module github.com/TrueBlocks/trueblocks-khedra/v6
 go 1.25.1
 
 require (
-	github.com/TrueBlocks/trueblocks-chifra/v6 v6.4.5
+	github.com/TrueBlocks/trueblocks-chifra/v6 v6.6.5
 	github.com/TrueBlocks/trueblocks-sdk/v6 v6.4.5
 	github.com/alecthomas/assert/v2 v2.11.0
 	github.com/goccy/go-yaml v1.18.0
