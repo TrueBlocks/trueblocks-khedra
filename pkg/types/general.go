@@ -10,9 +10,10 @@ import (
 // General represents configuration for data storage, ensuring the data folder is specified,
 // validated for existence, and serialized for YAML-based configuration management.
 type General struct {
-	DataFolder string `koanf:"dataFolder" yaml:"dataFolder" json:"dataFolder,omitempty" validate:"required,folder_exists"`
-	Strategy   string `koanf:"strategy" yaml:"strategy" json:"strategy,omitempty" validate:"oneof=download scratch"`
-	Detail     string `koanf:"detail" yaml:"detail" json:"detail,omitempty" validate:"oneof=index bloom"`
+	DataFolder       string `koanf:"dataFolder" yaml:"dataFolder" json:"dataFolder,omitempty" validate:"required,folder_exists"`
+	Strategy         string `koanf:"strategy" yaml:"strategy" json:"strategy,omitempty" validate:"oneof=download scratch"`
+	Detail           string `koanf:"detail" yaml:"detail" json:"detail,omitempty" validate:"oneof=index bloom"`
+	SkipMainnetProbe bool   `koanf:"skipMainnetProbe" yaml:"skipMainnetProbe" json:"skipMainnetProbe,omitempty"`
 }
 
 func NewGeneral() General {

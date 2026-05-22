@@ -8,8 +8,9 @@ import (
 	coreFile "github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
 	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/rpc"
-	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 	yamlv2 "gopkg.in/yaml.v2"
+
+	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 )
 
 // Cache for mainnet accessibility checks
@@ -65,8 +66,11 @@ func checkMainnetAccessible(rpcUrl string) bool {
 }
 
 // Configured returns true only if a config file exists AND contains a mainnet
-// configuration with a reachable RPC endpoint that returns chainId == 1.
-// Mainnet may be disabled for processing but its RPC must always be accessible.
+// configuration. By default mainnet RPC must be reachable and return
+// chainId == 1. When general.skipMainnetProbe is true, the reachability probe
+// is skipped so the daemon can run in hermetic / air-gapped environments
+// (CI, containers, isolated devnets) where no mainnet node is available;
+// structural checks (RPC non-empty, chainId non-zero) still apply.
 // Deep RPC reachability probing is performed here but cached for performance;
 // this determines whether to present the installation wizard.
 func Configured() bool {
@@ -87,19 +91,22 @@ func Configured() bool {
 	}
 	// Must have a mainnet key
 	if main, ok := cfg.Chains["mainnet"]; ok {
-		// Mainnet RPC is always required and must return valid data (chainId == 1)
 		if len(main.RPCs) == 0 || strings.TrimSpace(main.RPCs[0]) == "" {
 			logger.Info("mainnet RPC missing but is required")
 			return false
 		}
 
-		// Verify mainnet RPC is reachable and returns chainId == 1 (with caching)
-		if !checkMainnetAccessible(main.RPCs[0]) {
+		if main.ChainID == 0 {
+			logger.Info("mainnet chainId zero", "cfgFile", fn, "chain", main, "rawLen", len(b))
 			return false
 		}
 
-		if main.ChainID == 0 {
-			logger.Info("mainnet chainId zero", "cfgFile", fn, "chain", main, "rawLen", len(b))
+		if cfg.General.SkipMainnetProbe {
+			return true
+		}
+
+		// Verify mainnet RPC is reachable and returns chainId == 1 (with caching)
+		if !checkMainnetAccessible(main.RPCs[0]) {
 			return false
 		}
 		return true

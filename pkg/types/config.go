@@ -199,6 +199,7 @@ general:
   dataFolder: "{{ .General.DataFolder }}"
   strategy: "{{ .General.Strategy }}"
   detail: "{{ .General.Detail }}"
+  skipMainnetProbe: {{ .General.SkipMainnetProbe }}
 
 chains:
 {{- range $key, $value := .Chains }}

@@ -53,6 +53,47 @@ func TestValidateChains_MainnetEnabledNoRPC(t *testing.T) {
 	}
 }
 
+func TestValidateChains_MainnetDisabled_RequireMainnetByDefault(t *testing.T) {
+	d := newDraft()
+	ch := d.Config.Chains["mainnet"]
+	ch.Enabled = false
+	ch.RPCs = []string{"http://localhost:8545"}
+	d.Config.Chains["mainnet"] = ch
+	ferrs := ValidateDraftPhase(d, "step:chains")
+	if !hasCode(ferrs, "require_mainnet") {
+		t.Fatalf("expected require_mainnet when mainnet disabled without skipMainnetProbe: %+v", ferrs)
+	}
+}
+
+func TestValidateChains_MainnetDisabled_SkipProbeAllowed(t *testing.T) {
+	d := newDraft()
+	d.Config.General.SkipMainnetProbe = true
+	ch := d.Config.Chains["mainnet"]
+	ch.Enabled = false
+	ch.RPCs = []string{"http://localhost:8545"}
+	d.Config.Chains["mainnet"] = ch
+	ferrs := ValidateDraftPhase(d, "step:chains")
+	if hasCode(ferrs, "require_mainnet") {
+		t.Fatalf("unexpected require_mainnet with skipMainnetProbe=true: %+v", ferrs)
+	}
+	if len(filterCodes(ferrs, "mainnet_missing_rpc")) > 0 {
+		t.Fatalf("unexpected mainnet_missing_rpc: %+v", ferrs)
+	}
+}
+
+func TestValidateChains_MainnetDisabled_SkipProbe_RequiresRPC(t *testing.T) {
+	d := newDraft()
+	d.Config.General.SkipMainnetProbe = true
+	ch := d.Config.Chains["mainnet"]
+	ch.Enabled = false
+	ch.RPCs = []string{}
+	d.Config.Chains["mainnet"] = ch
+	ferrs := ValidateDraftPhase(d, "step:chains")
+	if !hasCode(ferrs, "mainnet_missing_rpc") {
+		t.Fatalf("expected mainnet_missing_rpc, got %+v", ferrs)
+	}
+}
+
 func TestValidateChains_InvalidRPCScheme(t *testing.T) {
 	d := newDraft()
 	ch := d.Config.Chains["mainnet"]
