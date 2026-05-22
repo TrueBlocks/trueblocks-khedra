@@ -36,47 +36,18 @@ func resetAccessibilityCache() {
 	accessibilityCache = map[string]accessibilityCacheEntry{}
 }
 
-func TestMainnetExplicitlyDisabled(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name string
-		yaml string
-		want bool
-	}{
-		{
-			name: "explicit false",
-			yaml: "chains:\n  mainnet:\n    enabled: false\n    chainId: 1\n",
-			want: true,
-		},
-		{
-			name: "omitted",
-			yaml: "chains:\n  mainnet:\n    chainId: 1\n",
-			want: false,
-		},
-		{
-			name: "explicit true",
-			yaml: "chains:\n  mainnet:\n    enabled: true\n    chainId: 1\n",
-			want: false,
-		},
-	}
-	for _, tc := range tests {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			if got := mainnetExplicitlyDisabled([]byte(tc.yaml)); got != tc.want {
-				t.Fatalf("mainnetExplicitlyDisabled() = %v, want %v", got, tc.want)
-			}
-		})
-	}
-}
-
-// When mainnet is disabled the daemon must be able to come up without a
-// reachable mainnet RPC — see issue #22 (kurtosis / air-gapped deployments).
-func TestConfigured_MainnetDisabled_SkipsReachabilityProbe(t *testing.T) {
+// When general.skipMainnetProbe is true the daemon must be able to come up
+// without a reachable mainnet RPC — see issue #22 (kurtosis / air-gapped).
+func TestConfigured_SkipMainnetProbe_SkipsReachabilityProbe(t *testing.T) {
 	resetAccessibilityCache()
-	// Use an obviously unreachable endpoint: a reserved-block address on a
-	// closed port. If the probe runs, Configured() will return false.
-	yaml := `chains:
+	// Use an obviously unreachable endpoint: a TEST-NET-1 address on a closed
+	// port. If the probe runs, Configured() will return false.
+	yaml := `general:
+  dataFolder: "/tmp/khedra-test"
+  strategy: "download"
+  detail: "index"
+  skipMainnetProbe: true
+chains:
   mainnet:
     rpcs:
       - "http://192.0.2.1:1/unreachable"
@@ -92,37 +63,18 @@ func TestConfigured_MainnetDisabled_SkipsReachabilityProbe(t *testing.T) {
 	defer restore()
 
 	if !Configured() {
-		t.Fatalf("Configured() = false; expected true when mainnet.enabled=false even with unreachable mainnet RPC")
+		t.Fatalf("Configured() = false; expected true when skipMainnetProbe=true even with unreachable mainnet RPC")
 	}
 }
 
-// When enabled is omitted, treat as "must verify RPC" (legacy configs).
-func TestConfigured_MainnetOmittedEnabled_RequiresReachableProbe(t *testing.T) {
+// Default behavior: skipMainnetProbe omitted (== false) → probe must run.
+func TestConfigured_SkipMainnetProbeOmitted_RequiresReachableProbe(t *testing.T) {
 	resetAccessibilityCache()
-	yaml := `chains:
-  mainnet:
-    rpcs:
-      - "http://192.0.2.1:1/unreachable"
-    chainId: 1
-  kurtosis:
-    rpcs:
-      - "http://localhost:8545"
-    chainId: 3151908
-    enabled: true
-`
-	restore := writeConfig(t, yaml)
-	defer restore()
-
-	if Configured() {
-		t.Fatalf("Configured() = true; expected false when mainnet.enabled is omitted and RPC is unreachable")
-	}
-}
-
-// When mainnet is enabled the existing strict probe must still gate
-// Configured() — an unreachable mainnet RPC means the wizard should run.
-func TestConfigured_MainnetEnabled_RequiresReachableProbe(t *testing.T) {
-	resetAccessibilityCache()
-	yaml := `chains:
+	yaml := `general:
+  dataFolder: "/tmp/khedra-test"
+  strategy: "download"
+  detail: "index"
+chains:
   mainnet:
     rpcs:
       - "http://192.0.2.1:1/unreachable"
@@ -133,16 +85,44 @@ func TestConfigured_MainnetEnabled_RequiresReachableProbe(t *testing.T) {
 	defer restore()
 
 	if Configured() {
-		t.Fatalf("Configured() = true; expected false when mainnet.enabled=true with unreachable RPC")
+		t.Fatalf("Configured() = true; expected false when skipMainnetProbe is omitted and mainnet RPC is unreachable")
 	}
 }
 
-// Disabled mainnet with no RPCs at all is still an invalid config — we don't
-// want to silently let through configs that would break code paths that read
-// main.RPCs[0] later (env wiring, etc.).
-func TestConfigured_MainnetDisabled_StillRequiresRPC(t *testing.T) {
+// skipMainnetProbe explicitly false → probe must run.
+func TestConfigured_SkipMainnetProbeFalse_RequiresReachableProbe(t *testing.T) {
 	resetAccessibilityCache()
-	yaml := `chains:
+	yaml := `general:
+  dataFolder: "/tmp/khedra-test"
+  strategy: "download"
+  detail: "index"
+  skipMainnetProbe: false
+chains:
+  mainnet:
+    rpcs:
+      - "http://192.0.2.1:1/unreachable"
+    chainId: 1
+    enabled: true
+`
+	restore := writeConfig(t, yaml)
+	defer restore()
+
+	if Configured() {
+		t.Fatalf("Configured() = true; expected false when skipMainnetProbe=false and mainnet RPC is unreachable")
+	}
+}
+
+// skipMainnetProbe=true with no RPCs at all is still invalid — downstream code
+// reads main.RPCs[0] (env wiring in action_daemon.go), so the structural check
+// must remain.
+func TestConfigured_SkipMainnetProbe_StillRequiresRPC(t *testing.T) {
+	resetAccessibilityCache()
+	yaml := `general:
+  dataFolder: "/tmp/khedra-test"
+  strategy: "download"
+  detail: "index"
+  skipMainnetProbe: true
+chains:
   mainnet:
     rpcs: []
     chainId: 1
@@ -152,15 +132,19 @@ func TestConfigured_MainnetDisabled_StillRequiresRPC(t *testing.T) {
 	defer restore()
 
 	if Configured() {
-		t.Fatalf("Configured() = true; expected false when mainnet has no RPCs even if disabled")
+		t.Fatalf("Configured() = true; expected false when mainnet has no RPCs even with skipMainnetProbe=true")
 	}
 }
 
-// Disabled mainnet with chainId == 0 is still rejected — the YAML is malformed
-// and the wizard should fix it.
-func TestConfigured_MainnetDisabled_StillRequiresChainID(t *testing.T) {
+// skipMainnetProbe=true with chainId == 0 is still rejected — malformed YAML.
+func TestConfigured_SkipMainnetProbe_StillRequiresChainID(t *testing.T) {
 	resetAccessibilityCache()
-	yaml := `chains:
+	yaml := `general:
+  dataFolder: "/tmp/khedra-test"
+  strategy: "download"
+  detail: "index"
+  skipMainnetProbe: true
+chains:
   mainnet:
     rpcs:
       - "http://localhost:8545"
@@ -171,6 +155,6 @@ func TestConfigured_MainnetDisabled_StillRequiresChainID(t *testing.T) {
 	defer restore()
 
 	if Configured() {
-		t.Fatalf("Configured() = true; expected false when mainnet has chainId=0 even if disabled")
+		t.Fatalf("Configured() = true; expected false when mainnet has chainId=0 even with skipMainnetProbe=true")
 	}
 }

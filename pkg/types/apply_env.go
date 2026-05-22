@@ -18,9 +18,10 @@ const (
 	PrefixServices = "TB_KHEDRA_SERVICES_"
 
 	// General Keys
-	KeyDataFolder = "TB_KHEDRA_GENERAL_DATAFOLDER"
-	KeyStrategy   = "TB_KHEDRA_GENERAL_STRATEGY"
-	KeyDetail     = "TB_KHEDRA_GENERAL_DETAIL"
+	KeyDataFolder       = "TB_KHEDRA_GENERAL_DATAFOLDER"
+	KeyStrategy         = "TB_KHEDRA_GENERAL_STRATEGY"
+	KeyDetail           = "TB_KHEDRA_GENERAL_DETAIL"
+	KeySkipMainnetProbe = "TB_KHEDRA_GENERAL_SKIPMAINNETPROBE"
 
 	// Logging Keys
 	KeyLoggingFolder     = "TB_KHEDRA_LOGGING_FOLDER"
@@ -160,6 +161,12 @@ func applyEnv(keys []string, receiver *Config) error {
 			receiver.General.Strategy = envValue
 		case key == KeyDetail:
 			receiver.General.Detail = envValue
+		case key == KeySkipMainnetProbe:
+			skip, err := strconv.ParseBool(envValue)
+			if err := validateValueParsing(key, err); err != nil {
+				return err
+			}
+			receiver.General.SkipMainnetProbe = skip
 
 		// Logging settings
 		case key == KeyLoggingFolder:

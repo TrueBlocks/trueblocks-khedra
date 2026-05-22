@@ -67,6 +67,7 @@ The `config.yaml` file (shown here with default values) is structured as follows
 
 general:
   dataFolder: "~/.khedra/data"     # See note 1
+  skipMainnetProbe: false          # See note 7
 
 chains:
   mainnet:                       # Blockchain name (see notes 2, 3, and 4)
@@ -132,6 +133,10 @@ logging:
 5. The `services` section is required. At least one service must be enabled.
 
 6. When a `scraper` or `monitor` is "catching up" to a chain, the `sleep` value is ignored.
+
+7. The `skipMainnetProbe` value defaults to `false`. When `false`, khedra verifies on startup that the configured mainnet RPC is reachable and returns `chainId == 1`; if it isn't, the installation wizard is presented. Set this to `true` for headless / air-gapped / container / CI deployments (e.g. isolated devnets via [kurtosis `ethereum-package`](https://github.com/ethpandaops/ethereum-package)) where no public mainnet node is available. Even with `skipMainnetProbe: true` the `mainnet` chain block itself must be present, with a non-empty `rpcs` entry and `chainId: 1`, because downstream code reads `mainnet.rpcs[0]` for env wiring.
+
+   The corresponding environment variable override is `TB_KHEDRA_GENERAL_SKIPMAINNETPROBE=true`.
 
 ---
 

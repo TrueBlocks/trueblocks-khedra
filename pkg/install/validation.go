@@ -84,6 +84,7 @@ func ValidateChains(d *Draft) []FieldError {
 	if d == nil {
 		return []FieldError{{Field: "", Code: "internal", Message: "nil draft"}}
 	}
+	skipProbe := d.Config.General.SkipMainnetProbe
 	hasMainnet := false
 	for name, ch := range d.Config.Chains {
 		// name validation (always)
@@ -104,6 +105,9 @@ func ValidateChains(d *Draft) []FieldError {
 				out = append(out, FieldError{Field: "chains.mainnet.rpc", Code: "mainnet_missing_rpc", Message: msg})
 			} else if !validRPCScheme(rpc) {
 				out = append(out, FieldError{Field: "chains.mainnet.rpc", Code: "invalid_rpc_scheme", Message: "mainnet RPC must start with http(s)://"})
+			}
+			if !ch.Enabled && !skipProbe {
+				out = append(out, FieldError{Field: "chains.mainnet.rpc", Code: "require_mainnet", Message: "mainnet must be enabled (or set general.skipMainnetProbe: true)"})
 			}
 		} else if ch.Enabled { // non-mainnet enabled
 			if len(ch.RPCs) == 0 || strings.TrimSpace(firstRPC(ch.RPCs)) == "" {

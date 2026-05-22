@@ -8,8 +8,9 @@ import (
 	coreFile "github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
 	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/rpc"
-	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 	yamlv2 "gopkg.in/yaml.v2"
+
+	"github.com/TrueBlocks/trueblocks-khedra/v6/pkg/types"
 )
 
 // Cache for mainnet accessibility checks
@@ -64,42 +65,12 @@ func checkMainnetAccessible(rpcUrl string) bool {
 	return accessible
 }
 
-// mainnetExplicitlyDisabled reports whether the config YAML sets
-// chains.mainnet.enabled to false. When the field is omitted, Enabled
-// unmarshals as false but we still require a reachability probe (legacy
-// configs that expect mainnet without an explicit enabled key).
-func mainnetExplicitlyDisabled(configYAML []byte) bool {
-	var sniff struct {
-		Chains map[string]struct {
-			Enabled *bool `yaml:"enabled"`
-		} `yaml:"chains"`
-	}
-	if err := yamlv2.Unmarshal(configYAML, &sniff); err != nil {
-		return false
-	}
-	m, ok := sniff.Chains["mainnet"]
-	if !ok || m.Enabled == nil {
-		return false
-	}
-	return !*m.Enabled
-}
-
-// mainnetRequiresReachabilityProbe is true when mainnet is enabled, or when
-// enabled is omitted (treated as "must verify RPC"). Probe is skipped only when
-// enabled: false is explicit in YAML.
-func mainnetRequiresReachabilityProbe(main types.Chain, configYAML []byte) bool {
-	if main.Enabled {
-		return true
-	}
-	return !mainnetExplicitlyDisabled(configYAML)
-}
-
 // Configured returns true only if a config file exists AND contains a mainnet
-// configuration. When mainnet is enabled (or enabled is omitted), its RPC
-// endpoint must be reachable and return chainId == 1. When mainnet is
-// explicitly disabled (enabled: false), the reachability probe is skipped so
-// the daemon can run in hermetic / air-gapped environments (CI, containers,
-// isolated devnets) where no mainnet node is available.
+// configuration. By default mainnet RPC must be reachable and return
+// chainId == 1. When general.skipMainnetProbe is true, the reachability probe
+// is skipped so the daemon can run in hermetic / air-gapped environments
+// (CI, containers, isolated devnets) where no mainnet node is available;
+// structural checks (RPC non-empty, chainId non-zero) still apply.
 // Deep RPC reachability probing is performed here but cached for performance;
 // this determines whether to present the installation wizard.
 func Configured() bool {
@@ -130,7 +101,7 @@ func Configured() bool {
 			return false
 		}
 
-		if !mainnetRequiresReachabilityProbe(main, []byte(b)) {
+		if cfg.General.SkipMainnetProbe {
 			return true
 		}
 
